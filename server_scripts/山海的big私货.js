@@ -347,7 +347,7 @@ global.shanhaiRecipeAPI = {
 
 ServerEvents.recipes(e => {
 
-    const gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     const GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     const VA = GTValues.VA;
     const [ULV,LV,MV,HV,EV,IV,LuV,ZPM,UV,UHV,UEV,UIV,UXV,OpV,MAX] = VA;
@@ -501,7 +501,6 @@ assrecipes.forEach(recipe => {
 let ass = asstimer.end();
 console.log(`🗓️ [山海的big私货] 组装机配方添加完毕 成功:${assSuccess} | 失败:${assFailed} | 耗时:${ass}ms`);
 
-
 // ========== 通用配方批处理 ==========
 const universalRecipes = [
     { id: 'raw_photon_carrying_wafer', type: 'precision_laser_engraver', itemInputs: ['kubejs:rutherfordium_neutronium_wafer'], notConsumable: 'dishanhai:wzcz1', itemOutputs: ['kubejs:raw_photon_carrying_wafer'], circuit: 1, EUt: uhv, duration: 20 },
@@ -517,7 +516,7 @@ const universalRecipes = [
     { id: 'sulfuric_acid', type: 'chemical_reactor', itemInputs: ['gtceu:sulfur_dust'], inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:sulfuric_acid 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
     { id: 'assembler_dye_law_cleaning_gravity_configuration_maintenance_hatch', type: 'assembler', itemInputs: ['gtceu:maintenance_hatch', 'minecraft:red_dye', 'minecraft:blue_dye'], itemOutputs: ['gtceu:law_cleaning_gravity_configuration_maintenance_hatch'], EUt: mv, duration: 20 },
     { id: 'all_exquisite_gems_output', type: 'laser_engraver', notConsumable: ['64x dishanhai:wzmk2', 'gtceu:glass_lens'],itemInputs: ['gtceu:silicon_dust'],circuit: 20,EUt: mv,duration: 20,dynamicOutputs: true},
-    /*{id:'',type:'',}*/
+    {id:'Dye_component_pack',type:'assembler',itemInputs: ['minecraft:dandelion'],dy_cell:true, EUt: ulv, duration: 20 },
 ];
 
 const sanitize = v => {
@@ -544,6 +543,11 @@ universalRecipes.forEach(recipe => {
         if (r.dynamicOutputs) {
             let gemOutputIds = Ingredient.of('#forge:exquisite_gems').itemIds;
             let outputs = gemOutputIds.map(id => `16x ${id}`);
+            if (outputs.length) machine.itemOutputs.apply(machine, outputs);
+        }
+        if (r.dy_cell) {
+            let dyes = Ingredient.of('#forge:dyes').itemIds;
+            let outputs = dyes.map(id => `${id}`);
             if (outputs.length) machine.itemOutputs.apply(machine, outputs);
         }
 
@@ -1620,15 +1624,23 @@ ServerEvents.tags('item', event => {
 });
 
 // ========== 无限盘配方生成 ==========
-let packed_cell_nbt2 = (list) => {
+let packed_cell_nbt2 = (list, displayName, lore) => {
+    if (displayName === undefined) displayName = null;
+    if (lore === undefined) lore = null;
     let parsed = list.map(entry => {
-        let match = entry.match(/^(\d+)\s*x\s*(.+)$/);
+        let match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
         if (!match) throw new Error("Invalid format: " + entry);
-        return [match[1], match[2]];
+        return [match[1], match[2], match[3]]; // [amount, id, innerId]
     });
 
-    let keysNBT = parsed.map(([amt, id]) => {
+    let keysNBT = parsed.map((item) => {
+        let [amt, id, innerId] = item;
         let tagPart = '';
+        
+        // 无限单元格特殊处理：如果指定了内部物品ID，则添加record标签
+        if (id === 'expatternprovider:infinity_cell' && innerId) {
+            tagPart = `,tag:{record:{"#c":"ae2:i",id:"${innerId}"}}`;
+        }
 
         if (id === 'constructionwand:infinity_wand') {
             tagPart = `,tag:{wand_options:{cores:["constructionwand:core_angel"],cores_sel:1b,lock:"nolock"}}`;
@@ -1662,10 +1674,25 @@ let packed_cell_nbt2 = (list) => {
         return `{ "#c":"ae2:i",id:"${id}"${tagPart} }`;
     }).join(',');
     
-    let amtsNBT = parsed.map(([amt]) => `${amt}L`).join(',');
+    let amtsNBT = parsed.map((item) => {
+        let [amt] = item;
+        return `${amt}L`;
+    }).join(',');
+    
+    let displayTag = '';
+    if (displayName) {
+        let lorePart = '';
+        if (lore) {
+            let loreLines = Array.isArray(lore) ? lore : [lore];
+            let loreJson = loreLines.map(line => `'{"text":"${line}"}'`).join(',');
+            lorePart = `,Lore:[${loreJson}]`;
+        }
+        displayTag = `display:{Name:'{\"text\":\"${displayName}\"}'${lorePart}},`;
+    }
     
     return `{
         RepairCost:0,
+        ${displayTag}
         amts:[L;${amtsNBT}],
         ic:${list.length}L,
         internalCurrentPower:2000000.0d,
@@ -1673,11 +1700,39 @@ let packed_cell_nbt2 = (list) => {
     }`;
 };
 
+// 简化的无限单元格打包函数（按照DiskSavior模式）
+const shanhai_packed_infinity_cell = (cellname, type, list, lore) => {
+    const list_length = list.length;
+    
+    // 生成 amounts 数组 [1L, 1L, ...]
+    let amtsNBT = "1L,".repeat(list_length - 1) + '1L';
+    
+    // 生成 keys 数组
+    let keysNBT = list.map(id => {
+        return `{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:${type}",id:"${id}"}}}`;
+    }).join(",");
+    
+    // 生成 display 标签
+    let displayTag = '';
+    if (cellname) {
+        let loreJson = '';
+        if (lore && Array.isArray(lore) && lore.length > 0) {
+            let loreArray = lore.map(line => `'{"text":"${line}"}'`).join(',');
+            loreJson = `,Lore:[${loreArray}]`;
+        }
+        displayTag = `display:{Name:'{\"text\":\"${cellname}\"}'${loreJson}},`;
+    }
+    
+    return Item.of('ae2:portable_item_cell_256k',
+        `{RepairCost:0,${displayTag}amts:[L;${amtsNBT}],ic:${list_length}L,internalCurrentPower:1999840.5d,keys:[${keysNBT}]}`);
+};
+
 // ========== 输出物品盘配方 ==========
 ServerEvents.recipes(event => {
     const timer = new Timer('超级AE包配方');
     info('📀 开始生成超级AE包配方...');
     
+    const GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     const recipeType = 'shapeless';
     const recipeId = 'dishanhai:super_ae_pack';
     
@@ -1700,6 +1755,52 @@ ServerEvents.recipes(event => {
         error(`❌ 超级AE包配方生成失败: ${err.message}`);
         // 记录失败的配方
         recordRecipe(recipeType, false, recipeId, err.message);
+    }
+    
+    // ========== 无限染料元件包配方 ==========
+    const dyeRecipeType = 'assembler';
+    const dyeRecipeId = 'dishanhai:infinity_dye_cell_pack_pro';
+    
+    try {
+        info('🎨 开始生成无限染料元件包pro配方...');
+        
+        // 固定的染料物品列表（33个物品，匹配实际NBT）
+        var dyeItemsList = [
+            // 原版染料（16种）
+            'minecraft:white_dye', 'minecraft:orange_dye', 'minecraft:magenta_dye', 'minecraft:light_blue_dye',
+            'minecraft:yellow_dye', 'minecraft:lime_dye', 'minecraft:pink_dye', 'minecraft:gray_dye',
+            'minecraft:light_gray_dye', 'minecraft:cyan_dye', 'minecraft:purple_dye', 'minecraft:blue_dye',
+            'minecraft:brown_dye', 'minecraft:green_dye', 'minecraft:red_dye', 'minecraft:black_dye',
+            // GregTech化学染料（16种）
+            'gtceu:chemical_white_dye', 'gtceu:chemical_orange_dye', 'gtceu:chemical_magenta_dye', 'gtceu:chemical_light_blue_dye',
+            'gtceu:chemical_yellow_dye', 'gtceu:chemical_lime_dye', 'gtceu:chemical_pink_dye', 'gtceu:chemical_gray_dye',
+            'gtceu:chemical_light_gray_dye', 'gtceu:chemical_cyan_dye', 'gtceu:chemical_purple_dye', 'gtceu:chemical_blue_dye',
+            'gtceu:chemical_brown_dye', 'gtceu:chemical_green_dye', 'gtceu:chemical_red_dye', 'gtceu:chemical_black_dye',
+            // 额外物品（1种）
+            'gtceu:metal_mixture_dust'
+        ];
+        
+        // 组装机配方（按照DiskSavior模式）
+        var gtr = event.recipes.gtceu;
+        gtr.assembler(dyeRecipeId)
+            .circuit(1)
+            .itemInputs('minecraft:dandelion')
+            .itemOutputs(shanhai_packed_infinity_cell('无限染料元件包pro', 'i', dyeItemsList, [
+                '§7包含所有染料物品的无限元件包',
+                `§7染料种类: §e${dyeItemsList.length}§7 种`,
+                '§7每个染料存储在无限元件包中',
+                '§8山海私货 v2.2'
+            ]))
+            .duration(200)
+            .EUt(GTValues.VA[GTValues.LV]);
+        
+        // 记录成功的配方
+        recordRecipe(dyeRecipeType, true, dyeRecipeId);
+        info('✅ 无限染料元件包pro配方已生成（组装机版）');
+    } catch(err) {
+        error(`❌ 无限染料元件包pro配方生成失败: ${err.message}`);
+        // 记录失败的配方
+        recordRecipe(dyeRecipeType, false, dyeRecipeId, err.message);
     }
     
     try {
@@ -1751,7 +1852,7 @@ ServerEvents.recipes(e => {
     
     let GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     let [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = GTValues.VA;
-    let gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     
     const recipes = [
         { id: 'assembler_dandelion', itemInputs: ['minecraft:yellow_dye'], itemOutputs: ['minecraft:dandelion'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
@@ -1823,7 +1924,7 @@ ServerEvents.recipes(e => {
     
     let GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     let [, , , , , , , , , , uev, uiv, uxv, opv, max] = GTValues.VA;
-    let gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     
     const waferTypes = [
         { id: 'cpu', baseOutput: 384 },
@@ -1887,7 +1988,7 @@ ServerEvents.recipes(e => {
     
     let GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     let [, , , , , , , , , , uev, uiv, uxv, opv, max] = GTValues.VA;
-    let gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     
     const waferTypes_2 = [
         { id: 'cpu', baseOutput: 384 },
@@ -1951,7 +2052,7 @@ ServerEvents.recipes(e => {
     
     let GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     let [, , , , , , , , , , uev, , , , ] = GTValues.VA;
-    let gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     
     const recipes = [
         {id:'echoite_plasma', input: 'gtceu:echoite', output: 'gtceu:echoite_plasma', count: 10000, voltage: uev, name: '回响合金等离子体'},
@@ -1996,7 +2097,7 @@ ServerEvents.recipes(e => {
     
     let GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
     let [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = GTValues.VA;
-    let gtr = e.recipes.gtceu;
+    var gtr = e.recipes.gtceu;
     
     console.log('[山海的big私货] 开始加载无限盘配方...');
     
