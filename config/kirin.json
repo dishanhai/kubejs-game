@@ -1,0 +1,26 @@
+{
+	"//_comment1": "这是一行注释，改动它没有任何效果",
+	"isLoaded": true,
+	"//_comment2": "启用修复板块",
+	"//_comment3": "具体内容请到README.md内查看",
+	"enableSafeFixes": true,
+	"//_comment4": "启用一般板块",
+	"//_comment5": "具体内容请到README.md内查看",
+	"enableSignificantBalanceChanges": true,
+	"//_comment6": "启用核爆板块",
+	"//_comment7": "具体内容请到README.md内查看",
+	"enableGameBreakingRecipes": true,
+	"Multiple": {
+		"//_comment8": "方块转换室批处理倍数调整此项",
+		"blockConversionMultiple": 64,
+		"//_comment9": "聚合装置批处理倍数调整此项",
+		"//_comment10": "原则上不应不超过64，否则ulv总线无法输入，但是没有实际检测",
+		"aggregationDeviceMultiple": 64,
+		"//_comment11": "炖聚变批处理倍数调整此项",
+		"fusionMultiple": 128,
+		"//_comment12": "艾萨系列批处理倍数调整此项",
+		"isaMultiple": 256
+	},
+	"//_comment13": "启用Tooltip(仅客户端)",
+	"enableClientTooltip": true
+}

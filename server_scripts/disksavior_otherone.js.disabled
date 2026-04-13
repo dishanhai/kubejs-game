@@ -1,0 +1,77 @@
+//集成了一些来自其他群友的脚本，感谢分享
+
+//@红烧提莫炖排骨 提取机配方缩减
+//移除了提取机的锭副产物的提取配方 比如板 管道 齿轮 方便写样板的时候更容易找到你要的
+//只保留了锭 粉 还有其他配方
+ServerEvents.recipes(event => {
+
+    // 移除的物品
+    const badParts = [
+        '_plate', '_double_plate', '_dense_plate',
+        '_rod', '_long_rod',
+        '_bolt', '_screw', '_ring', '_spring',
+        '_gear', '_small_gear',
+        '_wire', '_fine_wire', '_cable',
+        '_rotor', '_turbine_blade',
+        '_frame',
+        '_pipe', '_fluid_pipe', '_item_pipe',
+        '_foil', '_block', '_nugget'
+    ]
+
+    // 白名单
+    const whitelist = ['ingot', 'dust', 'gem', 'raw', 'ore']
+
+    Ingredient.all.itemIds.forEach(id => {
+        const item = id.toString()
+
+        // 跳过白名单物品
+        if (whitelist.some(w => item.includes(w))) return
+
+        // 删除副产物配方
+        badParts.forEach(part => {
+            if (item.endsWith(part)) {
+                event.remove({
+                    type: 'gtceu:extractor',
+                    input: item
+                })
+            }
+        })
+    })
+})
+//@红烧提莫炖排骨 锭粉碎成粉转移到锻造锤
+ServerEvents.recipes(event => {
+    event.remove({ type: 'gtceu:forge_hammer', output: '#forge:plates' })
+    event.remove({ id: /gtceu:forge_hammer\/.*_ingot_to_dust/ })
+    event.remove({ id: /gtceu:forge_hammer\/ingot_to_dust\/.*/ })
+
+    Ingredient.of('#forge:ingots').getItemIds().forEach(ingotId => {
+        let ingotIdStr = ingotId.toString()
+        let [mod, path] = ingotIdStr.split(':')
+        let materialName = path.replace(/_ingot$/, '')
+
+        let dustId
+        if (mod === 'minecraft') {
+            dustId = `gtceu:${materialName}_dust`
+        } else {
+            dustId = `${mod}:${materialName}_dust`
+        }
+
+        if (!Item.exists(dustId)) {
+            let tagDust = Ingredient.of(`#forge:dusts/${materialName}`).getFirst()
+            if (tagDust) {
+                dustId = tagDust.getId()
+            } else {
+                return
+            }
+        }
+
+        let safeMaterial = materialName.replace(/[^a-z0-9/._-]/g, '_')
+        let recipeId = `gtceu:forge_hammer/ingot_to_dust/${mod}_${safeMaterial}`
+
+        event.recipes.gtceu.forge_hammer(recipeId)
+            .itemInputs(Item.of(ingotIdStr, 64))
+            .itemOutputs(Item.of(dustId, 64))
+            .duration(200)
+            .EUt(2)
+    })
+})
