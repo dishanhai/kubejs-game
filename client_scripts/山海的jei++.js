@@ -32,7 +32,10 @@ e.addAdvanced('dishanhai:create_mk', (item, advanced, text) => {
     } else {
         text.add('§1按§2住§3§lSHIFT§r§5查看§k§l§n终末协议');
     }
-
+});
+})
+    
+ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
     if (e.shift) {
         text.add(`§8§o「对冲宇宙·创世纪」\n§7在对冲的伊始，即使已经投入了全部的超重元素，方舟依然无法战胜占有反宇宙的理事会。
@@ -55,8 +58,9 @@ e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
         text.add(`§7§o§l「万态平衡·大冻结·创世纪」\n§8§o按住 §7§lSHIFT §8§o查看宇宙终章`);
     }
 });
-});
 })
+
+
 
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:wzmk2', (item, advanced, text) => {
@@ -156,6 +160,7 @@ e.addAdvanced('dishanhai:big_tear', (item, advanced, text) => {
     }
 });
 })
+
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:time_reversal_protocol', (item, advanced, text) => {
     if (e.shift) {
@@ -286,7 +291,7 @@ JEIEvents.hideItems(e => {
     const idsToHide = new Set()
 
     tags.forEach(tag => {
-        Ingredient.of(`#${tag}`).itemIds.forEach(id => {
+        Ingredient.of(`#${tag}`).getItemIds().forEach(id => {
             if (regex.test(id)) {
                 idsToHide.add(id)
             }
@@ -334,33 +339,25 @@ const shanhai_packed_infinity_cell_256k = (cellname, type, list, lore) => {
 JEIEvents.addItems(event => {
     console.log('山海私货-正在向 JEI 注册无限染料元件包pro...')
     
-    // 完整的染料物品列表（基于实际配方中的33个物品）
-    var dyeItemsList = [
-        // 原版染料（16种）
-        'minecraft:white_dye', 'minecraft:orange_dye', 'minecraft:magenta_dye', 'minecraft:light_blue_dye',
-        'minecraft:yellow_dye', 'minecraft:lime_dye', 'minecraft:pink_dye', 'minecraft:gray_dye',
-        'minecraft:light_gray_dye', 'minecraft:cyan_dye', 'minecraft:purple_dye', 'minecraft:blue_dye',
-        'minecraft:brown_dye', 'minecraft:green_dye', 'minecraft:red_dye', 'minecraft:black_dye',
-        // GregTech化学染料（16种）
-        'gtceu:chemical_white_dye', 'gtceu:chemical_orange_dye', 'gtceu:chemical_magenta_dye', 'gtceu:chemical_light_blue_dye',
-        'gtceu:chemical_yellow_dye', 'gtceu:chemical_lime_dye', 'gtceu:chemical_pink_dye', 'gtceu:chemical_gray_dye',
-        'gtceu:chemical_light_gray_dye', 'gtceu:chemical_cyan_dye', 'gtceu:chemical_purple_dye', 'gtceu:chemical_blue_dye',
-        'gtceu:chemical_brown_dye', 'gtceu:chemical_green_dye', 'gtceu:chemical_red_dye', 'gtceu:chemical_black_dye',
-        // 额外物品（1种）
-        'gtceu:metal_mixture_dust'
-    ];
+    // 动态获取染料物品列表（使用 #forge:dyes 标签）
+    var dyeItemsList = Ingredient.of('#forge:dyes').getItemIds();
+    if (!dyeItemsList || dyeItemsList.length === 0) {
+        console.error('❌ 未找到染料物品，标签 #forge:dyes 可能为空');
+        return;
+    }
+    console.log(`🎨 从 #forge:dyes 标签获取到 ${dyeItemsList.length} 种染料物品`);
     
     event.add(shanhai_packed_infinity_cell_256k('无限染料元件包pro', 'i', dyeItemsList, [
-        '§7包含所有染料物品的无限单元格',
+        '§7包含所有染料物品的无限元件包',
         `§7染料种类: §e${dyeItemsList.length}§7 种`,
-        '§7每个染料存储在无限单元格中',
+        '§7每个染料存储在无限元件包中',
         '§8山海私货 v2.2'
     ]))
     
     console.log('✅ 无限染料元件包pro 已成功注册到 JEI')
 })
 
-// 启用NBT识别，确保256k便携物品细胞根据NBT独立显示
+// 启用NBT识别，确保256k便携物品元件根据NBT独立显示
 JEIEvents.subtypes(event => {
     event.useNBT('ae2:portable_item_cell_256k')
 })

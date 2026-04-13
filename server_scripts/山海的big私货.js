@@ -541,12 +541,12 @@ universalRecipes.forEach(recipe => {
         if (r.type !== 'cosmos_simulation' && r.EUt != null) machine.EUt(r.EUt);
 
         if (r.dynamicOutputs) {
-            let gemOutputIds = Ingredient.of('#forge:exquisite_gems').itemIds;
+            let gemOutputIds = Ingredient.of('#forge:exquisite_gems').getItemIds();
             let outputs = gemOutputIds.map(id => `16x ${id}`);
             if (outputs.length) machine.itemOutputs.apply(machine, outputs);
         }
         if (r.dy_cell) {
-            let dyes = Ingredient.of('#forge:dyes').itemIds;
+            let dyes = Ingredient.of('#forge:dyes').getItemIds();
             let outputs = dyes.map(id => `${id}`);
             if (outputs.length) machine.itemOutputs.apply(machine, outputs);
         }
@@ -1764,23 +1764,11 @@ ServerEvents.recipes(event => {
     try {
         info('🎨 开始生成无限染料元件包pro配方...');
         
-        // 固定的染料物品列表（33个物品，匹配实际NBT）
-        var dyeItemsList = [
-            // 原版染料（16种）
-            'minecraft:white_dye', 'minecraft:orange_dye', 'minecraft:magenta_dye', 'minecraft:light_blue_dye',
-            'minecraft:yellow_dye', 'minecraft:lime_dye', 'minecraft:pink_dye', 'minecraft:gray_dye',
-            'minecraft:light_gray_dye', 'minecraft:cyan_dye', 'minecraft:purple_dye', 'minecraft:blue_dye',
-            'minecraft:brown_dye', 'minecraft:green_dye', 'minecraft:red_dye', 'minecraft:black_dye',
-            // GregTech化学染料（16种）
-            'gtceu:chemical_white_dye', 'gtceu:chemical_orange_dye', 'gtceu:chemical_magenta_dye', 'gtceu:chemical_light_blue_dye',
-            'gtceu:chemical_yellow_dye', 'gtceu:chemical_lime_dye', 'gtceu:chemical_pink_dye', 'gtceu:chemical_gray_dye',
-            'gtceu:chemical_light_gray_dye', 'gtceu:chemical_cyan_dye', 'gtceu:chemical_purple_dye', 'gtceu:chemical_blue_dye',
-            'gtceu:chemical_brown_dye', 'gtceu:chemical_green_dye', 'gtceu:chemical_red_dye', 'gtceu:chemical_black_dye',
-            // 额外物品（1种）
-            'gtceu:metal_mixture_dust'
-        ];
-        
-        // 组装机配方（按照DiskSavior模式）
+        var dyeItemsList = Ingredient.of('#forge:dyes').getItemIds();
+        if (!dyeItemsList || dyeItemsList.length === 0) {
+            throw new Error('未找到染料物品，标签 #forge:dyes 可能为空');
+        }
+        info(`🎨 从 #forge:dyes 标签获取到 ${dyeItemsList.length} 种染料物品`);
         var gtr = event.recipes.gtceu;
         gtr.assembler(dyeRecipeId)
             .circuit(1)
@@ -1796,7 +1784,7 @@ ServerEvents.recipes(event => {
         
         // 记录成功的配方
         recordRecipe(dyeRecipeType, true, dyeRecipeId);
-        info('✅ 无限染料元件包pro配方已生成（组装机版）');
+        info('✅ 无限染料元件包pro配方已生成');
     } catch(err) {
         error(`❌ 无限染料元件包pro配方生成失败: ${err.message}`);
         // 记录失败的配方
