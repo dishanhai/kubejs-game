@@ -1,3 +1,4 @@
+//p
 // ========== 山海私货（日志模块） - 完整修复版 ==========
 // 版本: 2.3 - 修复结构问题
 
@@ -47,6 +48,40 @@ Timer.prototype.end=function(){
     info(`⏱️ ${this.name} 耗时: ${ms}ms`);
     return ms;
 };
+
+// ---------------- 配方错误消息发送 ----------------
+function broadcastRecipeError(type, id, errorMsg) {
+    try {
+        // 尝试向所有在线玩家发送错误消息
+        if (typeof Server !== 'undefined' && Server.players) {
+            let players = Server.players;
+            if (players && players.length > 0) {
+                let message = `§c[配方错误] §7${type}: §c${id} - §e${errorMsg}`;
+                // 只向有OP权限的玩家发送，避免刷屏
+                for (let i = 0; i < players.length; i++) {
+                    let player = players[i];
+                    if (player && player.op) {
+                        player.tell(message);
+                    }
+                }
+                // 如果没有OP玩家在线，则发送给第一个玩家（通常是控制台）
+                let hasOp = false;
+                for (let i = 0; i < players.length; i++) {
+                    if (players[i].op) {
+                        hasOp = true;
+                        break;
+                    }
+                }
+                if (!hasOp && players[0]) {
+                    players[0].tell(message);
+                }
+            }
+        }
+    } catch (err) {
+        // 如果发送失败，只记录到控制台
+        console.error(`无法向玩家发送配方错误消息: ${err.message}`);
+    }
+}
 
 // ---------------- 配方统计模块 ----------------
 let recipeStats = {
@@ -374,6 +409,7 @@ ServerEvents.recipes(e => {
         }
         else{
             error("❌ safeAddRecipe 调用方式错误");
+            broadcastRecipeError("safeAddRecipe", "invalid_parameters", "调用方式错误");
             return false;
         }
 
@@ -387,6 +423,7 @@ ServerEvents.recipes(e => {
                 return true;
             }catch(err){
                 recordRecipe(type,false,id,err.message);
+                broadcastRecipeError(type, id, err.message);
                 return false;
             }
         }
@@ -409,6 +446,7 @@ ServerEvents.recipes(e => {
         
         if (!isGtRecipe && !isVanillaRecipe) {
             recordRecipe(type, false, id, "未知机器或配方类型");
+            broadcastRecipeError(type, id, "未知机器或配方类型");
             return false;
         }
         
@@ -435,6 +473,7 @@ ServerEvents.recipes(e => {
             return true;
         }catch(err){
             recordRecipe(type,false,id,err.message);
+            broadcastRecipeError(type, id, err.message);
             return false;
         }
     }
@@ -452,20 +491,95 @@ const assrecipes = [
         circuit: null,
         EUt: opv,
         duration: 20
-    }
+    },
+    //这是测试配方列表 他们，用于测试错误处理机制 正常情况他们不会被启用
+     /*{ 
+        id: 'test_error_recipe',
+        type: 'assembler', 
+        itemInputs: ['1x minecraft:stick', '1x minecraft:stone'],
+        inputFluids: [],
+        notConsumable: null,
+        itemOutputs: ['minecraft:diamond'],
+        outputFluids: [],
+        circuit: null,
+        EUt: opv
+        // 故意缺少duration参数以触发错误
+    },
+    { 
+        id: 'test_invalid_machine',
+        type: 'invalid_machine_type', 
+        itemInputs: ['1x minecraft:dirt'],
+        inputFluids: [],
+        notConsumable: null,
+        itemOutputs: ['minecraft:gold_ingot'],
+        outputFluids: [],
+        circuit: null,
+        EUt: opv,
+        duration: 20
+        // 故意使用无效的机器类型以触发错误
+    },
+    { 
+        id: 'test_js_execution_error',
+        type: 'assembler', 
+        itemInputs: ['1x minecraft:stick'],
+        inputFluids: [],
+        notConsumable: null,
+        itemOutputs: ['minecraft:diamond'],
+        outputFluids: [],
+        circuit: null,
+        EUt: opv,
+        duration: 20,
+        // 添加一个特殊标记，让配方函数抛出错误
+        triggerJsError: true
+    }*/
 ];
+
+// 配方验证函数
+function validateRecipe(recipe) {
+    // 检查机器类型
+    if (!gtr[recipe.type]) {
+        return { valid: false, error: `未知机器类型: ${recipe.type}` };
+    }
+    
+    // 检查GT机器配方的必需参数
+    const isGtRecipe = gtr[recipe.type] !== undefined;
+    if (isGtRecipe) {
+        // 检查duration参数
+        if (recipe.duration == null) {
+            return { valid: false, error: `duration值缺失` };
+        }
+        // 检查EUt参数（除了cosmos_simulation类型）
+        if (recipe.type !== 'cosmos_simulation' && recipe.EUt == null) {
+            return { valid: false, error: `EUt值缺失` };
+        }
+    }
+    
+    return { valid: true };
+}
+
 let assSuccess = 0;
 let assFailed = 0;
 let asstimer = new Timer('组装机配方添加');
 
 assrecipes.forEach(recipe => {
-    if (!gtr[recipe.type]) {
-        console.error(`❌ 未知机器类型: ${recipe.type}`);
+    // 首先验证配方
+    const validation = validateRecipe(recipe);
+    if (!validation.valid) {
+        console.error(`❌ 配方验证失败: ${recipe.id} (${recipe.type}) - ${validation.error}`);
+        broadcastRecipeError(recipe.type, `dishanhai:${recipe.id}`, validation.error);
+        assFailed++;
         return;
     }
+    
     try {
         safeAddRecipe(recipe.type, `dishanhai:${recipe.id}`, () => {
             let machine = gtr[recipe.type](`dishanhai:${recipe.id}`);
+            
+            // 检查是否触发JavaScript执行错误（测试用）
+            if (recipe.triggerJsError) {
+                throw new Error("测试JavaScript执行错误：这是在配方函数内部抛出的错误");
+            }
+            
             if (recipe.notConsumable) {
                 if (Array.isArray(recipe.notConsumable)) {
                     recipe.notConsumable.forEach(item => machine.notConsumable(item));
@@ -498,6 +612,8 @@ assrecipes.forEach(recipe => {
         });
         assSuccess++;
     } catch(err) {
+        console.error(`❌ 配方执行失败: ${recipe.id} - ${err.message}`);
+        broadcastRecipeError(recipe.type, `dishanhai:${recipe.id}`, err.message);
         assFailed++;
     }
 });
@@ -539,6 +655,15 @@ const timer = new Timer('通用配方添加');
 let success = 0, fail = 0;
 
 universalRecipes.forEach(recipe => {
+    // 首先验证配方
+    const validation = validateRecipe(recipe);
+    if (!validation.valid) {
+        console.error(`❌ 配方验证失败: ${recipe.id} (${recipe.type}) - ${validation.error}`);
+        broadcastRecipeError(recipe.type, recipe.id, validation.error);
+        fail++;
+        return;
+    }
+    
     const ok = safeAddRecipe(recipe, r => {
         const machine = gtr[r.type](r.id);
         machine.duration(r.duration);
@@ -2207,11 +2332,11 @@ PlayerEvents.loggedIn(event => {
                 
                 // 显示前3个错误
                 if (stats.errors && stats.errors.length > 0) {
-                    player.tell(Component.red("§c❌ 失败示例:"));
+                    player.tell(Component.red("§c❌ 失败详情:"));
                     let showCount = Math.min(3, stats.errors.length);
                     for (let i = 0; i < showCount; i++) {
                         let err = stats.errors[i];
-                        player.tell(Component.red(`  ${i+1}. §7[${err.type}] §c${err.name}`));
+                        player.tell(Component.red(`  ${i+1}. §7[${err.type}] §c${err.name} - §e${err.error}`));
                     }
                     if (stats.errors.length > showCount) {
                         player.tell(Component.gray(`  §7... 还有 ${stats.errors.length - showCount} 个错误`));
@@ -2222,7 +2347,7 @@ PlayerEvents.loggedIn(event => {
             player.tell(Component.gold("§m==========================================="));
             
             if (failed > 0) {
-                player.tell(Component.red("§c⚠ 部分配方加载失败，请通知服务器管理员检查日志"));
+                player.tell(Component.red("§c⚠ 部分配方加载失败，具体错误信息已在上方显示"));
                 player.tell(Component.red('§c⚠ 日志路径:logs-kubejs-xxxxx.log'))
             }
         } else {
