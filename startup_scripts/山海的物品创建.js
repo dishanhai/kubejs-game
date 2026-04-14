@@ -5,6 +5,7 @@
 // 说明: 由于KubeJS物品名称不支持实时动态效果，改为静态随机颜色分布
 // 禁用§0黑色，确保颜色可见性
 
+(function() {
 StartupEvents.registry('item', e => {
     
     // =====================================================
@@ -360,3 +361,4 @@ StartupEvents.registry('item', e => {
     console.log('§7说明: 由于KubeJS限制，物品名称颜色为静态随机分布');
     console.log('§7动态效果需要Java层实现，当前使用静态方案');
 });
+})();

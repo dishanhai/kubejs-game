@@ -2,6 +2,7 @@
  此为作弊配方！
  此为作弊配方！！
  此为作弊配方！！！*/
+(function() {
 ServerEvents.recipes((event) => {
     const gtr = event.recipes.gtceu
     gtr.cosmos_simulation("dishanhai:Creator_God_home")
@@ -51,3 +52,4 @@ ServerEvents.recipes((event) => {
     .duration(1200)
     .inputFluids("minecraft:water 102400")
 })
+})();

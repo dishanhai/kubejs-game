@@ -8,7 +8,9 @@ alwaysApply: true
 山海的物品注册.js
 山海的无限盘注册.js
 C:\Users\dishanhai\Desktop\山海的神人私货2.2fix1路径下
-代码库.js
+山海的代码库.js
+山海的api测试脚本.js
+山海_API测试脚本.js
 日志.md
 说明（必看）.md
 山海私货API文档.md

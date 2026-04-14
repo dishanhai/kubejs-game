@@ -1,3 +1,4 @@
+(function() {
 StartupEvents.modifyCreativeTab("expatternprovider:tab_main", e => {
     // 无限流体
     const Inf_Fluid = [
@@ -45,7 +46,8 @@ StartupEvents.modifyCreativeTab("expatternprovider:tab_main", e => {
     // 添加所有流体无限盘
     Inf_Fluid.forEach((f) => {
         e.add(Item.of("expatternprovider:infinity_cell", `{record:{"#c":"ae2:f",id:"${f}"}}`));
-    });
+    })
+
 
     // 无限物品
     const Inf_Item = [
@@ -95,4 +97,4 @@ StartupEvents.modifyCreativeTab("expatternprovider:tab_main", e => {
 
 
     
-})
+})})();;

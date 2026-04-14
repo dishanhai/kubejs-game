@@ -1,3 +1,4 @@
+(function() {
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 与服务器端同步
 
@@ -5,7 +6,7 @@ ItemEvents.tooltip(tooltip => {
     tooltip.add('dishanhai:cosmic_probe_mk', '获取液体无需算力');
     tooltip.add('gtceu:nan_certificate','大猪咪的证明!')
     tooltip.add('kubejs:suprachronal_mainframe_complex','§2物质创造模块让主机更便宜')
-});
+})
 
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
@@ -470,4 +471,6 @@ JEIEvents.addItems(event => {
 // 启用NBT识别，确保256k便携物品元件根据NBT独立显示
 JEIEvents.subtypes(event => {
     event.useNBT('ae2:portable_item_cell_256k');
-})
+    
+
+})})()

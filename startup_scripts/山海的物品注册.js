@@ -1,4 +1,5 @@
 // priority: 100
+(function() {
 StartupEvents.registry('item', e =>{
     e.create('dishanhai:cosmic_probe_mk')
     .displayName('MK1—宇宙探测器')
@@ -112,4 +113,4 @@ e.create('dishanhai:time_reversal_protocol')
         .texture('dishanhai_item:item/soc')
         .tooltip('§1超§2越§3维§4度§5存§6在§7的§8造§9物，§a来§b自§c至§d高§e维§f度§4的§2回§6响')
 
-})
+})})();
