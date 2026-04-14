@@ -1,4 +1,4 @@
-const packed_cell_nbt = (list) => {
+var packed_cell_nbt = (list) => {
     let spiltedlist = list.map(id => id.split('x '));
 
     let keysNBT = spiltedlist.map(parts => {
@@ -207,8 +207,8 @@ ServerEvents.recipes((event) => {
     event.remove({ id: 'ae2:tools/fluix_pickaxe' });
 
 
-    const bandisassemblyitem = ['me_super_pattern_buffer_proxy', 'me_super_pattern_buffer', 'infinity_input_dual_hatch'];
-    const bandisassemblyitem2 = ['me_extended_export_buffer', 'me_extended_async_export_buffer', 'uv_dual_output_hatch', 'uv_dual_input_hatch', 'me_dual_hatch_stock_part_machine', 'me_input_hatch', 'me_input_bus'];
+    var bandisassemblyitem = ['me_super_pattern_buffer_proxy', 'me_super_pattern_buffer', 'infinity_input_dual_hatch'];
+    var bandisassemblyitem2 = ['me_extended_export_buffer', 'me_extended_async_export_buffer', 'uv_dual_output_hatch', 'uv_dual_input_hatch', 'me_dual_hatch_stock_part_machine', 'me_input_hatch', 'me_input_bus'];
     bandisassemblyitem.forEach(i => event.remove({ id: 'gtladditions:disassembly/' + i }));
     bandisassemblyitem2.forEach(i => event.remove({ id: 'gtceu:disassembly/' + i }));
     event.remove({ id: 'gtladditions:disassembly/wireless_energy_network_output_terminal' });

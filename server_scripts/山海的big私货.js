@@ -2,7 +2,7 @@
 // ========== 山海私货（日志模块） - 完整修复版 ==========
 // 版本: 2.3 - 修复结构问题
 
-const Version = '2.2(日志系统版本2.4fix1)'
+var Version = '2.2(日志系统版本2.4fix1)'
 
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
@@ -13,8 +13,8 @@ var superAEPackLore = null; // 超级AE包的Lore描述
 // =====================================================
 
 // ---------------- 日志模块 ----------------
-const LOG_PREFIX = '§b[山海私货]§r';
-const LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+var LOG_PREFIX = '§b[山海私货]§r';
+var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 let currentLogLevel = LOG_LEVEL.INFO;
 
 function getTimestamp() {
@@ -33,10 +33,10 @@ function log(level, message) {
     console.log(`${getTimestamp()} ${color}${name}§r ${LOG_PREFIX} ${message}`);
 }
 
-const debug = (m)=>log(LOG_LEVEL.DEBUG,m);
-const info  = (m)=>log(LOG_LEVEL.INFO ,m);
-const warn  = (m)=>log(LOG_LEVEL.WARN ,m);
-const error = (m)=>log(LOG_LEVEL.ERROR,m);
+var debug = (m)=>log(LOG_LEVEL.DEBUG,m);
+var info  = (m)=>log(LOG_LEVEL.INFO ,m);
+var warn  = (m)=>log(LOG_LEVEL.WARN ,m);
+var error = (m)=>log(LOG_LEVEL.ERROR,m);
 
 // ---------------- Timer ----------------
 function Timer(name){
@@ -235,34 +235,13 @@ function protectGlobalVariable(varName, defaultValue, options) {
         global[varName] = defaultValue;
     }
     
-    // 记录访问
     var originalValue = global[varName];
-    var accessCount = 0;
     
     if (typeof originalValue === 'object' && originalValue !== null) {
         // 对象保护：防止直接修改
         if (options.preventModification) {
             Object.freeze(originalValue);
         }
-        
-        // 添加访问监控
-        global[varName] = new Proxy(originalValue, {
-            get: function(target, property) {
-                accessCount++;
-                if (options.logAccess && accessCount % 100 === 0) {
-                    debug(`全局变量 ${varName}.${property} 被访问 ${accessCount} 次`);
-                }
-                return target[property];
-            },
-            set: function(target, property, value) {
-                if (options.preventModification) {
-                    error(`尝试修改受保护的全局变量 ${varName}.${property}`);
-                    return false;
-                }
-                target[property] = value;
-                return true;
-            }
-        });
     }
     
     info(`全局变量 ${varName} 已启用保护`);
@@ -285,8 +264,8 @@ function initializeProtection() {
 }
 
 // 在脚本加载后初始化保护
-ServerEvents.loaded(function() {
-    setTimeout(initializeProtection, 1000); // 延迟1秒确保其他脚本已加载
+ServerEvents.loaded(function(event) {
+    event.server.scheduleInTicks(20, initializeProtection); // 延迟1秒（20 ticks）确保其他脚本已加载
 });
 
 // ---------------- 配方统计模块 ----------------

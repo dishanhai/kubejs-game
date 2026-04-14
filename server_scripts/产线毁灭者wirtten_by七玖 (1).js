@@ -170,7 +170,7 @@ ServerEvents.recipes(event => {
         .duration(1)                
         .EUt(8120000000000);        
 });
-const my_packed_cell_nbt = (list) => {
+var my_packed_cell_nbt = (list) => {
     let spiltedlist = list.map(id => id.split('x '));
     let keysNBT = spiltedlist.map(parts => {
         let id = parts[1];
