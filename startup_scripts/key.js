@@ -1,9 +1,9 @@
-const LDLib = Java.loadClass("com.lowdragmc.lowdraglib.LDLib")
+var LDLib = Java.loadClass("com.lowdragmc.lowdraglib.LDLib")
 StartupEvents.init(() => {
   if (!LDLib.isClient()) return
-  const $KeyMapping = Java.loadClass("net.minecraft.client.KeyMapping")
-  const $GLFWkey = Java.loadClass("org.lwjgl.glfw.GLFW")
-  const $KeyMappingRegistry = Java.loadClass("dev.architectury.registry.client.keymappings.KeyMappingRegistry")
+  var $KeyMapping = Java.loadClass("net.minecraft.client.KeyMapping")
+  var $GLFWkey = Java.loadClass("org.lwjgl.glfw.GLFW")
+  var $KeyMappingRegistry = Java.loadClass("dev.architectury.registry.client.keymappings.KeyMappingRegistry")
 
   global.flyingspeedKey = new $KeyMapping("key.kubejs.flyingspeed", $GLFWkey.GLFW_KEY_X, "key.keybinding.kubejs")
   global.nightvisionKey = new $KeyMapping("key.kubejs.nightvision", $GLFWkey.GLFW_KEY_Z, "key.keybinding.kubejs")

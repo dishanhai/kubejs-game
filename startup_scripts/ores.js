@@ -1,6 +1,6 @@
 // priority: 95
-const BlockBehaviour = Java.loadClass("net.minecraft.world.level.block.state.BlockBehaviour")
-const BlockTags = Java.loadClass("net.minecraft.tags.BlockTags")
+var BlockBehaviour = Java.loadClass("net.minecraft.world.level.block.state.BlockBehaviour")
+var BlockTags = Java.loadClass("net.minecraft.tags.BlockTags")
 WorldgenEvents.remove(event => {
     event.removeFeatureById("underground_ores", ["ad_astra:moon_desh_ore", "ad_astra:moon_iron_ore", "ad_astra:moon_ice_shard_ore",
         "ad_astra:mars_iron_ore", "ad_astra:mars_diamond_ore", "ad_astra:mars_ostrum_ore", "ad_astra:mars_ice_shard_ore",

@@ -170,8 +170,8 @@ GTCEuStartupEvents.registry("gtceu:material", event => {
     .fluid()
     .plasma()
 })
-const $CoilWorkableElectricMultiblockMachine = Java.loadClass("com.gregtechceu.gtceu.api.machine.multiblock.CoilWorkableElectricMultiblockMachine")
-const $NumberUtils = Java.loadClass("org.gtlcore.gtlcore.utils.NumberUtils")
+var $CoilWorkableElectricMultiblockMachine = Java.loadClass("com.gregtechceu.gtceu.api.machine.multiblock.CoilWorkableElectricMultiblockMachine")
+var $NumberUtils = Java.loadClass("org.gtlcore.gtlcore.utils.NumberUtils")
 GTCEuStartupEvents.registry('gtceu:machine',event=>{
      event.create("advanced_chemical_distort", "multiblock", (holder) => new $CoilWorkableElectricMultiblockMachine(holder))
         .rotationState(RotationState.ALL)

@@ -21,9 +21,9 @@ StartupEvents.registry('item', event => {
     });
 });
 
-const $KeyMapping = Java.loadClass("net.minecraft.client.KeyMapping");
-const $GLFW = Java.loadClass("org.lwjgl.glfw.GLFW");
-const $KeyMappingRegistry = Java.loadClass("dev.architectury.registry.client.keymappings.KeyMappingRegistry");
+var $KeyMapping = Java.loadClass("net.minecraft.client.KeyMapping");
+var $GLFW = Java.loadClass("org.lwjgl.glfw.GLFW");
+var $KeyMappingRegistry = Java.loadClass("dev.architectury.registry.client.keymappings.KeyMappingRegistry");
 
 global.ttwToggleKey = new $KeyMapping(
     "key.kubejs.ttw_toggle",
