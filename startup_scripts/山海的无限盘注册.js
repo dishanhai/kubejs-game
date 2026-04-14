@@ -74,7 +74,7 @@ StartupEvents.modifyCreativeTab("expatternprovider:tab_main", e => {
     });
 
     // 无限染料元件批处理（固定33个物品列表，与无限染料元件包pro保持一致）
-    const inf_dyes = [
+/*    const inf_dyes = [
         // 原版染料（16种）
         'minecraft:white_dye', 'minecraft:orange_dye', 'minecraft:magenta_dye', 'minecraft:light_blue_dye',
         'minecraft:yellow_dye', 'minecraft:lime_dye', 'minecraft:pink_dye', 'minecraft:gray_dye',
@@ -90,5 +90,9 @@ StartupEvents.modifyCreativeTab("expatternprovider:tab_main", e => {
     ];
     inf_dyes.forEach((i) => {
         e.add(Item.of("expatternprovider:infinity_cell", `{record:{"#c":"ae2:i",id:"${i}"}}`));
-    });
+    });*/
+
+
+
+    
 })
