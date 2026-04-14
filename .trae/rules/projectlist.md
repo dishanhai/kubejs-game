@@ -24,3 +24,5 @@ C:\Users\dishanhai\Desktop\山海的神人私货2.2fix1路径下
 输出对应的修改提示，包括修改的文件、修改的位置、修改的内容
 注意变量，避免重复定义或修改已有的变量，否则会导致脚本运行错误
 允许调用主文件内的全局api
+需要测试的脚本默认写在D:\minecraft\gtl\.minecraft\versions\六周目2\.minecraft\versions\GTL六周目游戏路径下
+可以多调用其他文件看其他文件的实现

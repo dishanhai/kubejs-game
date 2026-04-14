@@ -108,6 +108,251 @@ function recordRecipe(type, ok, id, msg){
     }
 }
 
+// =====================================================
+// =============== 动态彩色名称系统 =================
+// =====================================================
+
+/**
+ * HSL颜色转换为RGB颜色
+ * 
+ * @param {number} h - 色相 (0-1)
+ * @param {number} s - 饱和度 (0-1)
+ * @param {number} l - 亮度 (0-1)
+ * @returns {Array} [r, g, b] 范围 0-255
+ */
+function hslToRgb(h, s, l) {
+    let r, g, b;
+    
+    if (s === 0) {
+        r = g = b = l; // 灰色
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+        
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+/**
+ * RGB颜色转换为十六进制颜色代码
+ * 
+ * @param {number} r - 红色 (0-255)
+ * @param {number} g - 绿色 (0-255)
+ * @param {number} b - 蓝色 (0-255)
+ * @returns {string} 十六进制颜色代码，如 "#FF0000"
+ */
+function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+}
+
+/**
+ * 获取动态颜色
+ * 
+ * 根据当前时间和速度参数生成动态变化的颜色。
+ * 使用HSL颜色模型实现平滑的颜色循环。
+ * 
+ * @param {number} [time] - 时间基准，如果不提供则使用游戏时间 (ticks)
+ * @param {number} [speed] - 颜色变化速度，默认0.001（约每3秒完成一次完整色相循环）
+ * @returns {string} Minecraft颜色代码，格式为 "§x§R§R§G§G§B§B"
+ */
+function getDynamicColor(time, speed) {
+    // 如果没有提供时间，使用游戏时间（ticks）
+    if (time === undefined) {
+        // 尝试获取游戏时间，如果不可用则使用现实时间
+        try {
+            time = Utils.time() || Date.now() / 50; // 模拟游戏时间
+        } catch (e) {
+            time = Date.now() / 50; // 每50ms约等于1 tick
+        }
+    }
+    
+    // 设置默认速度
+    if (speed === undefined) {
+        speed = 0.001;
+    }
+    
+    // 计算色相（0-1范围，循环）
+    const hue = (time * speed) % 1;
+    
+    // 固定饱和度和亮度，使颜色鲜艳但不太刺眼
+    const saturation = 0.8;
+    const lightness = 0.6;
+    
+    // 转换为RGB
+    const rgbArray = hslToRgb(hue, saturation, lightness);
+    const r = rgbArray[0];
+    const g = rgbArray[1];
+    const b = rgbArray[2];
+    
+    // 转换为Minecraft颜色代码格式
+    const hex = rgbToHex(r, g, b);
+    // Minecraft RGB格式: §x§R§R§G§G§B§B
+    const r1 = hex[1];
+    const r2 = hex[2];
+    const g1 = hex[3];
+    const g2 = hex[4];
+    const b1 = hex[5];
+    const b2 = hex[6];
+    
+    return "§x§" + r1 + "§" + r2 + "§" + g1 + "§" + g2 + "§" + b1 + "§" + b2;
+}
+
+/**
+ * 获取彩虹颜色序列
+ * 
+ * 生成彩虹色效果，每个字符使用不同的颜色。
+ * 
+ * @param {string} text - 要着色的文本
+ * @param {number} [time] - 时间基准
+ * @param {number} [speed] - 颜色变化速度，默认0.005
+ * @param {number} [offset] - 颜色偏移量，默认0.1
+ * @returns {string} 彩色文本
+ */
+function getRainbowText(text, time, speed, offset) {
+    if (time === undefined) {
+        try {
+            time = Utils.time() || Date.now() / 50;
+        } catch (e) {
+            time = Date.now() / 50;
+        }
+    }
+    
+    // 设置默认速度
+    if (speed === undefined) {
+        speed = 0.005;
+    }
+    
+    // 设置默认偏移量
+    if (offset === undefined) {
+        offset = 0.1;
+    }
+    
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        // 每个字符使用略微不同的时间偏移
+        const charTime = time + i * offset;
+        const color = getDynamicColor(charTime, speed);
+        result += color + char;
+    }
+    return result + "§r"; // 重置颜色
+}
+
+/**
+ * 获取渐变文本
+ * 
+ * 在两种颜色之间创建平滑渐变。
+ * 
+ * @param {string} text - 要着色的文本
+ * @param {string} startColor - 起始颜色（十六进制，如 "#FF0000"）
+ * @param {string} endColor - 结束颜色（十六进制，如 "#0000FF"）
+ * @returns {string} 渐变文本
+ */
+function getGradientText(text, startColor, endColor) {
+    // 解析起始颜色
+    const startR = parseInt(startColor.slice(1, 3), 16);
+    const startG = parseInt(startColor.slice(3, 5), 16);
+    const startB = parseInt(startColor.slice(5, 7), 16);
+    
+    // 解析结束颜色
+    const endR = parseInt(endColor.slice(1, 3), 16);
+    const endG = parseInt(endColor.slice(3, 5), 16);
+    const endB = parseInt(endColor.slice(5, 7), 16);
+    
+    let result = "";
+    const length = text.length;
+    
+    for (let i = 0; i < length; i++) {
+        const progress = i / (length - 1 || 1); // 0到1
+        
+        // 计算当前颜色
+        const r = Math.round(startR + (endR - startR) * progress);
+        const g = Math.round(startG + (endG - startG) * progress);
+        const b = Math.round(startB + (endB - startB) * progress);
+        
+        // 转换为Minecraft颜色代码
+        const hex = rgbToHex(r, g, b);
+        const r1 = hex[1];
+        const r2 = hex[2];
+        const g1 = hex[3];
+        const g2 = hex[4];
+        const b1 = hex[5];
+        const b2 = hex[6];
+        
+        const colorCode = "§x§" + r1 + "§" + r2 + "§" + g1 + "§" + g2 + "§" + b1 + "§" + b2;
+        result += colorCode + text[i];
+    }
+    
+    return result + "§r";
+}
+
+/**
+ * 创建动态彩色文本组件
+ * 
+ * 使用Component API创建动态彩色文本，适合在聊天或物品名称中使用。
+ * 
+ * @param {string} text - 文本内容
+ * @param {Object} [options] - 选项
+ * @param {string} [options.mode] - 颜色模式: 'dynamic', 'rainbow', 'gradient'
+ * @param {number} [options.speed] - 颜色变化速度
+ * @param {string} [options.startColor] - 渐变起始颜色（仅渐变模式）
+ * @param {string} [options.endColor] - 渐变结束颜色（仅渐变模式）
+ * @returns {Component} 彩色文本组件
+ */
+function createDynamicText(text, options) {
+    // 设置默认选项
+    if (options === undefined) {
+        options = {};
+    }
+    
+    const mode = options.mode || 'dynamic';
+    const speed = options.speed || (mode === 'rainbow' ? 0.005 : 0.001);
+    
+    let coloredText;
+    
+    switch (mode) {
+        case 'rainbow':
+            coloredText = getRainbowText(text, undefined, speed);
+            break;
+            
+        case 'gradient':
+            if (options.startColor && options.endColor) {
+                coloredText = getGradientText(text, options.startColor, options.endColor);
+            } else {
+                // 默认红到蓝渐变
+                coloredText = getGradientText(text, '#FF0000', '#0000FF');
+            }
+            break;
+            
+        case 'dynamic':
+        default:
+            const color = getDynamicColor(undefined, speed);
+            coloredText = color + text + "§r";
+            break;
+    }
+    
+    // 使用Component API创建文本
+    try {
+        return Component.literal(coloredText);
+    } catch (e) {
+        // 如果Component API不可用，返回普通字符串
+        return coloredText;
+    }
+}
+
 let syncStatsToGlobal = function() {
     let statsCopy = JSON.parse(JSON.stringify(recipeStats));
     statsCopy.loaded = true;
@@ -493,6 +738,130 @@ global.shanhaiRecipeAPI = {
      */
     getSystemStatus: function() {
         return getSystemStatus();
+    },
+    
+    /**
+     * 获取动态颜色
+     * 
+     * 根据当前时间和速度参数生成动态变化的颜色。
+     * 使用HSL颜色模型实现平滑的颜色循环。
+     * 
+     * @function getDynamicColor
+     * @memberof shanhaiRecipeAPI
+     * @param {number} [time] - 时间基准，如果不提供则使用游戏时间 (ticks)
+     * @param {number} [speed] - 颜色变化速度，默认0.001（约每3秒完成一次完整色相循环）
+     * @returns {string} Minecraft颜色代码，格式为 "§x§R§R§G§G§B§B"
+     * @example
+     * let color = global.shanhaiRecipeAPI.getDynamicColor();
+     * console.log(color); // 输出: §x§F§F§0§0§0§0 (动态变化的颜色)
+     */
+    getDynamicColor: function(time, speed) {
+        return getDynamicColor(time, speed);
+    },
+    
+    /**
+     * 获取彩虹颜色序列
+     * 
+     * 生成彩虹色效果，每个字符使用不同的颜色。
+     * 
+     * @function getRainbowText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @param {number} [time] - 时间基准
+     * @param {number} [speed] - 颜色变化速度，默认0.005
+     * @param {number} [offset] - 颜色偏移量，默认0.1
+     * @returns {string} 彩色文本
+     * @example
+     * let rainbow = global.shanhaiRecipeAPI.getRainbowText("山海私货");
+     * console.log(rainbow); // 输出: §x§F§F§0§0§0§0山§x§F§F§7§F§0§0海§x§F§F§F§F§0§0私§x§0§0§F§F§0§0货§r
+     */
+    getRainbowText: function(text, time, speed, offset) {
+        return getRainbowText(text, time, speed, offset);
+    },
+    
+    /**
+     * 获取渐变文本
+     * 
+     * 在两种颜色之间创建平滑渐变。
+     * 
+     * @function getGradientText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @param {string} startColor - 起始颜色（十六进制，如 "#FF0000"）
+     * @param {string} endColor - 结束颜色（十六进制，如 "#0000FF"）
+     * @returns {string} 渐变文本
+     * @example
+     * let gradient = global.shanhaiRecipeAPI.getGradientText("山海私货", "#FF0000", "#0000FF");
+     * console.log(gradient); // 输出: 从红到蓝渐变的文本
+     */
+    getGradientText: function(text, startColor, endColor) {
+        return getGradientText(text, startColor, endColor);
+    },
+    
+    /**
+     * 创建动态彩色文本组件
+     * 
+     * 使用Component API创建动态彩色文本，适合在聊天或物品名称中使用。
+     * 
+     * @function createDynamicText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 文本内容
+     * @param {Object} [options] - 选项
+     * @param {string} [options.mode] - 颜色模式: 'dynamic', 'rainbow', 'gradient'
+     * @param {number} [options.speed] - 颜色变化速度
+     * @param {string} [options.startColor] - 渐变起始颜色（仅渐变模式）
+     * @param {string} [options.endColor] - 渐变结束颜色（仅渐变模式）
+     * @returns {Component|string} 彩色文本组件或字符串
+     * @example
+     * // 创建动态颜色文本
+     * let dynamicText = global.shanhaiRecipeAPI.createDynamicText("动态文本");
+     * 
+     * // 创建彩虹文本
+     * let rainbowText = global.shanhaiRecipeAPI.createDynamicText("彩虹文本", { mode: 'rainbow' });
+     * 
+     * // 创建渐变文本
+     * let gradientText = global.shanhaiRecipeAPI.createDynamicText("渐变文本", { 
+     *     mode: 'gradient', 
+     *     startColor: '#FF0000', 
+     *     endColor: '#0000FF' 
+     * });
+     */
+    createDynamicText: function(text, options) {
+        return createDynamicText(text, options);
+    },
+    
+    /**
+     * HSL颜色转换为RGB颜色（工具函数）
+     * 
+     * @function hslToRgb
+     * @memberof shanhaiRecipeAPI
+     * @param {number} h - 色相 (0-1)
+     * @param {number} s - 饱和度 (0-1)
+     * @param {number} l - 亮度 (0-1)
+     * @returns {Array} [r, g, b] 范围 0-255
+     * @example
+     * let rgb = global.shanhaiRecipeAPI.hslToRgb(0.5, 1, 0.5); // 青色
+     * console.log(rgb); // 输出: [0, 255, 255]
+     */
+    hslToRgb: function(h, s, l) {
+        return hslToRgb(h, s, l);
+    },
+    
+    /**
+     * RGB颜色转换为十六进制颜色代码（工具函数）
+     * 
+     * @function rgbToHex
+     * @memberof shanhaiRecipeAPI
+     * @param {number} r - 红色 (0-255)
+     * @param {number} g - 绿色 (0-255)
+     * @param {number} b - 蓝色 (0-255)
+     * @returns {string} 十六进制颜色代码，如 "#FF0000"
+     * @example
+     * let hex = global.shanhaiRecipeAPI.rgbToHex(255, 0, 0); // 红色
+     * console.log(hex); // 输出: "#FF0000"
+     */
+    rgbToHex: function(r, g, b) {
+        return rgbToHex(r, g, b);
     }
 };
 
