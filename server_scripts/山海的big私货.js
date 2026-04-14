@@ -83,6 +83,212 @@ function broadcastRecipeError(type, id, errorMsg) {
     }
 }
 
+// =====================================================
+// =============== API保护模块 ==================
+// =====================================================
+
+// ---------------- 输入验证 ----------------
+function validateString(param, paramName, minLength, maxLength) {
+    if (typeof param !== 'string') {
+        throw new Error(`参数 ${paramName} 必须是字符串类型，实际类型: ${typeof param}`);
+    }
+    if (minLength !== undefined && param.length < minLength) {
+        throw new Error(`参数 ${paramName} 长度不能小于 ${minLength}，实际长度: ${param.length}`);
+    }
+    if (maxLength !== undefined && param.length > maxLength) {
+        throw new Error(`参数 ${paramName} 长度不能大于 ${maxLength}，实际长度: ${param.length}`);
+    }
+    return param;
+}
+
+function validateBoolean(param, paramName) {
+    if (typeof param !== 'boolean') {
+        throw new Error(`参数 ${paramName} 必须是布尔类型，实际类型: ${typeof param}`);
+    }
+    return param;
+}
+
+function validateNumber(param, paramName, min, max) {
+    if (typeof param !== 'number' || isNaN(param)) {
+        throw new Error(`参数 ${paramName} 必须是有效数字，实际类型: ${typeof param}`);
+    }
+    if (min !== undefined && param < min) {
+        throw new Error(`参数 ${paramName} 不能小于 ${min}，实际值: ${param}`);
+    }
+    if (max !== undefined && param > max) {
+        throw new Error(`参数 ${paramName} 不能大于 ${max}，实际值: ${param}`);
+    }
+    return param;
+}
+
+function validateObject(param, paramName, requiredKeys) {
+    if (typeof param !== 'object' || param === null) {
+        throw new Error(`参数 ${paramName} 必须是对象，实际类型: ${typeof param}`);
+    }
+    if (requiredKeys) {
+        for (let i = 0; i < requiredKeys.length; i++) {
+            let key = requiredKeys[i];
+            if (!(key in param)) {
+                throw new Error(`参数 ${paramName} 必须包含属性: ${key}`);
+            }
+        }
+    }
+    return param;
+}
+
+// ---------------- API防护装饰器 ----------------
+function protectAPI(apiFunction, paramValidators, options) {
+    options = options || {};
+    var defaultOptions = {
+        requireOp: false,
+        maxCallPerSecond: 100,
+        logPerformance: false
+    };
+    for (var key in defaultOptions) {
+        if (options[key] === undefined) {
+            options[key] = defaultOptions[key];
+        }
+    }
+    
+    var callCount = 0;
+    var lastReset = Date.now();
+    
+    return function protectedFunction() {
+        try {
+            // 检查调用频率限制
+            var now = Date.now();
+            if (now - lastReset > 1000) { // 1秒重置
+                callCount = 0;
+                lastReset = now;
+            }
+            callCount++;
+            if (callCount > options.maxCallPerSecond) {
+                error(`API调用频率过高: ${apiFunction.name || '匿名函数'}，当前 ${callCount}/秒，限制 ${options.maxCallPerSecond}/秒`);
+                throw new Error('API调用频率过高，请稍后重试');
+            }
+            
+            // 验证参数
+            var args = Array.prototype.slice.call(arguments);
+            if (paramValidators) {
+                for (var i = 0; i < paramValidators.length; i++) {
+                    var validator = paramValidators[i];
+                    if (validator) {
+                        args[i] = validator(args[i], '参数' + (i + 1));
+                    }
+                }
+            }
+            
+            // 权限检查
+            if (options.requireOp && typeof Server !== 'undefined') {
+                var hasOp = false;
+                var players = Server.players;
+                if (players && players.length > 0) {
+                    for (var j = 0; j < players.length; j++) {
+                        if (players[j] && players[j].op) {
+                            hasOp = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasOp) {
+                    throw new Error('此API需要OP权限才能访问');
+                }
+            }
+            
+            // 执行原始函数
+            var startTime = options.logPerformance ? Date.now() : 0;
+            var result = apiFunction.apply(this, args);
+            
+            // 性能日志
+            if (options.logPerformance) {
+                var endTime = Date.now();
+                debug(`API ${apiFunction.name || '匿名函数'} 执行时间: ${endTime - startTime}ms`);
+            }
+            
+            return result;
+            
+        } catch (err) {
+            // 错误处理
+            error(`API调用失败: ${apiFunction.name || '匿名函数'} - ${err.message}`);
+            
+            // 如果是验证错误或权限错误，直接抛出
+            if (err.message.includes('参数') || err.message.includes('权限') || err.message.includes('频率')) {
+                throw err;
+            }
+            
+            // 其他错误返回安全值
+            if (options.defaultValue !== undefined) {
+                warn(`API ${apiFunction.name || '匿名函数'} 出错，返回默认值: ${options.defaultValue}`);
+                return options.defaultValue;
+            }
+            
+            // 如果没有默认值，重新抛出错误
+            throw err;
+        }
+    };
+}
+
+// ---------------- 全局变量保护 ----------------
+function protectGlobalVariable(varName, defaultValue, options) {
+    options = options || {};
+    if (global[varName] === undefined) {
+        global[varName] = defaultValue;
+    }
+    
+    // 记录访问
+    var originalValue = global[varName];
+    var accessCount = 0;
+    
+    if (typeof originalValue === 'object' && originalValue !== null) {
+        // 对象保护：防止直接修改
+        if (options.preventModification) {
+            Object.freeze(originalValue);
+        }
+        
+        // 添加访问监控
+        global[varName] = new Proxy(originalValue, {
+            get: function(target, property) {
+                accessCount++;
+                if (options.logAccess && accessCount % 100 === 0) {
+                    debug(`全局变量 ${varName}.${property} 被访问 ${accessCount} 次`);
+                }
+                return target[property];
+            },
+            set: function(target, property, value) {
+                if (options.preventModification) {
+                    error(`尝试修改受保护的全局变量 ${varName}.${property}`);
+                    return false;
+                }
+                target[property] = value;
+                return true;
+            }
+        });
+    }
+    
+    info(`全局变量 ${varName} 已启用保护`);
+}
+
+// ---------------- 初始化保护 ----------------
+function initializeProtection() {
+    info('初始化API保护系统...');
+    
+    // 保护关键全局变量
+    protectGlobalVariable('shanhaiRecipeStats', {}, { preventModification: true });
+    protectGlobalVariable('shanhaiAPI', {}, { preventModification: false });
+    protectGlobalVariable('shanhaiRecipeAPI', {}, { preventModification: false });
+    
+    // 保护内部统计变量
+    protectGlobalVariable('recipeStatsInternal', recipeStats, { preventModification: true });
+    protectGlobalVariable('typeFailedInternal', typeFailed, { preventModification: true });
+    
+    info('API保护系统初始化完成');
+}
+
+// 在脚本加载后初始化保护
+ServerEvents.loaded(function() {
+    setTimeout(initializeProtection, 1000); // 延迟1秒确保其他脚本已加载
+});
+
 // ---------------- 配方统计模块 ----------------
 let recipeStats = {
     total:0, success:0, failed:0,
@@ -363,19 +569,61 @@ let syncStatsToGlobal = function() {
 
 // ========== 山海私货全局API ==========
 global.shanhaiAPI = {
-    getStats: function() { return recipeStats; },
-    safeAddRecipe: function(type, id, recipeFunc) {
-        try {
-            recipeFunc();
-            recordRecipe(type, true, id);
-            return true;
-        } catch(err) {
-            recordRecipe(type, false, id, err.message);
-            return false;
+    getStats: protectAPI(
+        function() { return recipeStats; },
+        [], // 无参数
+        { logPerformance: true }
+    ),
+    
+    safeAddRecipe: protectAPI(
+        function(type, id, recipeFunc) {
+            try {
+                recipeFunc();
+                recordRecipe(type, true, id);
+                return true;
+            } catch(err) {
+                recordRecipe(type, false, id, err.message);
+                return false;
+            }
+        },
+        [
+            function(p) { return validateString(p, 'type', 1, 50); },
+            function(p) { return validateString(p, 'id', 1, 200); },
+            function(p) { 
+                if (typeof p !== 'function') {
+                    throw new Error('参数 recipeFunc 必须是函数，实际类型: ' + typeof p);
+                }
+                return p;
+            }
+        ],
+        { 
+            logPerformance: true,
+            requireOp: false,
+            maxCallPerSecond: 50 // 配方添加频率限制
         }
-    },
-    recordRecipe: recordRecipe,
-    syncStats: syncStatsToGlobal
+    ),
+    
+    recordRecipe: protectAPI(
+        recordRecipe,
+        [
+            function(p) { return validateString(p, 'type', 1, 50); },
+            function(p) { return validateBoolean(p, 'ok'); },
+            function(p) { return validateString(p, 'id', 1, 200); },
+            function(p) { 
+                if (p !== undefined && typeof p !== 'string') {
+                    throw new Error('参数 msg 必须是字符串或undefined，实际类型: ' + typeof p);
+                }
+                return p;
+            }
+        ],
+        { logPerformance: false }
+    ),
+    
+    syncStats: protectAPI(
+        syncStatsToGlobal,
+        [],
+        { logPerformance: true, requireOp: true }
+    )
 };
 
 // =====================================================
