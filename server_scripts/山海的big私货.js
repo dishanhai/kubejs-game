@@ -377,6 +377,122 @@ global.shanhaiRecipeAPI = {
      */
     getAllTypeStats: function() {
         return JSON.parse(JSON.stringify(recipeStats.byType));
+    },
+    
+    /**
+     * 查找配方
+     * 
+     * 在所有配方数组中查找指定ID的配方。
+     * 
+     * @function findRecipeById
+     * @memberof shanhaiRecipeAPI
+     * @param {string} id - 配方ID
+     * @returns {Object|null} 配方对象，包含配方、数组名称和索引信息
+     * @property {Object} recipe - 配方数据
+     * @property {string} arrayName - 所在数组名称
+     * @property {number} index - 在数组中的索引
+     * @example
+     * let recipe = global.shanhaiRecipeAPI.findRecipeById('mk1_comsic');
+     * if (recipe) {
+     *     console.log(`找到配方: ${recipe.recipe.id} 在 ${recipe.arrayName}[${recipe.index}]`);
+     * }
+     */
+    findRecipeById: function(id) {
+        return findRecipeById(id);
+    },
+    
+    /**
+     * 获取配方详情
+     * 
+     * 获取配方的详细信息，包括输入、输出、机器参数等。
+     * 
+     * @function getRecipeDetails
+     * @memberof shanhaiRecipeAPI
+     * @param {string|Object} recipeOrId - 配方ID或配方对象
+     * @returns {string} 配方详情字符串
+     * @example
+     * // 通过ID获取详情
+     * let details = global.shanhaiRecipeAPI.getRecipeDetails('mk1_comsic');
+     * console.log(details);
+     * 
+     * // 通过配方对象获取详情
+     * let recipe = global.shanhaiRecipeAPI.findRecipeById('mk1_comsic');
+     * if (recipe) {
+     *     let details = global.shanhaiRecipeAPI.getRecipeDetails(recipe.recipe);
+     *     console.log(details);
+     * }
+     */
+    getRecipeDetails: function(recipeOrId) {
+        if (typeof recipeOrId === 'string') {
+            let result = findRecipeById(recipeOrId);
+            if (!result) return '无配方信息';
+            return getRecipeDetails(result.recipe);
+        }
+        return getRecipeDetails(recipeOrId);
+    },
+    
+    /**
+     * 获取错误详情
+     * 
+     * 获取指定索引的错误详细信息。
+     * 
+     * @function getErrorDetails
+     * @memberof shanhaiRecipeAPI
+     * @param {number} index - 错误索引（从0开始）
+     * @returns {Object|null} 错误对象，包含类型、配方ID和错误信息
+     * @property {string} type - 机器类型
+     * @property {string} name - 配方ID
+     * @property {string} error - 错误信息
+     * @example
+     * let error = global.shanhaiRecipeAPI.getErrorDetails(0);
+     * if (error) {
+     *     console.log(`错误: ${error.type} - ${error.name}: ${error.error}`);
+     * }
+     */
+    getErrorDetails: function(index) {
+        return getErrorDetails(index);
+    },
+    
+    /**
+     * 获取性能统计
+     * 
+     * 获取配方加载的性能统计数据。
+     * 
+     * @function getPerformanceStats
+     * @memberof shanhaiRecipeAPI
+     * @returns {Object} 性能统计对象
+     * @property {number} recipeCount - 配方总数
+     * @property {number} success - 成功数量
+     * @property {number} failed - 失败数量
+     * @property {string} successRate - 成功率
+     * @property {number} errors - 错误数量
+     * @property {Object} byType - 按类型统计
+     * @example
+     * let performance = global.shanhaiRecipeAPI.getPerformanceStats();
+     * console.log(`成功率: ${performance.successRate}`);
+     */
+    getPerformanceStats: function() {
+        return getPerformanceStats();
+    },
+    
+    /**
+     * 获取系统状态
+     * 
+     * 获取山海私货系统的当前状态。
+     * 
+     * @function getSystemStatus
+     * @memberof shanhaiRecipeAPI
+     * @returns {Object} 系统状态对象
+     * @property {number} superAEPackItemCount - 超级AE包物品数量
+     * @property {string} superAEPackLore - 超级AE包Lore描述
+     * @property {string} shanhaiRecipeStats - 全局统计状态
+     * @property {Object} recipeStats - 内部统计
+     * @example
+     * let status = global.shanhaiRecipeAPI.getSystemStatus();
+     * console.log(`AE包物品数: ${status.superAEPackItemCount}`);
+     */
+    getSystemStatus: function() {
+        return getSystemStatus();
     }
 };
 
@@ -492,7 +608,7 @@ const assrecipes = [
         EUt: opv,
         duration: 20
     },
-    //这是测试配方列表 他们，用于测试错误处理机制 正常情况他们不会被启用
+    //这是测试配方列表 他们用于测试错误处理机制 正常情况他们不会被启用
      /*{ 
         id: 'test_error_recipe',
         type: 'assembler', 
@@ -2357,6 +2473,97 @@ PlayerEvents.loggedIn(event => {
     });
 });
 
+// ========== 调试工具 ==========
+// 配方查找函数
+function findRecipeById(id) {
+    // 定义所有配方数组
+    const recipeArrays = [
+        assrecipes,
+        universalRecipes,
+        suprecipes_1,
+        recipes_voidfluxs,
+        dishanhairecipes,
+        recipes,
+        recipes_electrolyzers
+    ];
+    // 遍历所有数组查找配方
+    for (let i = 0; i < recipeArrays.length; i++) {
+        const arr = recipeArrays[i];
+        if (!arr) continue;
+        for (let j = 0; j < arr.length; j++) {
+            const recipe = arr[j];
+            if (recipe && recipe.id === id) {
+                return {
+                    recipe: recipe,
+                    arrayName: getArrayName(arr),
+                    index: j
+                };
+            }
+        }
+    }
+    return null;
+}
+
+function getArrayName(arr) {
+    // 通过全局变量查找数组名称（简单实现）
+    if (arr === assrecipes) return 'assrecipes';
+    if (arr === universalRecipes) return 'universalRecipes';
+    if (arr === suprecipes_1) return 'suprecipes_1';
+    if (arr === recipes_voidfluxs) return 'recipes_voidfluxs';
+    if (arr === dishanhairecipes) return 'dishanhairecipes';
+    if (arr === recipes) return 'recipes';
+    if (arr === recipes_electrolyzers) return 'recipes_electrolyzers';
+    return 'unknown';
+}
+
+function getRecipeDetails(recipe) {
+    if (!recipe) return '无配方信息';
+    let details = 'ID: ' + recipe.id + '\n类型: ' + recipe.type + '\n';
+    if (recipe.itemInputs) details += '物品输入: ' + JSON.stringify(recipe.itemInputs) + '\n';
+    if (recipe.inputFluids) details += '流体输入: ' + JSON.stringify(recipe.inputFluids) + '\n';
+    if (recipe.itemOutputs) details += '物品输出: ' + JSON.stringify(recipe.itemOutputs) + '\n';
+    if (recipe.outputFluids) details += '流体输出: ' + JSON.stringify(recipe.outputFluids) + '\n';
+    if (recipe.EUt !== undefined) details += 'EU/t: ' + recipe.EUt + '\n';
+    if (recipe.duration !== undefined) details += '耗时: ' + recipe.duration + '\n';
+    if (recipe.circuit !== undefined) details += '电路: ' + recipe.circuit + '\n';
+    if (recipe.notConsumable !== undefined) details += '非消耗品: ' + recipe.notConsumable + '\n';
+    return details;
+}
+
+function getErrorDetails(index) {
+    if (!global.shanhaiRecipeStats || !global.shanhaiRecipeStats.errors) {
+        return null;
+    }
+    if (index < 0 || index >= global.shanhaiRecipeStats.errors.length) {
+        return null;
+    }
+    return global.shanhaiRecipeStats.errors[index];
+}
+
+function getPerformanceStats() {
+    return {
+        recipeCount: recipeStats.total,
+        success: recipeStats.success,
+        failed: recipeStats.failed,
+        successRate: recipeStats.total > 0 ? (recipeStats.success / recipeStats.total * 100).toFixed(1) + '%' : '0%',
+        errors: recipeStats.errors.length,
+        byType: recipeStats.byType
+    };
+}
+
+function getSystemStatus() {
+    return {
+        superAEPackItemCount: superAEPackItemCount,
+        superAEPackLore: superAEPackLore,
+        shanhaiRecipeStats: global.shanhaiRecipeStats ? '已加载' : '未加载',
+        recipeStats: {
+            total: recipeStats.total,
+            success: recipeStats.success,
+            failed: recipeStats.failed
+        }
+    };
+}
+
 // ========== 聊天命令 ==========
 PlayerEvents.chat(event => {
     let rawMessage = event.getMessage();
@@ -2464,6 +2671,128 @@ PlayerEvents.chat(event => {
         }
         return;
     }
+    
+    // 调试帮助命令
+    if (message === "!山海调试" || message === "!调试帮助" || message === "!shanhai debug") {
+        event.cancel();
+        player.tell(Component.gold("§m========== §l山海私货调试工具 §m=========="));
+        player.tell(Component.green("§a可用调试命令:"));
+        player.tell(Component.yellow("§e!调试配方 <ID> §7- 查看配方详情"));
+        player.tell(Component.yellow("§e!调试错误 <索引> §7- 查看错误详情"));
+        player.tell(Component.yellow("§e!调试性能 §7- 查看性能统计"));
+        player.tell(Component.yellow("§e!调试状态 §7- 查看系统状态"));
+        player.tell(Component.yellow("§e!调试导出 §7- 导出配方数据（控制台）"));
+        player.tell(Component.gold("§m=========================================="));
+        return;
+    }
+    
+    // 调试配方命令
+    if (message.startsWith("!调试配方 ")) {
+        event.cancel();
+        let id = message.substring("!调试配方 ".length).trim();
+        if (!id) {
+            player.tell(Component.red("§c✗ 请提供配方ID！"));
+            return;
+        }
+        let result = findRecipeById(id);
+        if (!result) {
+            player.tell(Component.red("§c✗ 未找到配方: " + id));
+            return;
+        }
+        player.tell(Component.gold("§m========== §l配方详情 §m=========="));
+        player.tell(Component.green("§a配方ID: §e" + result.recipe.id));
+        player.tell(Component.green("§a所在数组: §e" + result.arrayName + "[" + result.index + "]"));
+        player.tell(Component.green("§a类型: §e" + result.recipe.type));
+        let details = getRecipeDetails(result.recipe);
+        let lines = details.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim()) {
+                player.tell(Component.gray("§7" + lines[i]));
+            }
+        }
+        player.tell(Component.gold("§m=================================="));
+        return;
+    }
+    
+    // 调试错误命令
+    if (message.startsWith("!调试错误 ")) {
+        event.cancel();
+        let indexStr = message.substring("!调试错误 ".length).trim();
+        let index = parseInt(indexStr);
+        if (isNaN(index) || index < 1) {
+            player.tell(Component.red("§c✗ 请输入有效的错误索引（从1开始）！"));
+            return;
+        }
+        let error = getErrorDetails(index - 1);
+        if (!error) {
+            player.tell(Component.red("§c✗ 未找到错误索引: " + index));
+            return;
+        }
+        player.tell(Component.gold("§m========== §l错误详情 §m=========="));
+        player.tell(Component.red("§c错误索引: §e" + index));
+        player.tell(Component.red("§c类型: §e" + error.type));
+        player.tell(Component.red("§c配方: §e" + error.name));
+        player.tell(Component.red("§c错误信息: §e" + error.error));
+        player.tell(Component.gold("§m=================================="));
+        return;
+    }
+    
+    // 调试性能命令
+    if (message === "!调试性能" || message === "!shanhai performance") {
+        event.cancel();
+        let stats = getPerformanceStats();
+        player.tell(Component.gold("§m========== §l性能统计 §m=========="));
+        player.tell(Component.green("§a配方总数: §e" + stats.recipeCount));
+        player.tell(Component.green("§a成功: §e" + stats.success));
+        player.tell(Component.green("§a失败: §e" + stats.failed));
+        player.tell(Component.green("§a成功率: §e" + stats.successRate));
+        player.tell(Component.green("§a错误数: §e" + stats.errors));
+        // 按类型统计
+        let types = Object.keys(stats.byType);
+        if (types.length > 0) {
+            player.tell(Component.green("§a按类型统计:"));
+            for (let i = 0; i < types.length; i++) {
+                let type = types[i];
+                let typeStats = stats.byType[type];
+                player.tell(Component.gray("§7  " + type + ": §e" + typeStats.success + "✓/" + typeStats.failed + "✗ (总计:" + typeStats.total + ")"));
+            }
+        }
+        player.tell(Component.gold("§m=================================="));
+        return;
+    }
+    
+    // 调试状态命令
+    if (message === "!调试状态" || message === "!shanhai status") {
+        event.cancel();
+        let status = getSystemStatus();
+        player.tell(Component.gold("§m========== §l系统状态 §m=========="));
+        player.tell(Component.green("§a超级AE包物品数: §e" + status.superAEPackItemCount));
+        player.tell(Component.green("§a超级AE包Lore: §e" + (status.superAEPackLore ? "已设置" : "未设置")));
+        player.tell(Component.green("§a全局统计: §e" + status.shanhaiRecipeStats));
+        player.tell(Component.green("§a内部统计 - 总计: §e" + status.recipeStats.total));
+        player.tell(Component.green("§a内部统计 - 成功: §e" + status.recipeStats.success));
+        player.tell(Component.green("§a内部统计 - 失败: §e" + status.recipeStats.failed));
+        player.tell(Component.gold("§m=================================="));
+        return;
+    }
+    
+    // 调试导出命令
+    if (message === "!调试导出" || message === "!shanhai export") {
+        event.cancel();
+        // 导出到控制台
+        let exportData = {
+            timestamp: new Date().toISOString(),
+            recipeCount: recipeStats.total,
+            success: recipeStats.success,
+            failed: recipeStats.failed,
+            errors: recipeStats.errors,
+            byType: recipeStats.byType
+        };
+        console.log("[山海私货] 导出配方数据:", JSON.stringify(exportData, null, 2));
+        player.tell(Component.green("§a✓ 配方数据已导出到控制台！"));
+        player.tell(Component.gray("§7查看服务端日志获取详细信息"));
+        return;
+    }
 });
 
 
@@ -2474,6 +2803,6 @@ ServerEvents.loaded(event => {
     info(`§a✨ 山海的big私货 加载完成！§r`);
     info(`§6═══════════════════════════════════════════════════════════§r`);
     info(`§b📋 山海私货脚本框架加载完成§r`);
-    info(`§7可用命令: §e!山海统计§7, §e!山海错误§7, §e!刷新统计§r`);
+    info(`§7可用命令: §e!山海统计§7, §e!山海错误§7, §e!刷新统计§7, §e!山海调试§r`);
     info(`§6═══════════════════════════════════════════════════════════§r`);
 });
