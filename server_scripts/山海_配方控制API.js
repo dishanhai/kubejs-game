@@ -420,10 +420,19 @@ function saveRecipeLoadConfig() {
             debug('已修复recipeLoadConfig对象，现在有 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
         }
         
-        // 尝试保存配置
+        // 尝试保存配置 - 使用深拷贝确保纯对象
         debug('正在保存配置到global.shanhaiRecipeLoadConfig...');
-        global.shanhaiRecipeLoadConfig = recipeLoadConfig;
-        debug('配置已赋值到全局存储');
+        try {
+            // 使用JSON序列化/反序列化创建纯对象副本
+            var configCopy = JSON.parse(JSON.stringify(recipeLoadConfig));
+            global.shanhaiRecipeLoadConfig = configCopy;
+            debug('配置已通过深拷贝保存到全局存储');
+        } catch (copyErr) {
+            // 如果深拷贝失败，直接赋值（回退）
+            warn('深拷贝失败，使用直接赋值: ' + copyErr.message);
+            global.shanhaiRecipeLoadConfig = recipeLoadConfig;
+            debug('配置已通过直接赋值保存到全局存储');
+        }
         
         // 验证保存是否成功
         var savedConfig = global.shanhaiRecipeLoadConfig;
@@ -556,17 +565,16 @@ function setRecipeEnabled(recipeId, enabled) {
         return true;
     }
     
-    // 更新配置
-    recipeLoadConfig[normalizedId] = newValue;
-    debug('配置已更新，等待保存: ' + normalizedId + ' = ' + newValue + ' (原始ID: ' + recipeId + ')');
-    
-    // 验证recipeLoadConfig对象
-    if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object') {
-        error('设置配方加载状态失败: recipeLoadConfig不是有效对象，类型: ' + typeof recipeLoadConfig);
-        // 尝试修复
+    // 确保recipeLoadConfig是有效对象
+    if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
+        warn('recipeLoadConfig不是有效对象，正在修复... 类型: ' + typeof recipeLoadConfig);
         recipeLoadConfig = {};
         debug('已重置recipeLoadConfig为空对象');
     }
+    
+    // 更新配置
+    recipeLoadConfig[normalizedId] = newValue;
+    debug('配置已更新，等待保存: ' + normalizedId + ' = ' + newValue + ' (原始ID: ' + recipeId + ')');
     
     // 验证要保存的值是布尔值
     if (typeof newValue !== 'boolean') {
