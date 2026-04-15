@@ -1,9 +1,11 @@
 // priority: 50 优先级50 
+//API主控制器模块 
 // ========== 山海私货（日志模块） - 完整修复版 ==========
 (function() {
-// 版本: 2.3 - 修复结构问题
+// 版本: 2.4 - 添加配方加载控制
 
-var Version = '2.2(日志系统版本2.4fix1)'
+var Version = '2.2.4(日志系统版本2.4fix2)'
+var APIVersion = '2.4.0'
 
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
@@ -295,7 +297,7 @@ function recordRecipe(type, ok, id, msg){
 }
 
 // =====================================================
-// =============== 动态彩色名称系统 =================
+// =============== 静态彩色名称系统 =================
 // =====================================================
 
 /**
@@ -1126,6 +1128,28 @@ ServerEvents.recipes(e => {
             return false;
         }
 
+        // ---- 配方加载控制检查 (v2.4新增) ----
+        // 检查配方是否应该加载，支持多种API接口
+        var recipeEnabled = true; // 默认启用
+        
+        // 尝试从配方控制API检查
+        if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && 
+            typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
+            recipeEnabled = global.shanhaiRecipeControlAPI.isRecipeEnabled(id);
+        }
+        // 尝试从山海私货API检查（向后兼容）
+        else if (typeof global.shanhaiRecipeAPI !== 'undefined' && 
+                 typeof global.shanhaiRecipeAPI.isRecipeEnabled === 'function') {
+            recipeEnabled = global.shanhaiRecipeAPI.isRecipeEnabled(id);
+        }
+        // 如果都没有，使用默认值（启用所有配方）
+        
+        if (!recipeEnabled) {
+            debug('⏭️ 配方加载已禁用，跳过: ' + id + ' (' + type + ')');
+            recordRecipe(type, true, id, '配方加载已禁用（跳过）');
+            return true; // 返回true表示"成功跳过"，不视为失败
+        }
+
         // ---- 跳过 duration 检查 ----
         // 对于直接传入函数的情况，不检查 duration 和 EUt，由函数内部处理
         if (typeof arg3 === 'function') {
@@ -1244,7 +1268,19 @@ const assrecipes = [
         duration: 20,
         // 添加一个特殊标记，让配方函数抛出错误
         triggerJsError: true
-    }*/
+    }*/,
+    { 
+        id: 'test_recipe_load_control',
+        type: 'assembler', 
+        itemInputs: ['1x minecraft:iron_ingot', '1x minecraft:redstone'],
+        inputFluids: [],
+        notConsumable: null,
+        itemOutputs: ['1x minecraft:redstone_block'],
+        outputFluids: [],
+        circuit: null,
+        EUt: mv,
+        duration: 100
+    }
 ];
 
 // 配方验证函数
