@@ -29,3 +29,4 @@ C:\Users\dishanhai\Desktop\山海的神人私货2.2fix1路径下
 允许调用主文件内的全局api
 需要测试的脚本默认写在D:\minecraft\gtl\.minecraft\versions\六周目2\.minecraft\versions\GTL六周目游戏路径下
 可以多调用其他文件看其他文件的实现
+不要再日志或说明之类的文件中添加文件路径 仅说明文件的名称与功能

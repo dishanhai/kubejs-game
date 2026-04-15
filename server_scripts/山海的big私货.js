@@ -2,10 +2,10 @@
 //API主控制器模块 
 // ========== 山海私货（日志模块） - 完整修复版 ==========
 (function() {
-// 版本: 2.4 - 添加配方加载控制
+// 版本: 2.6 - 添加API控制系统
 
-var Version = '2.2.4(日志系统版本2.4fix2)'
-var APIVersion = '2.4.0'
+var Version = '2.2.6(日志系统版本2.6)'
+var APIVersion = '2.6.0'
 
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
@@ -1092,6 +1092,587 @@ global.shanhaiRecipeAPI = {
      */
     rgbToHex: function(r, g, b) {
         return rgbToHex(r, g, b);
+    }
+};
+
+// =====================================================
+// =============== 命令控制API =================
+// =====================================================
+
+/**
+ * 山海私货命令控制全局API
+ * 
+ * 该API提供了对山海私货命令系统的完整控制和管理功能。
+ * 允许动态注册、注销、启用、禁用自定义命令，并支持权限检查和命令统计。
+ * 所有其他KubeJS脚本都可以通过 `global.shanhaiCommandAPI` 访问。
+ * 
+ * @namespace shanhaiCommandAPI
+ * @version 1.0
+ */
+global.shanhaiCommandAPI = {
+    
+    // 命令存储对象
+    _commands: {},
+    
+    /**
+     * 注册新命令
+     * 
+     * 注册一个自定义命令到山海私货命令系统。
+     * 支持同步命令（/前缀）和聊天命令（!前缀）两种模式。
+     * 
+     * @function register
+     * @memberof shanhaiCommandAPI
+     * @param {string} name - 命令名称（不带前缀）
+     * @param {Function} handler - 命令处理函数
+     * @param {Object} [options] - 命令选项
+     * @param {string} [options.description] - 命令描述
+     * @param {boolean} [options.requiresOp] - 是否需要OP权限（默认: true）
+     * @param {Array<string>} [options.aliases] - 命令别名
+     * @param {string} [options.permission] - 自定义权限节点
+     * @param {boolean} [options.enabled] - 是否启用（默认: true）
+     * @param {Array<string>} [options.supportedPrefixes] - 支持的前缀，可选值: 'slash', 'exclamation' 或两者都包含（默认: ['slash', 'exclamation']）
+     * @returns {boolean} 是否成功注册
+     * @example
+     * // 注册一个简单命令
+     * global.shanhaiCommandAPI.register('test', function(sender, args) {
+     *     sender.tell('测试命令执行成功！参数: ' + args.join(' '));
+     *     return true;
+     * }, {
+     *     description: '测试命令',
+     *     requiresOp: false
+     * });
+     * 
+     * // 注册仅支持斜杠前缀的命令
+     * global.shanhaiCommandAPI.register('admin', function(sender, args) {
+     *     // 管理功能
+     * }, {
+     *     description: '管理员命令',
+     *     supportedPrefixes: ['slash'] // 仅支持 /admin
+     * });
+     */
+    register: function(name, handler, options) {
+        try {
+            if (!name || typeof name !== 'string') {
+                error('命令注册失败: 命令名称必须是字符串');
+                return false;
+            }
+            
+            if (typeof handler !== 'function') {
+                error('命令注册失败: 命令处理函数必须是函数');
+                return false;
+            }
+            
+            // 默认选项
+            options = options || {};
+            var command = {
+                name: name,
+                handler: handler,
+                description: options.description || '无描述',
+                requiresOp: options.requiresOp !== false, // 默认需要OP
+                aliases: options.aliases || [],
+                permission: options.permission || null,
+                enabled: options.enabled !== false, // 默认启用
+                supportedPrefixes: options.supportedPrefixes || ['slash', 'exclamation'],
+                registeredAt: new Date().toISOString(),
+                usageCount: 0
+            };
+            
+            // 检查命令是否已存在
+            if (this._commands[name]) {
+                warn(`命令 '${name}' 已存在，将被覆盖`);
+            }
+            
+            this._commands[name] = command;
+            info(`命令注册成功: ${name} (描述: ${command.description})`);
+            
+            // 注册到KubeJS命令系统（如果支持）
+            this._registerToKubeJS(name, command);
+            
+            return true;
+        } catch (err) {
+            error(`命令注册失败: ${name} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 注销命令
+     * 
+     * 从山海私货命令系统中移除指定命令。
+     * 
+     * @function unregister
+     * @memberof shanhaiCommandAPI
+     * @param {string} name - 要注销的命令名称
+     * @returns {boolean} 是否成功注销
+     * @example
+     * // 注销命令
+     * global.shanhaiCommandAPI.unregister('test');
+     */
+    unregister: function(name) {
+        try {
+            if (!this._commands[name]) {
+                warn(`命令注销失败: 命令 '${name}' 不存在`);
+                return false;
+            }
+            
+            delete this._commands[name];
+            info(`命令注销成功: ${name}`);
+            
+            // 从KubeJS命令系统中移除（需要手动处理）
+            this._unregisterFromKubeJS(name);
+            
+            return true;
+        } catch (err) {
+            error(`命令注销失败: ${name} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 启用命令
+     * 
+     * 启用之前被禁用的命令。
+     * 
+     * @function enable
+     * @memberof shanhaiCommandAPI
+     * @param {string} name - 要启用的命令名称
+     * @returns {boolean} 是否成功启用
+     * @example
+     * // 启用命令
+     * global.shanhaiCommandAPI.enable('test');
+     */
+    enable: function(name) {
+        try {
+            if (!this._commands[name]) {
+                warn(`命令启用失败: 命令 '${name}' 不存在`);
+                return false;
+            }
+            
+            this._commands[name].enabled = true;
+            info(`命令已启用: ${name}`);
+            return true;
+        } catch (err) {
+            error(`命令启用失败: ${name} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 禁用命令
+     * 
+     * 禁用命令（命令仍然存在，但无法执行）。
+     * 
+     * @function disable
+     * @memberof shanhaiCommandAPI
+     * @param {string} name - 要禁用的命令名称
+     * @returns {boolean} 是否成功禁用
+     * @example
+     * // 禁用命令
+     * global.shanhaiCommandAPI.disable('test');
+     */
+    disable: function(name) {
+        try {
+            if (!this._commands[name]) {
+                warn(`命令禁用失败: 命令 '${name}' 不存在`);
+                return false;
+            }
+            
+            this._commands[name].enabled = false;
+            info(`命令已禁用: ${name}`);
+            return true;
+        } catch (err) {
+            error(`命令禁用失败: ${name} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 列出所有命令
+     * 
+     * 获取所有已注册命令的列表。
+     * 
+     * @function list
+     * @memberof shanhaiCommandAPI
+     * @param {Object} [filter] - 过滤选项
+     * @param {boolean} [filter.enabledOnly] - 是否只显示已启用的命令
+     * @param {boolean} [filter.requiresOp] - 是否只显示需要OP的命令
+     * @returns {Array<Object>} 命令列表
+     * @example
+     * // 获取所有命令
+     * let allCommands = global.shanhaiCommandAPI.list();
+     * 
+     * // 只获取已启用的命令
+     * let enabledCommands = global.shanhaiCommandAPI.list({ enabledOnly: true });
+     */
+    list: function(filter) {
+        try {
+            filter = filter || {};
+            var commands = [];
+            
+            for (var name in this._commands) {
+                if (this._commands.hasOwnProperty(name)) {
+                    var command = this._commands[name];
+                    
+                    // 应用过滤
+                    if (filter.enabledOnly && !command.enabled) {
+                        continue;
+                    }
+                    if (filter.requiresOp !== undefined && command.requiresOp !== filter.requiresOp) {
+                        continue;
+                    }
+                    
+                    commands.push({
+                        name: name,
+                        description: command.description,
+                        requiresOp: command.requiresOp,
+                        enabled: command.enabled,
+                        aliases: command.aliases,
+                        supportedPrefixes: command.supportedPrefixes,
+                        usageCount: command.usageCount,
+                        registeredAt: command.registeredAt
+                    });
+                }
+            }
+            
+            return commands;
+        } catch (err) {
+            error(`获取命令列表失败: ${err.message}`);
+            return [];
+        }
+    },
+    
+    /**
+     * 获取命令信息
+     * 
+     * 获取指定命令的详细信息。
+     * 
+     * @function getInfo
+     * @memberof shanhaiCommandAPI
+     * @param {string} name - 命令名称
+     * @returns {Object|null} 命令信息，如果不存在则返回null
+     * @example
+     * // 获取命令信息
+     * let info = global.shanhaiCommandAPI.getInfo('test');
+     * if (info) {
+     *     console.log(`命令: ${info.name}, 描述: ${info.description}, 启用: ${info.enabled}`);
+     * }
+     */
+    getInfo: function(name) {
+        try {
+            if (!this._commands[name]) {
+                return null;
+            }
+            
+            var command = this._commands[name];
+            return {
+                name: name,
+                description: command.description,
+                requiresOp: command.requiresOp,
+                enabled: command.enabled,
+                aliases: command.aliases,
+                permission: command.permission,
+                supportedPrefixes: command.supportedPrefixes,
+                usageCount: command.usageCount,
+                registeredAt: command.registeredAt
+            };
+        } catch (err) {
+            error(`获取命令信息失败: ${name} - ${err.message}`);
+            return null;
+        }
+    },
+    
+    /**
+     * 检查命令权限
+     * 
+     * 检查玩家是否有权限执行指定命令。
+     * 
+     * @function checkPermission
+     * @memberof shanhaiCommandAPI
+     * @param {Object} player - 玩家对象
+     * @param {string} commandName - 命令名称
+     * @returns {boolean} 是否有权限
+     * @example
+     * // 在命令处理函数中检查权限
+     * function handleCommand(sender, args) {
+     *     if (!global.shanhaiCommandAPI.checkPermission(sender, 'admin')) {
+     *         sender.tell('§c你没有权限执行此命令！');
+     *         return false;
+     *     }
+     *     // 执行命令逻辑
+     * }
+     */
+    checkPermission: function(player, commandName) {
+        try {
+            var command = this._commands[commandName];
+            if (!command) {
+                return false;
+            }
+            
+            // 检查命令是否启用
+            if (!command.enabled) {
+                return false;
+            }
+            
+            // 检查OP权限
+            if (command.requiresOp && (!player || !player.op)) {
+                return false;
+            }
+            
+            // 检查自定义权限节点
+            if (command.permission && player && player.hasPermission) {
+                return player.hasPermission(command.permission);
+            }
+            
+            return true;
+        } catch (err) {
+            error(`检查命令权限失败: ${commandName} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 执行命令
+     * 
+     * 手动执行指定命令（内部使用）。
+     * 
+     * @function _execute
+     * @memberof shanhaiCommandAPI
+     * @private
+     * @param {Object} sender - 命令发送者（玩家或控制台）
+     * @param {string} commandName - 命令名称
+     * @param {Array<string>} args - 命令参数
+     * @param {string} prefix - 命令前缀（'slash' 或 'exclamation'）
+     * @returns {boolean} 是否执行成功
+     */
+    _execute: function(sender, commandName, args, prefix) {
+        try {
+            var command = this._commands[commandName];
+            if (!command) {
+                return false;
+            }
+            
+            // 检查命令是否启用
+            if (!command.enabled) {
+                if (sender && sender.tell) {
+                    sender.tell(`§c命令 '${commandName}' 已被禁用`);
+                }
+                return false;
+            }
+            
+            // 检查支持的前缀
+            if (!command.supportedPrefixes.includes(prefix)) {
+                if (sender && sender.tell) {
+                    sender.tell(`§c命令 '${commandName}' 不支持 ${prefix === 'slash' ? '/' : '!'} 前缀`);
+                }
+                return false;
+            }
+            
+            // 检查权限
+            if (!this.checkPermission(sender, commandName)) {
+                if (sender && sender.tell) {
+                    sender.tell('§c你没有权限执行此命令！');
+                }
+                return false;
+            }
+            
+            // 执行命令处理函数
+            command.usageCount++;
+            return command.handler(sender, args);
+        } catch (err) {
+            error(`命令执行失败: ${commandName} - ${err.message}`);
+            if (sender && sender.tell) {
+                sender.tell(`§c命令执行时发生错误: ${err.message}`);
+            }
+            return false;
+        }
+    },
+    
+    /**
+     * 注册到KubeJS命令系统（内部使用）
+     * 
+     * @function _registerToKubeJS
+     * @memberof shanhaiCommandAPI
+     * @private
+     * @param {string} name - 命令名称
+     * @param {Object} command - 命令对象
+     */
+    _registerToKubeJS: function(name, command) {
+        // 此函数在实际命令注册时被调用
+        // KubeJS命令注册通常在ServerEvents.commandRegistry事件中处理
+        // 这里只记录信息，实际注册由事件监听器处理
+        debug(`命令 '${name}' 已准备好注册到KubeJS系统`);
+    },
+    
+    /**
+     * 从KubeJS命令系统中移除（内部使用）
+     * 
+     * @function _unregisterFromKubeJS
+     * @memberof shanhaiCommandAPI
+     * @private
+     * @param {string} name - 命令名称
+     */
+    _unregisterFromKubeJS: function(name) {
+        // 此函数在实际命令注销时被调用
+        // KubeJS命令无法动态注销，但可以标记为禁用
+        debug(`命令 '${name}' 已从KubeJS系统中标记为移除`);
+    },
+    
+    /**
+     * 处理斜杠命令（/前缀）
+     * 
+     * 用于ServerEvents.commandRegistry事件处理。
+     * 
+     * @function handleSlashCommand
+     * @memberof shanhaiCommandAPI
+     * @param {Object} event - KubeJS命令事件
+     * @param {string} command - 命令名称
+     * @param {Array<string>} args - 命令参数
+     */
+    handleSlashCommand: function(event, command, args) {
+        try {
+            var sender = event.source;
+            var result = this._execute(sender, command, args, 'slash');
+            
+            if (!result && sender && sender.tell) {
+                // 命令不存在或执行失败，显示帮助
+                var availableCommands = this.list({ enabledOnly: true })
+                    .filter(cmd => cmd.supportedPrefixes.includes('slash'))
+                    .map(cmd => `§e/${cmd.name}§7 - ${cmd.description}`)
+                    .join('\n');
+                
+                if (availableCommands) {
+                    sender.tell('§6=== 可用命令 ===\n' + availableCommands);
+                } else {
+                    sender.tell('§c没有可用的命令');
+                }
+            }
+        } catch (err) {
+            error(`处理斜杠命令失败: ${command} - ${err.message}`);
+        }
+    },
+    
+    /**
+     * 处理感叹号命令（!前缀）
+     * 
+     * 用于PlayerEvents.chat事件处理。
+     * 
+     * @function handleExclamationCommand
+     * @memberof shanhaiCommandAPI
+     * @param {Object} player - 玩家对象
+     * @param {string} message - 聊天消息
+     * @returns {boolean} 是否处理了命令（如果返回true，则阻止原始消息）
+     */
+    handleExclamationCommand: function(player, message) {
+        try {
+            if (!message.startsWith('!')) {
+                return false;
+            }
+            
+            var parts = message.substring(1).trim().split(/\s+/);
+            if (parts.length === 0) {
+                return false;
+            }
+            
+            var command = parts[0];
+            var args = parts.slice(1);
+            
+            var result = this._execute(player, command, args, 'exclamation');
+            return result !== false; // 如果命令存在且执行成功，则阻止原始消息
+        } catch (err) {
+            error(`处理感叹号命令失败: ${message} - ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 获取命令统计
+     * 
+     * 获取命令系统的统计信息。
+     * 
+     * @function getStats
+     * @memberof shanhaiCommandAPI
+     * @returns {Object} 统计信息
+     * @property {number} total - 命令总数
+     * @property {number} enabled - 启用命令数
+     * @property {number} disabled - 禁用命令数
+     * @property {number} requiresOp - 需要OP的命令数
+     * @property {number} totalUsage - 总使用次数
+     * @example
+     * let stats = global.shanhaiCommandAPI.getStats();
+     * console.log(`命令统计: ${stats.total}个命令, ${stats.enabled}个启用, ${stats.disabled}个禁用`);
+     */
+    getStats: function() {
+        try {
+            var stats = {
+                total: 0,
+                enabled: 0,
+                disabled: 0,
+                requiresOp: 0,
+                totalUsage: 0
+            };
+            
+            for (var name in this._commands) {
+                if (this._commands.hasOwnProperty(name)) {
+                    var command = this._commands[name];
+                    stats.total++;
+                    stats.totalUsage += command.usageCount;
+                    
+                    if (command.enabled) {
+                        stats.enabled++;
+                    } else {
+                        stats.disabled++;
+                    }
+                    
+                    if (command.requiresOp) {
+                        stats.requiresOp++;
+                    }
+                }
+            }
+            
+            return stats;
+        } catch (err) {
+            error(`获取命令统计失败: ${err.message}`);
+            return { total: 0, enabled: 0, disabled: 0, requiresOp: 0, totalUsage: 0 };
+        }
+    },
+    
+    /**
+     * 重置命令统计
+     * 
+     * 重置所有命令的使用计数。
+     * 
+     * @function resetStats
+     * @memberof shanhaiCommandAPI
+     * @returns {boolean} 是否成功重置
+     * @example
+     * // 重置命令统计
+     * global.shanhaiCommandAPI.resetStats();
+     */
+    resetStats: function() {
+        try {
+            for (var name in this._commands) {
+                if (this._commands.hasOwnProperty(name)) {
+                    this._commands[name].usageCount = 0;
+                }
+            }
+            
+            info('命令统计已重置');
+            return true;
+        } catch (err) {
+            error(`重置命令统计失败: ${err.message}`);
+            return false;
+        }
+    },
+    
+    /**
+     * 获取API版本
+     * 
+     * @function getVersion
+     * @memberof shanhaiCommandAPI
+     * @returns {string} API版本
+     */
+    getVersion: function() {
+        return '1.0';
     }
 };
 
@@ -2620,7 +3201,7 @@ ServerEvents.recipes(event => {
         var superAEPackItemList = [
             '1x constructionwand:infinity_wand','16777216x expatternprovider:ex_pattern_provider','1x gtceu:echoite_vajra','4x expatternprovider:ex_pattern_access_part','16777216x expatternprovider:ex_import_bus_part','16777216x expatternprovider:ex_export_bus_part','10x ironfurnaces:unobtainium_furnace','16x expatternprovider:ex_drive','1x mekanism:mekasuit_helmet','1x mekanism:mekasuit_bodyarmor','1x mekanism:mekasuit_pants','1x mekanism:mekasuit_boots','3x ae2:quantum_entangled_singularity','1x gtmadvancedhatch:net_data_stick','1x ae2:portable_item_cell_1k','1x gtmadvancedhatch:adaptive_net_energy_terminal','16777216x gtmadvancedhatch:adaptive_net_laser_source_hatch','16777216x gtmadvancedhatch:adaptive_net_energy_output_hatch','1x ae2wtlib:wireless_universal_terminal','16777216x expatternprovider:wireless_connect','4x ae2:pattern_encoding_terminal','16777216x gtceu:me_input_hatch','16777216x ae2:capacity_card','1x ae2:wireless_access_point','4x minecraft:flint_and_steel','1x sov:spear_of_void','100x avaritia:star_fuel','1x ironfurnaces:augment_generator','16777216x ae2:fuzzy_card','16777216x minecraft:orange_dye',
             '16777216x minecraft:light_gray_dye','16777216x minecraft:light_blue_dye','16777216x ae2:void_card','16777216x minecraft:gray_dye','16777216x ae2:basic_card','16777216x ae2:equal_distribution_card','16777216x minecraft:magenta_dye','16777216x ae2:crafting_card','16777216x ae2:inverter_card','16777216x ae2:speed_card','32x ae2:creative_energy_cell','16777216x ae2:quantum_link','16777216x ae2:quantum_ring','16777216x gtceu:me_input_bus','16777216x expatternprovider:assembler_matrix_glass','16777216x ae2:crafting_terminal','16777216x expatternprovider:ex_interface','16777216x ae2:fluix_smart_cable','16777216x ae2:fluix_glass_cable','16777216x ae2:fluix_covered_dense_cable','16777216x ae2:fluix_smart_dense_cable','16777216x ae2:blank_pattern','16777216x minecraft:pink_dye','16777216x minecraft:purple_dye','16777216x minecraft:red_dye','16777216x ae2:cable_anchor','16777216x ae2:redstone_card','16777216x ae2:logic_processor','16777216x ae2:calculation_processor','16777216x ae2:engineering_processor',
-            '16777216x minecraft:black_dye','16777216x minecraft:yellow_dye','16777216x minecraft:green_dye','16777216x minecraft:blue_dye','16777216x minecraft:lime_dye','16777216x ae2:advanced_card','16777216x minecraft:cyan_dye','16777216x minecraft:white_dye','16777216x ae2:quartz_fiber','16777216x expatternprovider:ex_io_port','16777216x ae2:level_emitter','16777216x ae2:toggle_bus','16777216x gtladditions:infinity_input_dual_hatch','16777216x gtladditions:me_super_pattern_buffer','16777216x gtladditions:me_super_pattern_buffer_proxy','16777216x gtceu:uv_dual_output_hatch','16777216x gtceu:uv_dual_input_hatch','16777216x gtceu:me_extended_export_buffer','16777216x gtceu:me_extended_async_export_buffer','16777216x gtceu:tag_filter_me_stock_bus_part_machine','16777216x gtceu:me_dual_hatch_stock_part_machine','16777216x extendedae_plus:assembler_matrix_speed_plus','16777216x extendedae_plus:assembler_matrix_crafter_plus','16777216x extendedae_plus:assembler_matrix_pattern_plus','16777216x extendedae_plus:assembler_matrix_upload_core','1024x extendedae_plus:1024x_crafting_accelerator','16777216x extendedae_plus:labeled_wireless_transceiver','16777216x merequester:requester','16777216x extendedae_plus:wireless_transceiver','16777216x extendedae_plus:channel_card',
+            '16777216x minecraft:black_dye','16777216x minecraft:yellow_dye','16777216x minecraft:green_dye','16777216x minecraft:blue_dye','16777216x minecraft:lime_dye','16777216x ae2:advanced_card','16777216x minecraft:cyan_dye','16777216x minecraft:white_dye','16777216x ae2:quartz_fiber','16777216x expatternprovider:ex_io_port','16777216x ae2:level_emitter','16777216x ae2:toggle_bus','16777216x gtladditions:infinity_input_dual_hatch','16777216x gtladditions:me_super_pattern_buffer','16777216x gtladditions:me_super_pattern_buffer_proxy','16777216x gtceu:uv_dual_output_hatch','16777216x gtceu:uv_dual_input_hatch','16777216x gtceu:me_extended_export_buffer','16777216x gtceu:me_extended_async_export_buffer','16777216x gtceu:tag_filter_me_stock_bus_part_machine','16777216x gtceu:me_dual_hatch_stock_part_machine','16777216x extendedae_plus:assembler_matrix_upload_core','1024x extendedae_plus:1024x_crafting_accelerator','16777216x extendedae_plus:labeled_wireless_transceiver','16777216x merequester:requester','16777216x extendedae_plus:wireless_transceiver','16777216x extendedae_plus:channel_card',
             '16777216x expatternprovider:ex_interface_part','16777216x expatternprovider:ex_pattern_provider_part','16777216x expatternprovider:tag_storage_bus','16777216x ae2:storage_bus','16777216x ae2_toggleable_view_cell:toggleable_view_cell','16777216x ae2:fluix_covered_cable','16777216x gtmadvancedhatch:adaptive_net_energy_input_hatch','16777216x gtmadvancedhatch:adaptive_net_laser_target_hatch','16777216x ae2:energy_card','4x extendedae_plus:infinity_biginteger_cell','4x merequester:requester_terminal','16777216x extendedae_plus:virtual_crafting_card','1x gtlcore:fast_infinity_cell','4x gtlcore:debug_pattern_test','4x gtlcore:pattern_modifier','4x expatternprovider:pattern_modifier','4x gtlcore:me_pattern_buffer_cut','4x gtlcore:me_pattern_buffer_copy','32x gtlcore:max_storage','32x mae2:256x_crafting_accelerator','4x expatternprovider:wireless_tool','16777216x travelanchors:travel_anchor','4x travelanchors:travel_staff','16777216x gtladditions:wireless_energy_network_input_terminal','16777216x gtladditions:wireless_energy_network_output_terminal','16777216x aewireless:wireless_transceiver','10000000x ae2:fluix_crystal','10240000x ae2:certus_quartz_crystal','10240000x ae2:charged_certus_quartz_crystal','10240000x ae2:certus_quartz_dust',
             '10240000x gtceu:certus_quartz_dust','10240000x gtceu:certus_quartz_gem','1x sophisticatedbackpacks:netherite_backpack','1x fluxnetworks:flux_controller','1024000x fluxnetworks:flux_point','1024000x fluxnetworks:flux_plug','1x gtceu:molecular_assembler_matrix','1x gtceu:me_molecular_assembler_io','70x gtlcore:advanced_assembly_line_unit','320x gtlcore:iridium_casing','80x gtlcore:hyper_mechanical_casing','84x gtlcore:molecular_casing','20x gtceu:hsse_frame','56x gtceu:naquadah_alloy_frame','78x gtceu:trinium_frame','36x gtceu:europium_frame','306x gtceu:high_power_casing','48x gtceu:advanced_computer_casing','36x gtceu:fusion_glass','104x gtceu:superconducting_coil','17x gtceu:assembly_line_casing','32x gtceu:assembly_line_grating','90x gtceu:large_scale_assembler_casing','1x gtlcore:ultimate_terminal','10240000x gtmadvancedhatch:max_configurable_dual_hatch_input_16p','5x gtceu:me_craft_speed_core','20x gtceu:me_craft_pattern_container','64x gtceu:me_craft_parallel_core','1x ae2wtlib:magnet_card','1x ae2_ftbquest_detector:me_quests_detector'
         ];
@@ -3202,9 +3783,29 @@ PlayerEvents.chat(event => {
     let rawMessage = event.getMessage();
     
     // 简化处理：直接转换为字符串
-    let message = String(rawMessage).trim().toLowerCase();
+    let message = String(rawMessage).trim();
+    let messageLower = message.toLowerCase();
     
     let player = event.player;
+    
+    // 首先检查命令控制API是否处理此消息
+    // 只有当消息以!开头时才检查
+    if (message.startsWith('!')) {
+        // 检查命令控制API是否已初始化
+        if (global.shanhaiCommandAPI && typeof global.shanhaiCommandAPI.handleExclamationCommand === 'function') {
+            // 尝试通过命令控制API处理命令
+            var handled = global.shanhaiCommandAPI.handleExclamationCommand(player, message);
+            if (handled) {
+                // API已处理命令，取消事件
+                event.cancel();
+                return;
+            }
+        }
+    }
+    
+    // 如果命令控制API未处理，继续原有的硬编码命令处理
+    // 使用小写版本进行匹配
+    message = messageLower;
     
     // 统计查询命令
     if (message === "!山海统计" || message === "!配方统计" || message === "!shanhai") {
@@ -3428,10 +4029,316 @@ PlayerEvents.chat(event => {
     }
 });
 
+// ========== 命令控制API事件监听器 ==========
+// 注册斜杠命令（/前缀）
+ServerEvents.commandRegistry(function(event) {
+    var Commands = event.commands;
+    var Arguments = event.arguments;
+    
+    // 注册 /shanhai 主命令
+    event.register(
+        Commands.literal('shanhai')
+            .requires(function(source) {
+                // 检查权限
+                if (source.getEntity && source.getEntity()) {
+                    var player = source.getEntity();
+                    // 使用命令控制API检查权限，如果API未初始化则默认需要OP
+                    if (global.shanhaiCommandAPI && typeof global.shanhaiCommandAPI.checkPermission === 'function') {
+                        return global.shanhaiCommandAPI.checkPermission(player, 'shanhai');
+                    }
+                    return player && player.op;
+                }
+                return source.hasPermission(2); // OP权限等级2
+            })
+            .executes(function(ctx) {
+                var source = ctx.source;
+                var player = source.getEntity ? source.getEntity() : null;
+                var args = [];
+                
+                // 调用命令控制API处理命令
+                if (global.shanhaiCommandAPI && typeof global.shanhaiCommandAPI.handleSlashCommand === 'function') {
+                    // 创建一个模拟事件对象，使用玩家作为源
+                    var mockEvent = { source: player || source };
+                    return global.shanhaiCommandAPI.handleSlashCommand(mockEvent, 'shanhai', args) ? 1 : 0;
+                } else {
+                    if (player && player.tell) {
+                        player.tell('§c命令控制API未初始化');
+                    } else if (source && source.sendSuccess) {
+                        source.sendSuccess('命令控制API未初始化', false);
+                    }
+                    return 0;
+                }
+            })
+            .then(Commands.argument('subcommand', Arguments.GREEDY_STRING.create(event))
+                .executes(function(ctx) {
+                    var source = ctx.source;
+                    var player = source.getEntity ? source.getEntity() : null;
+                    var subcommand = Arguments.GREEDY_STRING.getResult(ctx, 'subcommand');
+                    var args = subcommand ? subcommand.split(' ') : [];
+                    
+                    // 调用命令控制API处理命令
+                    if (global.shanhaiCommandAPI && typeof global.shanhaiCommandAPI.handleSlashCommand === 'function') {
+                        var mockEvent = { source: player || source };
+                        return global.shanhaiCommandAPI.handleSlashCommand(mockEvent, 'shanhai', args) ? 1 : 0;
+                    } else {
+                        if (player && player.tell) {
+                            player.tell('§c命令控制API未初始化');
+                        }
+                        return 0;
+                    }
+                })
+            )
+    );
+    
+    info('山海私货斜杠命令已注册: /shanhai');
+    
+    // 注册通过命令控制API动态添加的命令
+    // 这个会在命令控制API初始化后动态处理
+});
+
+// 增强现有的聊天命令处理，支持命令控制API
+// 现有的PlayerEvents.chat事件已经处理了特定命令
+// 我们将让它也支持通过API注册的命令
 
 // ========== 脚本加载完成事件 ==========
 ServerEvents.loaded(event => {
     syncStatsToGlobal();
+    
+    // 注册默认的山海私货命令
+    if (global.shanhaiCommandAPI && typeof global.shanhaiCommandAPI.register === 'function') {
+        global.shanhaiCommandAPI.register('shanhai', function(sender, args) {
+            if (args.length === 0) {
+                // 没有子命令，显示帮助
+                sender.tell('§6=== 山海私货命令系统 ===');
+                sender.tell('§e/shanhai stats§7 - 显示统计信息');
+                sender.tell('§e/shanhai version§7 - 显示版本信息');
+                sender.tell('§e/shanhai api list§7 - 列出所有API');
+                sender.tell('§e/shanhai api status <API名称>§7 - 查看API状态');
+                sender.tell('§e/shanhai api enable <API名称>§7 - 启用API');
+                sender.tell('§e/shanhai api disable <API名称>§7 - 禁用API');
+                sender.tell('§e/shanhai api errors§7 - 查看API错误历史');
+                sender.tell('§e/shanhai help§7 - 显示此帮助');
+                sender.tell('§e!山海统计§7 - 显示配方统计');
+                sender.tell('§e!山海错误§7 - 显示错误统计');
+                sender.tell('§e!刷新统计§7 - 刷新统计信息');
+                sender.tell('§e!山海调试§7 - 调试模式开关');
+                return true;
+            }
+            
+            var subcommand = args[0].toLowerCase();
+            if (subcommand === 'stats' || subcommand === '统计') {
+                var stats = global.shanhaiRecipeAPI ? global.shanhaiRecipeAPI.getStats() : null;
+                if (stats) {
+                    sender.tell(`§6=== 山海私货统计 ===`);
+                    sender.tell(`§7总计配方: §e${stats.total}§7 个`);
+                    sender.tell(`§7成功加载: §a${stats.success}§7 个`);
+                    sender.tell(`§7失败加载: §c${stats.failed}§7 个`);
+                    sender.tell(`§7成功率: §e${stats.successRate}%`);
+                } else {
+                    sender.tell('§c统计信息不可用');
+                }
+                return true;
+            } else if (subcommand === 'version' || subcommand === '版本') {
+                var version = global.shanhaiRecipeAPI ? global.shanhaiRecipeAPI.getVersion() : '未知';
+                sender.tell(`§6山海私货版本: §e${version}`);
+                sender.tell(`§6命令控制API版本: §e${global.shanhaiCommandAPI.getVersion()}`);
+                return true;
+            } else if (subcommand === 'help' || subcommand === '帮助') {
+                sender.tell('§6=== 山海私货命令帮助 ===');
+                sender.tell('§e/shanhai stats§7 - 显示统计信息');
+                sender.tell('§e/shanhai version§7 - 显示版本信息');
+                sender.tell('§e/shanhai api list§7 - 列出所有API');
+                sender.tell('§e/shanhai api status <API名称>§7 - 查看API状态');
+                sender.tell('§e/shanhai api enable <API名称>§7 - 启用API');
+                sender.tell('§e/shanhai api disable <API名称>§7 - 禁用API');
+                sender.tell('§e/shanhai api errors§7 - 查看API错误历史');
+                sender.tell('§e/shanhai help§7 - 显示此帮助');
+                return true;
+            } else if (subcommand === 'api' || subcommand === '接口') {
+                // API控制系统
+                if (args.length < 2) {
+                    sender.tell('§6=== API控制系统 ===');
+                    sender.tell('§7用法: /shanhai api <操作> [参数]');
+                    sender.tell('§7可用操作:');
+                    sender.tell('  §elist§7 - 列出所有可用API');
+                    sender.tell('  §estatus <API名称>§7 - 查看API状态');
+                    sender.tell('  §eenable <API名称>§7 - 启用API');
+                    sender.tell('  §edisable <API名称>§7 - 禁用API');
+                    sender.tell('  §eerrors§7 - 查看API错误历史');
+                    return false;
+                }
+                
+                var operation = args[1].toLowerCase();
+                var apiName = args[2];
+                
+                if (operation === 'list') {
+                    // 列出所有API
+                    sender.tell('§6=== 可用API列表 ===');
+                    
+                    var apis = [];
+                    
+                    // 检查各种可能的API
+                    if (global.shanhaiRecipeAPI) {
+                        apis.push({ name: 'shanhaiRecipeAPI', type: '配方统计API', enabled: true });
+                    }
+                    if (global.shanhaiCommandAPI) {
+                        apis.push({ name: 'shanhaiCommandAPI', type: '命令控制API', enabled: true });
+                    }
+                    if (global.shanhaiRecipeControlAPI) {
+                        apis.push({ name: 'shanhaiRecipeControlAPI', type: '配方控制API', enabled: true });
+                    }
+                    if (global.shanhaiAPI) {
+                        apis.push({ name: 'shanhaiAPI', type: '基础API', enabled: true });
+                    }
+                    
+                    if (apis.length === 0) {
+                        sender.tell('§c没有找到任何API');
+                        return false;
+                    }
+                    
+                    for (var i = 0; i < apis.length; i++) {
+                        var api = apis[i];
+                        var status = api.enabled ? '§a启用' : '§c禁用';
+                        sender.tell(`§e${api.name}§7 - ${api.type} (${status}§7)`);
+                    }
+                    
+                    sender.tell(`§7总计: §e${apis.length}§7 个API`);
+                    return true;
+                    
+                } else if (operation === 'status') {
+                    // 查看API状态
+                    if (!apiName) {
+                        sender.tell('§c请指定API名称，例如: /shanhai api status shanhaiRecipeAPI');
+                        return false;
+                    }
+                    
+                    var api = global[apiName];
+                    if (!api) {
+                        sender.tell(`§cAPI '${apiName}' 不存在`);
+                        return false;
+                    }
+                    
+                    sender.tell(`§6=== API状态: ${apiName} ===`);
+                    sender.tell(`§7类型: §e${typeof api}`);
+                    
+                    // 检查是否有版本信息
+                    if (api.getVersion && typeof api.getVersion === 'function') {
+                        try {
+                            var version = api.getVersion();
+                            sender.tell(`§7版本: §e${version}`);
+                        } catch (err) {
+                            sender.tell(`§7版本: §c获取失败 (${err.message})`);
+                        }
+                    }
+                    
+                    // 检查是否有统计信息
+                    if (api.getStats && typeof api.getStats === 'function') {
+                        try {
+                            var stats = api.getStats();
+                            sender.tell(`§7统计: §e可用`);
+                        } catch (err) {
+                            sender.tell(`§7统计: §c获取失败`);
+                        }
+                    }
+                    
+                    // 检查是否有启用状态（假设enabled属性）
+                    var enabled = api.enabled !== false;
+                    sender.tell(`§7状态: ${enabled ? '§a启用' : '§c禁用'}`);
+                    
+                    return true;
+                    
+                } else if (operation === 'enable') {
+                    // 启用API
+                    if (!apiName) {
+                        sender.tell('§c请指定API名称，例如: /shanhai api enable shanhaiRecipeAPI');
+                        return false;
+                    }
+                    
+                    var api = global[apiName];
+                    if (!api) {
+                        sender.tell(`§cAPI '${apiName}' 不存在`);
+                        return false;
+                    }
+                    
+                    // 设置启用状态
+                    api.enabled = true;
+                    sender.tell(`§aAPI '${apiName}' 已启用`);
+                    
+                    // 记录日志
+                    if (global.shanhaiCommandAPI && global.shanhaiCommandAPI._commands) {
+                        global.shanhaiCommandAPI._commands['shanhai'].usageCount++;
+                    }
+                    
+                    return true;
+                    
+                } else if (operation === 'disable') {
+                    // 禁用API
+                    if (!apiName) {
+                        sender.tell('§c请指定API名称，例如: /shanhai api disable shanhaiRecipeAPI');
+                        return false;
+                    }
+                    
+                    var api = global[apiName];
+                    if (!api) {
+                        sender.tell(`§cAPI '${apiName}' 不存在`);
+                        return false;
+                    }
+                    
+                    // 设置禁用状态
+                    api.enabled = false;
+                    sender.tell(`§cAPI '${apiName}' 已禁用`);
+                    
+                    // 记录日志
+                    if (global.shanhaiCommandAPI && global.shanhaiCommandAPI._commands) {
+                        global.shanhaiCommandAPI._commands['shanhai'].usageCount++;
+                    }
+                    
+                    return true;
+                    
+                } else if (operation === 'errors') {
+                    // 查看错误历史
+                    sender.tell('§6=== API错误历史 ===');
+                    
+                    if (global.shanhaiAPIErrors && Array.isArray(global.shanhaiAPIErrors)) {
+                        var errors = global.shanhaiAPIErrors;
+                        if (errors.length === 0) {
+                            sender.tell('§7最近没有API错误记录');
+                        } else {
+                            var recentErrors = errors.slice(-5); // 显示最近5条错误
+                            sender.tell(`§7最近 §e${recentErrors.length}§7 条错误记录 (共 ${errors.length} 条):`);
+                            
+                            for (var i = 0; i < recentErrors.length; i++) {
+                                var error = recentErrors[i];
+                                var time = error.timestamp ? new Date(error.timestamp).toLocaleString() : '未知时间';
+                                sender.tell(`§7${i+1}. §c${error.functionName}§7: ${error.errorMessage} (${time})`);
+                            }
+                        }
+                    } else {
+                        sender.tell('§7错误历史记录不可用');
+                        sender.tell('§7提示: 确保错误保护机制已启用');
+                    }
+                    
+                    return true;
+                    
+                } else {
+                    sender.tell(`§c未知API操作: ${operation}`);
+                    sender.tell('§7可用操作: list, status, enable, disable, errors');
+                    return false;
+                }
+            } else {
+                sender.tell(`§c未知子命令: ${args[0]}`);
+                sender.tell('§7可用子命令: §estats§7, §eversion§7, §eapi§7, §ehelp');
+                return false;
+            }
+        }, {
+            description: '山海私货管理命令',
+            requiresOp: false,
+            supportedPrefixes: ['slash']
+        });
+        
+        info('默认山海私货命令已注册到命令控制API');
+    }
+    
     info(`§6═══════════════════════════════════════════════════════════§r`);
     info(`§a✨ 山海的big私货 加载完成！§r`);
     info(`§6═══════════════════════════════════════════════════════════§r`);
