@@ -1,27 +1,3 @@
 {
-	"test_recipe_1": true,
-	"test_recipe_2": true,
-	"test_universal_1": true,
-	"test_super_1": true,
-	"gelid_cryotheum": true,
-	"time_reversal_protocol_cosmos_plus": true,
-	"time_reversal_protocol_stellar_forge_supercritical_steam": true,
-	"time_reversal_protocol_stellar_forge_steam": true,
-	"cosmos_simulation_hxsp": true,
-	"greythings_eoh_plus_cosmos_simulation_plus": true,
-	"miracle_cosmos": true,
-	"assembler_chaos_containment_unit": true,
-	"assembler_cosmic_mesh_containment_unit": true,
-	"assembler_actinium_superhydride_plasma_containment_cell": true,
-	"assembler_rhenium_plasma_containment_cell": true,
-	"assembler_crystalmatrix_plasma_containment_cell": true,
-	"assembler_draconiumawakened_plasma_containment_cell": true,
-	"assembler_neutron_plasma_containment_cell": true,
-	"assembler_dense_neutron_plasma_cell": true,
-	"fluix_axe": true,
-	"chest": true,
-	"tank": true,
-	"mekzq": true,
-	"soc": true,
-	"air_sour": true
+	"test_recipe_load_control": false
 }
