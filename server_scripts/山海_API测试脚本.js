@@ -1,7 +1,7 @@
 // priority: 100
 // 山海私货 - API测试脚本
 // 开发者: 山海恒长在/dishanhai
-// 版本: v2.2
+// 版本: v2.2fix1
 // 用途: 测试山海私货API接口功能
 
 (function() {

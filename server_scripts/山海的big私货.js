@@ -4,7 +4,7 @@
 (function() {
 // 版本: 2.6 - 添加API控制系统
 
-var Version = '2.2.6(日志系统版本2.6)'
+var Version = '2.2.6fix1(日志系统版本2.6)'
 var APIVersion = '2.6.0'
 
 // 超级AE包全局变量
@@ -36,10 +36,10 @@ function log(level, message) {
     console.log(`${getTimestamp()} ${color}${name}§r ${LOG_PREFIX} ${message}`);
 }
 
-var debug = (m)=>log(LOG_LEVEL.DEBUG,m);
-var info  = (m)=>log(LOG_LEVEL.INFO ,m);
-var warn  = (m)=>log(LOG_LEVEL.WARN ,m);
-var error = (m)=>log(LOG_LEVEL.ERROR,m);
+var debug = function(m) { return log(LOG_LEVEL.DEBUG, m); };
+var info  = function(m) { return log(LOG_LEVEL.INFO, m); };
+var warn  = function(m) { return log(LOG_LEVEL.WARN, m); };
+var error = function(m) { return log(LOG_LEVEL.ERROR, m); };
 
 // ---------------- Timer ----------------
 function Timer(name){
@@ -309,22 +309,23 @@ function recordRecipe(type, ok, id, msg){
  * @returns {Array} [r, g, b] 范围 0-255
  */
 function hslToRgb(h, s, l) {
-    let r, g, b;
+    var r, g, b;
+     
+    // 定义辅助函数
+    function hue2rgb(p, q, t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+    }
     
     if (s === 0) {
         r = g = b = l; // 灰色
     } else {
-        const hue2rgb = (p, q, t) => {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1/6) return p + (q - p) * 6 * t;
-            if (t < 1/2) return q;
-            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-            return p;
-        };
-        
-        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        const p = 2 * l - q;
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
         
         r = hue2rgb(p, q, h + 1/3);
         g = hue2rgb(p, q, h);
@@ -373,27 +374,27 @@ function getDynamicColor(time, speed) {
     }
     
     // 计算色相（0-1范围，循环）
-    const hue = (time * speed) % 1;
+    var hue = (time * speed) % 1;
     
     // 固定饱和度和亮度，使颜色鲜艳但不太刺眼
-    const saturation = 0.8;
-    const lightness = 0.6;
+    var saturation = 0.8;
+    var lightness = 0.6;
     
     // 转换为RGB
-    const rgbArray = hslToRgb(hue, saturation, lightness);
-    const r = rgbArray[0];
-    const g = rgbArray[1];
-    const b = rgbArray[2];
+    var rgbArray = hslToRgb(hue, saturation, lightness);
+    var r = rgbArray[0];
+    var g = rgbArray[1];
+    var b = rgbArray[2];
     
     // 转换为Minecraft颜色代码格式
-    const hex = rgbToHex(r, g, b);
+    var hex = rgbToHex(r, g, b);
     // Minecraft RGB格式: §x§R§R§G§G§B§B
-    const r1 = hex[1];
-    const r2 = hex[2];
-    const g1 = hex[3];
-    const g2 = hex[4];
-    const b1 = hex[5];
-    const b2 = hex[6];
+    var r1 = hex[1];
+    var r2 = hex[2];
+    var g1 = hex[3];
+    var g2 = hex[4];
+    var b1 = hex[5];
+    var b2 = hex[6];
     
     return "§x§" + r1 + "§" + r2 + "§" + g1 + "§" + g2 + "§" + b1 + "§" + b2;
 }
@@ -428,12 +429,12 @@ function getRainbowText(text, time, speed, offset) {
         offset = 0.1;
     }
     
-    let result = "";
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
+    var result = "";
+    for (var i = 0; i < text.length; i++) {
+        var char = text[i];
         // 每个字符使用略微不同的时间偏移
-        const charTime = time + i * offset;
-        const color = getDynamicColor(charTime, speed);
+        var charTime = time + i * offset;
+        var color = getDynamicColor(charTime, speed);
         result += color + char;
     }
     return result + "§r"; // 重置颜色
@@ -717,7 +718,7 @@ global.shanhaiRecipeAPI = {
      * let assemblerErrors = global.shanhaiRecipeAPI.getErrorsByType('assembler');
      */
     getErrorsByType: function(type) {
-        return recipeStats.errors.filter(err => err.type === type);
+        return recipeStats.errors.filter(function(err) { return err.type === type; });
     },
     
     /**
@@ -734,27 +735,27 @@ global.shanhaiRecipeAPI = {
      * // 输出: 山海私货配方统计\n总计:121个配方\n√成功:19个\n×失败:102个
      */
     getSummary: function() {
-        let stats = this.getStats();
-        let summary = `山海私货配方统计\n`;
-        summary += `总计:${stats.total}个配方\n`;
-        summary += `√成功:${stats.success}个\n`;
-        summary += `×失败:${stats.failed}个\n`;
+        var stats = this.getStats();
+        var summary = "山海私货配方统计\n";
+        summary += "总计:" + stats.total + "个配方\n";
+        summary += "√成功:" + stats.success + "个\n";
+        summary += "×失败:" + stats.failed + "个\n";
         
         if (stats.errors.length > 0) {
-            summary += `警告:配方库错误反馈联系qq：1982932217\n`;//自行替换
-            summary += `当前神人私货版本：${Version}\n`;
-            summary += `X失败示例：\n`;
+            summary += "警告:配方库错误反馈联系qq：1982932217\n";//自行替换
+            summary += "当前神人私货版本：" + Version + "\n";
+            summary += "X失败示例：\n";
             
             // 显示前5个错误示例
-            stats.errors.slice(0, 5).forEach((err, i) => {
-                summary += `${i+1}.[${err.type}] ${err.name}\n`;
+            stats.errors.slice(0, 5).forEach(function(err, i) {
+                summary += (i+1) + ".[" + err.type + "] " + err.name + "\n";
             });
             
             if (stats.errors.length > 5) {
-                summary += `..还有${stats.errors.length - 5}个错误\n`;
+                summary += "..还有" + (stats.errors.length - 5) + "个错误\n";
             }
             
-            summary += `部分配方加载失败，请通知服务器管理员检查日志`;
+            summary += "部分配方加载失败，请通知服务器管理员检查日志";
         }
         
         return summary;
@@ -1536,8 +1537,8 @@ global.shanhaiCommandAPI = {
             if (!result && sender && sender.tell) {
                 // 命令不存在或执行失败，显示帮助
                 var availableCommands = this.list({ enabledOnly: true })
-                    .filter(cmd => cmd.supportedPrefixes.includes('slash'))
-                    .map(cmd => `§e/${cmd.name}§7 - ${cmd.description}`)
+                    .filter(function(cmd) { return cmd.supportedPrefixes.includes('slash'); })
+                    .map(function(cmd) { return "§e/" + cmd.name + "§7 - " + cmd.description; })
                     .join('\n');
                 
                 if (availableCommands) {
@@ -3690,22 +3691,24 @@ PlayerEvents.loggedIn(event => {
 // ========== 调试工具 ==========
 // 配方查找函数
 function findRecipeById(id) {
-    // 定义所有配方数组
-    const recipeArrays = [
-        assrecipes,
-        universalRecipes,
-        suprecipes_1,
-        recipes_voidfluxs,
-        dishanhairecipes,
-        recipes,
-        recipes_electrolyzers
-    ];
+    // 定义所有配方数组 - 使用安全访问
+    var recipeArrays = [];
+    
+    // 安全检查并添加每个配方数组
+    if (global.assrecipes && Array.isArray(global.assrecipes)) recipeArrays.push(global.assrecipes);
+    if (global.universalRecipes && Array.isArray(global.universalRecipes)) recipeArrays.push(global.universalRecipes);
+    if (global.suprecipes_1 && Array.isArray(global.suprecipes_1)) recipeArrays.push(global.suprecipes_1);
+    if (global.recipes_voidfluxs && Array.isArray(global.recipes_voidfluxs)) recipeArrays.push(global.recipes_voidfluxs);
+    if (global.dishanhairecipes && Array.isArray(global.dishanhairecipes)) recipeArrays.push(global.dishanhairecipes);
+    if (global.recipes && Array.isArray(global.recipes)) recipeArrays.push(global.recipes);
+    if (global.recipes_electrolyzers && Array.isArray(global.recipes_electrolyzers)) recipeArrays.push(global.recipes_electrolyzers);
+    
     // 遍历所有数组查找配方
-    for (let i = 0; i < recipeArrays.length; i++) {
-        const arr = recipeArrays[i];
+    for (var i = 0; i < recipeArrays.length; i++) {
+        var arr = recipeArrays[i];
         if (!arr) continue;
-        for (let j = 0; j < arr.length; j++) {
-            const recipe = arr[j];
+        for (var j = 0; j < arr.length; j++) {
+            var recipe = arr[j];
             if (recipe && recipe.id === id) {
                 return {
                     recipe: recipe,
@@ -3719,14 +3722,15 @@ function findRecipeById(id) {
 }
 
 function getArrayName(arr) {
-    // 通过全局变量查找数组名称（简单实现）
-    if (arr === assrecipes) return 'assrecipes';
-    if (arr === universalRecipes) return 'universalRecipes';
-    if (arr === suprecipes_1) return 'suprecipes_1';
-    if (arr === recipes_voidfluxs) return 'recipes_voidfluxs';
-    if (arr === dishanhairecipes) return 'dishanhairecipes';
-    if (arr === recipes) return 'recipes';
-    if (arr === recipes_electrolyzers) return 'recipes_electrolyzers';
+    // 通过全局变量查找数组名称（安全实现）
+    if (!arr) return 'unknown';
+    if (global.assrecipes && arr === global.assrecipes) return 'assrecipes';
+    if (global.universalRecipes && arr === global.universalRecipes) return 'universalRecipes';
+    if (global.suprecipes_1 && arr === global.suprecipes_1) return 'suprecipes_1';
+    if (global.recipes_voidfluxs && arr === global.recipes_voidfluxs) return 'recipes_voidfluxs';
+    if (global.dishanhairecipes && arr === global.dishanhairecipes) return 'dishanhairecipes';
+    if (global.recipes && arr === global.recipes) return 'recipes';
+    if (global.recipes_electrolyzers && arr === global.recipes_electrolyzers) return 'recipes_electrolyzers';
     return 'unknown';
 }
 
@@ -4339,6 +4343,19 @@ ServerEvents.loaded(event => {
         info('默认山海私货命令已注册到命令控制API');
     }
     
+    // 检查配方控制API状态
+    if (global.shanhaiRecipeControlAPI && typeof global.shanhaiRecipeControlAPI.getVersion === 'function') {
+        try {
+            var version = global.shanhaiRecipeControlAPI.getVersion();
+            info(`§a✓ 配方控制API已加载 (v${version})`);
+        } catch(err) {
+            info(`§e⚠ 配方控制API加载异常: ${err.message}`);
+        }
+    } else if (global.shanhaiRecipeControlAPI) {
+        info(`§e⚠ 配方控制API已加载 (无版本信息)`);
+    } else {
+        info(`§e⚠ 配方控制API未加载，配方加载控制将使用默认行为`);
+    }
     info(`§6═══════════════════════════════════════════════════════════§r`);
     info(`§a✨ 山海的big私货 加载完成！§r`);
     info(`§6═══════════════════════════════════════════════════════════§r`);

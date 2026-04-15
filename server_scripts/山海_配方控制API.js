@@ -343,7 +343,57 @@ function initRecipeLoadConfig() {
 function saveRecipeLoadConfig() {
     try {
         // 调试信息：检查global对象是否可用
-        debug('尝试保存配置到全局存储，当前配置条目数: ' + Object.keys(recipeLoadConfig).length);
+        debug('尝试保存配置到全局存储，当前配置条目数: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
+        
+        // ========== 第一步：验证和修复recipeLoadConfig对象 ==========
+        // 确保recipeLoadConfig是一个有效的对象
+        if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
+            warn('recipeLoadConfig不是有效的对象，正在修复...');
+            warn('  原始类型: ' + typeof recipeLoadConfig);
+            warn('  是数组: ' + Array.isArray(recipeLoadConfig));
+            
+            // 尝试从全局存储恢复配置
+            if (typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig && typeof global.shanhaiRecipeLoadConfig === 'object') {
+                warn('  尝试从全局存储恢复配置...');
+                recipeLoadConfig = {};
+                for (var key in global.shanhaiRecipeLoadConfig) {
+                    if (global.shanhaiRecipeLoadConfig.hasOwnProperty(key) && typeof key === 'string') {
+                        var value = global.shanhaiRecipeLoadConfig[key];
+                        // 只保存有效的布尔值
+                        if (typeof value === 'boolean') {
+                            recipeLoadConfig[key] = value;
+                        } else {
+                            warn('  跳过无效的值: ' + key + ' = ' + value + ' (类型: ' + typeof value + ')');
+                        }
+                    }
+                }
+                debug('  从全局存储恢复完成: ' + Object.keys(recipeLoadConfig).length + ' 个有效条目');
+            } else {
+                // 创建新的空对象
+                recipeLoadConfig = {};
+                debug('  已创建新的空配置对象');
+            }
+        }
+        
+        // 清理recipeLoadConfig：移除无效的键值对
+        var validKeys = Object.keys(recipeLoadConfig);
+        var cleanedCount = 0;
+        for (var i = 0; i < validKeys.length; i++) {
+            var key = validKeys[i];
+            var value = recipeLoadConfig[key];
+            
+            // 只保留字符串键和布尔值
+            if (typeof key !== 'string' || key.trim() === '' || typeof value !== 'boolean') {
+                delete recipeLoadConfig[key];
+                cleanedCount++;
+                if (cleanedCount <= 5) { // 只记录前5个清理的条目
+                    debug('  清理无效条目: ' + key + ' = ' + value + ' (键类型: ' + typeof key + ', 值类型: ' + typeof value + ')');
+                }
+            }
+        }
+        if (cleanedCount > 0) {
+            debug('  总共清理了 ' + cleanedCount + ' 个无效条目');
+        }
         
         // 检查global对象是否存在
         if (typeof global === 'undefined') {
@@ -351,31 +401,23 @@ function saveRecipeLoadConfig() {
             return false;
         }
         
-        // 验证recipeLoadConfig对象
-        if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object') {
-            warn('保存失败: recipeLoadConfig不是有效的对象，类型: ' + typeof recipeLoadConfig);
-            // 尝试修复：如果recipeLoadConfig无效，重置为空对象
-            if (typeof recipeLoadConfig !== 'object') {
-                recipeLoadConfig = {};
-                debug('已重置recipeLoadConfig为空对象');
-            }
-        }
-        
         // 检查recipeLoadConfig是否可序列化（调试）
         try {
-            var jsonTest = JSON.stringify(recipeLoadConfig);
+            var jsonTest = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? JSON.stringify(recipeLoadConfig) : '{}';
             debug('recipeLoadConfig JSON序列化测试成功，长度: ' + jsonTest.length + ' 字符');
         } catch (jsonErr) {
             warn('recipeLoadConfig JSON序列化失败: ' + jsonErr.message);
             // 尝试修复：创建新对象
             var fixedConfig = {};
-            for (var key in recipeLoadConfig) {
-                if (recipeLoadConfig.hasOwnProperty(key)) {
-                    fixedConfig[key] = recipeLoadConfig[key];
+            if (recipeLoadConfig && typeof recipeLoadConfig === 'object') {
+                for (var key in recipeLoadConfig) {
+                    if (recipeLoadConfig.hasOwnProperty(key)) {
+                        fixedConfig[key] = recipeLoadConfig[key];
+                    }
                 }
             }
             recipeLoadConfig = fixedConfig;
-            debug('已修复recipeLoadConfig对象');
+            debug('已修复recipeLoadConfig对象，现在有 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
         }
         
         // 尝试保存配置
@@ -404,7 +446,7 @@ function saveRecipeLoadConfig() {
             }
             
             // 额外验证：检查保存的对象是否与原始对象相同
-            var originalKeys = Object.keys(recipeLoadConfig);
+            var originalKeys = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig) : [];
             var savedKeys = Object.keys(savedConfig);
             if (originalKeys.length === savedKeys.length) {
                 debug('配置保存验证通过：条目数匹配');
@@ -499,6 +541,12 @@ function setRecipeEnabled(recipeId, enabled) {
         debug('ID规范化: ' + recipeId + ' -> ' + normalizedId);
     }
     
+    // 验证规范化后的ID
+    if (!normalizedId || normalizedId.trim() === '') {
+        error('设置配方加载状态失败: 规范化后的ID无效: "' + normalizedId + '" (原始ID: ' + recipeId + ')');
+        return false;
+    }
+    
     var oldValue = recipeLoadConfig[normalizedId];
     var newValue = enabled === true;
     
@@ -512,15 +560,51 @@ function setRecipeEnabled(recipeId, enabled) {
     recipeLoadConfig[normalizedId] = newValue;
     debug('配置已更新，等待保存: ' + normalizedId + ' = ' + newValue + ' (原始ID: ' + recipeId + ')');
     
+    // 验证recipeLoadConfig对象
+    if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object') {
+        error('设置配方加载状态失败: recipeLoadConfig不是有效对象，类型: ' + typeof recipeLoadConfig);
+        // 尝试修复
+        recipeLoadConfig = {};
+        debug('已重置recipeLoadConfig为空对象');
+    }
+    
+    // 验证要保存的值是布尔值
+    if (typeof newValue !== 'boolean') {
+        warn('警告: 要保存的值不是布尔值，强制转换: ' + newValue + ' -> ' + Boolean(newValue));
+        newValue = Boolean(newValue);
+        recipeLoadConfig[normalizedId] = newValue;
+    }
+    
     // 保存配置
+    debug('开始调用saveRecipeLoadConfig()...');
     var saved = saveRecipeLoadConfig();
+    debug('saveRecipeLoadConfig()返回: ' + saved);
     
     if (saved) {
         info('配方加载状态已更新: ' + normalizedId + ' = ' + newValue + ' (之前: ' + (oldValue !== undefined ? oldValue : '未设置') + ') [原始ID: ' + recipeId + ']');
     } else {
-        warn('配方加载状态更新但保存失败: ' + normalizedId + ' = ' + newValue + ' [原始ID: ' + recipeId + ']');
-        warn('当前recipeLoadConfig对象类型: ' + typeof recipeLoadConfig);
-        warn('当前recipeLoadConfig条目数: ' + Object.keys(recipeLoadConfig).length);
+        error('❌ 配方加载状态设置失败！');
+        error('   可能原因: 配方ID无效或保存配置时出错。');
+        error('   详细信息:');
+        error('     原始配方ID: ' + recipeId);
+        error('     规范化ID: ' + normalizedId);
+        error('     目标状态: ' + newValue + ' (' + (newValue ? '启用' : '禁用') + ')');
+        error('     recipeLoadConfig类型: ' + typeof recipeLoadConfig);
+        error('     recipeLoadConfig键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
+        error('     保存函数返回值: ' + saved);
+        
+        // 尝试诊断global对象状态
+        try {
+            error('     global对象类型: ' + typeof global);
+            if (typeof global !== 'undefined') {
+                error('     global.shanhaiRecipeLoadConfig类型: ' + typeof global.shanhaiRecipeLoadConfig);
+                if (global.shanhaiRecipeLoadConfig && typeof global.shanhaiRecipeLoadConfig === 'object') {
+                    error('     global.shanhaiRecipeLoadConfig键数量: ' + Object.keys(global.shanhaiRecipeLoadConfig).length);
+                }
+            }
+        } catch (globalErr) {
+            error('     诊断global对象时出错: ' + globalErr.message);
+        }
     }
     
     return saved;

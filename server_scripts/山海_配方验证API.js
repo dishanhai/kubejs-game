@@ -85,11 +85,16 @@ function getGtrObject() {
 function getAllRecipeArrays() {
     var arrays = [];
     var arrayNames = [
+        // 主配方数组
         'assrecipes', 'universalRecipes', 'suprecipes_1', 
         'recipes_voidfluxs', 'dishanhairecipes', 'recipes', 
-        'recipes_electrolyzers'
+        'recipes_electrolyzers',
+        // 测试配方数组
+        'recipeTestArray', 'testRecipes', 'mockRecipes', 'test_recipe_array',
+        'testRecipesArray', 'mockRecipeArray'
     ];
     
+    // 首先添加精确匹配的数组
     for (var i = 0; i < arrayNames.length; i++) {
         var arr = global[arrayNames[i]];
         if (arr && Array.isArray(arr)) {
@@ -100,11 +105,47 @@ function getAllRecipeArrays() {
         }
     }
     
+    // 然后搜索所有全局变量，查找可能包含配方的数组
+    // （以'recipe'、'recipes'、'配方'等关键词结尾的变量）
+    var recipeKeywords = ['recipe', 'recipes', '配方', 'ass', 'universal', 'sup'];
+    for (var key in global) {
+        if (global.hasOwnProperty(key)) {
+            var value = global[key];
+            if (Array.isArray(value) && value.length > 0) {
+                // 检查数组第一个元素是否有类似配方的结构
+                var firstItem = value[0];
+                if (firstItem && typeof firstItem === 'object' && 
+                    firstItem.id !== undefined && firstItem.type !== undefined) {
+                    // 这看起来像是一个配方数组
+                    arrays.push({
+                        name: key,
+                        array: value
+                    });
+                }
+            }
+        }
+    }
+    
     return arrays;
 }
 
 /**
+ * 规范化配方ID，用于模糊匹配
+ * 移除所有空格、下划线、连字符，转换为小写
+ */
+function normalizeRecipeId(id) {
+    if (typeof id !== 'string') return '';
+    return id.toLowerCase()
+        .replace(/\s+/g, '')     // 移除所有空格
+        .replace(/_/g, '')       // 移除下划线
+        .replace(/-/g, '')       // 移除连字符
+        .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
+        .trim();
+}
+
+/**
  * 在所有配方数组中查找指定ID的配方
+ * 支持多种ID格式：原样匹配、小写匹配、移除空格和下划线后匹配
  */
 function findRecipeById(id) {
     if (!id || typeof id !== 'string') {
@@ -112,6 +153,7 @@ function findRecipeById(id) {
     }
     
     var arrays = getAllRecipeArrays();
+    var normalizedId = normalizeRecipeId(id);
     
     for (var i = 0; i < arrays.length; i++) {
         var arr = arrays[i].array;
@@ -119,7 +161,29 @@ function findRecipeById(id) {
         
         for (var j = 0; j < arr.length; j++) {
             var recipe = arr[j];
-            if (recipe && recipe.id === id) {
+            if (!recipe || !recipe.id) continue;
+            
+            // 1. 精确匹配
+            if (recipe.id === id) {
+                return {
+                    recipe: recipe,
+                    arrayName: arrays[i].name,
+                    index: j
+                };
+            }
+            
+            // 2. 小写匹配
+            if (recipe.id.toLowerCase() === id.toLowerCase()) {
+                return {
+                    recipe: recipe,
+                    arrayName: arrays[i].name,
+                    index: j
+                };
+            }
+            
+            // 3. 规范化匹配（移除空格、下划线、连字符等）
+            var recipeNormalizedId = normalizeRecipeId(recipe.id);
+            if (recipeNormalizedId === normalizedId) {
                 return {
                     recipe: recipe,
                     arrayName: arrays[i].name,
