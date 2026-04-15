@@ -4,15 +4,15 @@
 // 描述: 允许玩家通过聊天命令控制配方修改和配方加载状态的独立API
 // 作者: 山海恒长在/dishanhai
 // 使用方法: 将此文件放入server_scripts目录，重启服务器即可使用
-// 聊天命令: !配方修改 <配方ID> <字段> <值>
-//            !配方信息 <配方ID>
-//            !配方列表 [数组名]
-//            !配方开关 <配方ID> <开/关>
-//            !配方状态 <配方ID>
-//            !配方列表已启用
-//            !配方列表已禁用
-//            !配方重置配置
-//            !配方确认重置
+// 聊天命令: /配方修改 <配方ID> <字段> <值>
+//            /配方信息 <配方ID>
+//            /配方列表 [数组名]
+//            /配方开关 <配方ID> <开/关>
+//            /配方状态 <配方ID>
+//            /配方列表已启用
+//            /配方列表已禁用
+//            /配方重置配置
+//            /配方确认重置
 // =====================================================
 
 // ========== 重要提示 ==========
@@ -28,7 +28,7 @@
 
 var LOG_PREFIX = '§b[配方控制API]§r';
 var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-var currentLogLevel = LOG_LEVEL.INFO;
+var currentLogLevel = LOG_LEVEL.DEBUG;
 
 function getTimestamp() {
     var now = new Date();
@@ -218,10 +218,29 @@ function protectAllAPIFunctions(apiObject) {
 // =============== 核心功能模块 ==================
 // =====================================================
 
+/**
+ * 规范化配方ID，用于模糊匹配
+ * 移除所有空格、下划线、连字符，转换为小写
+ * 与山海_配方验证API.js中的normalizeRecipeId函数保持一致
+ */
+function normalizeRecipeId(id) {
+    if (typeof id !== 'string') return '';
+    return id.toLowerCase()
+        .replace(/\s+/g, '')     // 移除所有空格
+        .replace(/_/g, '')       // 移除下划线
+        .replace(/-/g, '')       // 移除连字符
+        .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
+        .trim();
+}
+
 // 配方查找函数
 // 注意：此函数假设配方数组已定义为全局变量（如 global.assrecipes）
 // 如果您的配方数组是局部变量，请修改此函数以引用正确的变量
 function findRecipeById(id) {
+    if (!id || typeof id !== 'string') {
+        return null;
+    }
+    
     // 定义所有可能的配方数组
     // 这些数组需要在使用前定义为全局变量，例如：global.assrecipes = [...]
     var recipeArrays = [
@@ -234,13 +253,37 @@ function findRecipeById(id) {
         global.recipes_electrolyzers // 电解机配方数组
     ];
     
+    var normalizedId = normalizeRecipeId(id);
+    
     // 遍历所有数组查找配方
     for (var i = 0; i < recipeArrays.length; i++) {
         var arr = recipeArrays[i];
         if (!arr) continue;
         for (var j = 0; j < arr.length; j++) {
             var recipe = arr[j];
-            if (recipe && recipe.id === id) {
+            if (!recipe || !recipe.id) continue;
+            
+            // 1. 精确匹配
+            if (recipe.id === id) {
+                return {
+                    recipe: recipe,
+                    arrayName: getArrayName(arr),
+                    index: j
+                };
+            }
+            
+            // 2. 小写匹配
+            if (recipe.id.toLowerCase() === id.toLowerCase()) {
+                return {
+                    recipe: recipe,
+                    arrayName: getArrayName(arr),
+                    index: j
+                };
+            }
+            
+            // 3. 规范化匹配（移除空格、下划线、连字符等）
+            var recipeNormalizedId = normalizeRecipeId(recipe.id);
+            if (recipeNormalizedId === normalizedId) {
                 return {
                     recipe: recipe,
                     arrayName: getArrayName(arr),
@@ -301,9 +344,45 @@ var recipeLoadConfig = {};
 function initRecipeLoadConfig() {
     debug('开始初始化配方加载配置...');
     
+    // 配置文件路径
+    var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+    
     // 尝试从持久化存储加载
     try {
-        // 检查global对象是否可用
+        // 首先尝试从文件加载（JsonIO持久化存储）
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+            try {
+                debug('尝试从文件加载配置: ' + CONFIG_PATH);
+                var fileConfig = JsonIO.read(CONFIG_PATH);
+                if (fileConfig && typeof fileConfig === 'object') {
+                    recipeLoadConfig = fileConfig;
+                    var entryCount = Object.keys(recipeLoadConfig).length;
+                    debug('配方加载配置已从文件存储加载: ' + entryCount + ' 个条目');
+                    
+                    // 记录加载的配方ID（前5个）
+                    var keys = Object.keys(recipeLoadConfig);
+                    if (keys.length > 0) {
+                        debug('已加载的配方ID示例: ' + keys.slice(0, 5).join(', '));
+                    }
+                    
+                    // 同时同步到global对象以保持向后兼容
+                    if (typeof global !== 'undefined') {
+                        global.shanhaiRecipeLoadConfig = recipeLoadConfig;
+                        debug('配置已同步到global.shanhaiRecipeLoadConfig');
+                    }
+                    
+                    debug('配方加载配置初始化完成（从文件加载）');
+                    return;
+                } else {
+                    debug('配置文件不存在或为空，使用默认配置');
+                }
+            } catch (fileErr) {
+                debug('从文件加载配置失败（可能是首次运行）: ' + fileErr.message);
+                // 继续尝试从global加载
+            }
+        }
+        
+        // 回退方案：从global对象加载（向后兼容）
         if (typeof global === 'undefined') {
             warn('global对象未定义，使用空配置');
             recipeLoadConfig = {};
@@ -322,6 +401,16 @@ function initRecipeLoadConfig() {
             var keys = Object.keys(recipeLoadConfig);
             if (keys.length > 0) {
                 debug('已加载的配方ID示例: ' + keys.slice(0, 5).join(', '));
+            }
+            
+            // 保存到文件以便将来使用
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+                try {
+                    JsonIO.write(CONFIG_PATH, recipeLoadConfig);
+                    debug('配置已保存到文件: ' + CONFIG_PATH);
+                } catch (writeErr) {
+                    warn('保存配置到文件失败: ' + writeErr.message);
+                }
             }
         } else {
             // 初始化空配置
@@ -342,8 +431,19 @@ function initRecipeLoadConfig() {
  */
 function saveRecipeLoadConfig() {
     try {
+        // 配置文件路径
+        var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+        
         // 调试信息：检查global对象是否可用
-        debug('尝试保存配置到全局存储，当前配置条目数: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
+        debug('=== saveRecipeLoadConfig() 开始执行 ===');
+        debug('尝试保存配置到持久化存储，当前配置条目数: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
+        debug('global对象检查: ' + (typeof global !== 'undefined' ? '已定义' : '未定义'));
+        if (typeof global !== 'undefined') {
+            debug('global.shanhaiRecipeLoadConfig检查: ' + (global.shanhaiRecipeLoadConfig ? '已定义' : '未定义'));
+            if (global.shanhaiRecipeLoadConfig && typeof global.shanhaiRecipeLoadConfig === 'object') {
+                debug('global.shanhaiRecipeLoadConfig条目数: ' + Object.keys(global.shanhaiRecipeLoadConfig).length);
+            }
+        }
         
         // ========== 第一步：验证和修复recipeLoadConfig对象 ==========
         // 确保recipeLoadConfig是一个有效的对象
@@ -398,6 +498,7 @@ function saveRecipeLoadConfig() {
         // 检查global对象是否存在
         if (typeof global === 'undefined') {
             error('保存失败: global对象未定义');
+            debug('=== saveRecipeLoadConfig() global未定义，返回 false ===');
             return false;
         }
         
@@ -420,21 +521,40 @@ function saveRecipeLoadConfig() {
             debug('已修复recipeLoadConfig对象，现在有 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
         }
         
-        // 尝试保存配置 - 使用深拷贝确保纯对象
+        // ========== 第二步：保存到文件存储（JsonIO持久化）==========
+        var fileSaved = false;
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+            try {
+                debug('正在保存配置到文件: ' + CONFIG_PATH);
+                JsonIO.write(CONFIG_PATH, recipeLoadConfig);
+                fileSaved = true;
+                debug('配置已成功保存到文件存储');
+            } catch (fileErr) {
+                warn('保存配置到文件失败: ' + fileErr.message);
+                warn('文件保存失败不影响主要功能，继续保存到global对象');
+            }
+        } else {
+            debug('JsonIO API不可用，跳过文件保存');
+        }
+        
+        // ========== 第三步：保存到global对象（向后兼容）==========
         debug('正在保存配置到global.shanhaiRecipeLoadConfig...');
+        var globalSaved = false;
         try {
             // 使用JSON序列化/反序列化创建纯对象副本
             var configCopy = JSON.parse(JSON.stringify(recipeLoadConfig));
             global.shanhaiRecipeLoadConfig = configCopy;
+            globalSaved = true;
             debug('配置已通过深拷贝保存到全局存储');
         } catch (copyErr) {
             // 如果深拷贝失败，直接赋值（回退）
             warn('深拷贝失败，使用直接赋值: ' + copyErr.message);
             global.shanhaiRecipeLoadConfig = recipeLoadConfig;
+            globalSaved = true;
             debug('配置已通过直接赋值保存到全局存储');
         }
         
-        // 验证保存是否成功
+        // ========== 第四步：验证保存结果 ==========
         var savedConfig = global.shanhaiRecipeLoadConfig;
         if (savedConfig && typeof savedConfig === 'object') {
             var entryCount = Object.keys(savedConfig).length;
@@ -463,11 +583,25 @@ function saveRecipeLoadConfig() {
                 warn('配置保存验证警告：条目数不匹配 (原始: ' + originalKeys.length + ', 保存后: ' + savedKeys.length + ')');
             }
             
-            return true;
+            // 总结保存结果
+            debug('保存结果总结:');
+            debug('  文件存储: ' + (fileSaved ? '成功' : '失败/跳过'));
+            debug('  Global存储: ' + (globalSaved ? '成功' : '失败'));
+            
+            // 只要global保存成功就返回true（主要功能）
+            if (globalSaved) {
+                debug('=== saveRecipeLoadConfig() 执行成功，返回 true ===');
+                return true;
+            } else {
+                warn('Global存储失败，但文件存储: ' + (fileSaved ? '成功' : '失败'));
+                debug('=== saveRecipeLoadConfig() Global存储失败，返回 false ===');
+                return false;
+            }
         } else {
             warn('配置保存后验证失败，保存的对象无效');
             warn('savedConfig类型: ' + typeof savedConfig);
             warn('savedConfig值: ' + savedConfig);
+            debug('=== saveRecipeLoadConfig() 验证失败，返回 false ===');
             return false;
         }
     } catch (err) {
@@ -484,6 +618,7 @@ function saveRecipeLoadConfig() {
             error('诊断失败: ' + diagErr.message);
         }
         
+        debug('=== saveRecipeLoadConfig() 捕获异常，返回 false ===');
         return false;
     }
 }
@@ -505,7 +640,7 @@ function isRecipeEnabled(recipeId) {
         return recipeLoadConfig[recipeId] === true;
     }
     
-    // 尝试处理dishanhai:前缀的兼容性
+    // 尝试处理dishanhai:/dishanahi:前缀的兼容性
     // 如果ID以dishanhai:开头，也检查去掉前缀的版本
     if (recipeId.startsWith('dishanhai:')) {
         var shortId = recipeId.substring(10); // 去掉'dishanhai:'前缀
@@ -514,12 +649,42 @@ function isRecipeEnabled(recipeId) {
             return recipeLoadConfig[shortId] === true;
         }
     } 
-    // 如果ID不以dishanhai:开头，也检查加上前缀的版本
+    // 如果ID以dishanahi:开头，也检查去掉前缀的版本
+    else if (recipeId.startsWith('dishanahi:')) {
+        var shortId = recipeId.substring(9); // 去掉'dishanahi:'前缀
+        if (recipeLoadConfig.hasOwnProperty(shortId)) {
+            debug('配方加载状态检查（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId + ' = ' + recipeLoadConfig[shortId]);
+            return recipeLoadConfig[shortId] === true;
+        }
+    }
+    // 如果ID不以dishanhai:或dishanahi:开头，也检查加上前缀的版本
     else if (!recipeId.includes(':')) {
+        // 检查dishanhai:前缀
         var prefixedId = 'dishanhai:' + recipeId;
         if (recipeLoadConfig.hasOwnProperty(prefixedId)) {
             debug('配方加载状态检查（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId + ' = ' + recipeLoadConfig[prefixedId]);
             return recipeLoadConfig[prefixedId] === true;
+        }
+        // 检查dishanahi:前缀
+        var prefixedId2 = 'dishanahi:' + recipeId;
+        if (recipeLoadConfig.hasOwnProperty(prefixedId2)) {
+            debug('配方加载状态检查（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId2 + ' = ' + recipeLoadConfig[prefixedId2]);
+            return recipeLoadConfig[prefixedId2] === true;
+        }
+    }
+    
+    // 尝试规范化匹配（移除空格、下划线、连字符、冒号，转换为小写）
+    var normalizedRecipeId = normalizeRecipeId(recipeId);
+    if (normalizedRecipeId) {
+        // 遍历所有配置键，查找规范化匹配
+        for (var key in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(key)) {
+                var normalizedKey = normalizeRecipeId(key);
+                if (normalizedKey === normalizedRecipeId) {
+                    debug('配方加载状态检查（规范化匹配）: ' + recipeId + ' -> ' + key + ' = ' + recipeLoadConfig[key] + ' (规范化: ' + normalizedRecipeId + ')');
+                    return recipeLoadConfig[key] === true;
+                }
+            }
         }
     }
     
@@ -543,11 +708,14 @@ function setRecipeEnabled(recipeId, enabled) {
         return false;
     }
     
-    // ID规范化：对于dishanhai:前缀的ID，保存去掉前缀的版本以保持一致性
+    // ID规范化：对于dishanhai:/dishanahi:前缀的ID，保存去掉前缀的版本以保持一致性
     var normalizedId = recipeId;
     if (recipeId.startsWith('dishanhai:')) {
-        normalizedId = recipeId.substring(10); // 去掉'dishanhai:'前缀
-        debug('ID规范化: ' + recipeId + ' -> ' + normalizedId);
+        normalizedId = recipeId.substring(10); // 去掉'dishanhai:'前缀 (10个字符)
+        debug('ID规范化(dishanhai:): ' + recipeId + ' -> ' + normalizedId);
+    } else if (recipeId.startsWith('dishanahi:')) {
+        normalizedId = recipeId.substring(9); // 去掉'dishanahi:'前缀 (9个字符)
+        debug('ID规范化(dishanahi:): ' + recipeId + ' -> ' + normalizedId);
     }
     
     // 验证规范化后的ID
@@ -1078,8 +1246,8 @@ function sendMessageToPlayer(player, message) {
 /**
  * 处理配方修改命令
  * 
- * 格式: !配方修改 <配方ID> <字段> <值>
- * 示例: !配方修改 my_recipe EUt 256
+ * 格式: /配方修改 <配方ID> <字段> <值>
+ * 示例: /配方修改 my_recipe EUt 256
  * 
  * @param {Object} player - 玩家对象
  * @param {Array} args - 命令参数
@@ -1092,9 +1260,9 @@ function handleModifyCommand(player, args) {
     }
     
     if (args.length < 3) {
-        sendMessageToPlayer(player, '§e用法: !配方修改 <配方ID> <字段> <值>');
-        sendMessageToPlayer(player, '§7示例: !配方修改 my_recipe EUt 256');
-        sendMessageToPlayer(player, '§7示例: !配方修改 my_recipe duration 100');
+        sendMessageToPlayer(player, '§e用法: /配方修改 <配方ID> <字段> <值>');
+        sendMessageToPlayer(player, '§7示例: /配方修改 my_recipe EUt 256');
+        sendMessageToPlayer(player, '§7示例: /配方修改 my_recipe duration 100');
         return false;
     }
     
@@ -1155,7 +1323,7 @@ function handleModifyCommand(player, args) {
 /**
  * 处理配方信息命令
  * 
- * 格式: !配方信息 <配方ID>
+ * 格式: /配方信息 <配方ID>
  * 
  * @param {Object} player - 玩家对象
  * @param {Array} args - 命令参数
@@ -1168,8 +1336,8 @@ function handleInfoCommand(player, args) {
     }
     
     if (args.length < 1) {
-        sendMessageToPlayer(player, '§e用法: !配方信息 <配方ID>');
-        sendMessageToPlayer(player, '§7示例: !配方信息 my_recipe');
+        sendMessageToPlayer(player, '§e用法: /配方信息 <配方ID>');
+        sendMessageToPlayer(player, '§7示例: /配方信息 my_recipe');
         return false;
     }
     
@@ -1204,7 +1372,7 @@ function handleInfoCommand(player, args) {
 /**
  * 处理配方列表命令
  * 
- * 格式: !配方列表 [数组名]
+ * 格式: /配方列表 [数组名]
  * 
  * @param {Object} player - 玩家对象
  * @param {Array} args - 命令参数
@@ -1259,7 +1427,7 @@ function handleListCommand(player, args) {
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§a总计: §e' + totalRecipes + ' 个配方');
     if (!arrayName) {
-        sendMessageToPlayer(player, '§7使用 !配方列表 <数组名> 查看特定数组的配方');
+        sendMessageToPlayer(player, '§7使用 /配方列表 <数组名> 查看特定数组的配方');
     }
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     return true;
@@ -1268,7 +1436,7 @@ function handleListCommand(player, args) {
 /**
  * 处理帮助命令
  * 
- * 格式: !配方帮助
+ * 格式: /配方帮助
  * 
  * @param {Object} player - 玩家对象
  * @returns {boolean} 是否处理成功
@@ -1279,24 +1447,24 @@ function handleHelpCommand(player) {
     sendMessageToPlayer(player, '§7版本: v2.4.0 - 仅限OP玩家使用');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e可用命令:');
-    sendMessageToPlayer(player, '§7!配方修改 <配方ID> <字段> <值> §f- 修改配方字段');
-    sendMessageToPlayer(player, '§7!配方信息 <配方ID> §f- 查看配方详细信息');
-    sendMessageToPlayer(player, '§7!配方列表 [数组名] §f- 查看配方数组列表');
-    sendMessageToPlayer(player, '§7!配方开关 <配方ID> <开/关> §f- 启用/禁用配方加载');
-    sendMessageToPlayer(player, '§7!配方状态 <配方ID> §f- 查看配方加载状态');
-    sendMessageToPlayer(player, '§7!配方列表已启用 §f- 列出所有启用的配方');
-    sendMessageToPlayer(player, '§7!配方列表已禁用 §f- 列出所有禁用的配方');
-    sendMessageToPlayer(player, '§7!配方重置配置 §f- 重置所有配置（需要确认）');
-    sendMessageToPlayer(player, '§7!配方确认重置 §f- 确认重置配置操作');
-    sendMessageToPlayer(player, '§7!配方帮助 §f- 显示此帮助信息');
+    sendMessageToPlayer(player, '§7/配方修改 <配方ID> <字段> <值> §f- 修改配方字段');
+    sendMessageToPlayer(player, '§7/配方信息 <配方ID> §f- 查看配方详细信息');
+    sendMessageToPlayer(player, '§7/配方列表 [数组名] §f- 查看配方数组列表');
+    sendMessageToPlayer(player, '§7/配方开关 <配方ID> <开/关> §f- 启用/禁用配方加载');
+    sendMessageToPlayer(player, '§7/配方状态 <配方ID> §f- 查看配方加载状态');
+    sendMessageToPlayer(player, '§7/配方列表已启用 §f- 列出所有启用的配方');
+    sendMessageToPlayer(player, '§7/配方列表已禁用 §f- 列出所有禁用的配方');
+    sendMessageToPlayer(player, '§7/配方重置配置 §f- 重置所有配置（需要确认）');
+    sendMessageToPlayer(player, '§7/配方确认重置 §f- 确认重置配置操作');
+    sendMessageToPlayer(player, '§7/配方帮助 §f- 显示此帮助信息');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e常用字段:');
     sendMessageToPlayer(player, '§7EUt §f- 能量消耗 (数字)');
     sendMessageToPlayer(player, '§7duration §f- 处理时间 (数字)');
     sendMessageToPlayer(player, '§7itemInputs §f- 物品输入 (JSON数组)');
     sendMessageToPlayer(player, '§7itemOutputs §f- 物品输出 (JSON数组)');
-    sendMessageToPlayer(player, '§7示例: !配方修改 my_recipe EUt 256');
-    sendMessageToPlayer(player, '§7示例: !配方修改 my_recipe itemOutputs \'["2x minecraft:diamond"]\'');
+    sendMessageToPlayer(player, '§7示例: /配方修改 my_recipe EUt 256');
+    sendMessageToPlayer(player, '§7示例: /配方修改 my_recipe itemOutputs \'["2x minecraft:diamond"]\'');
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     return true;
 }
@@ -1304,9 +1472,9 @@ function handleHelpCommand(player) {
 /**
  * 处理配方开关命令
  * 
- * 格式: !配方开关 <配方ID> <开/关>
- * 示例: !配方开关 my_recipe 开
- * 示例: !配方开关 my_recipe 关闭
+ * 格式: /配方开关 <配方ID> <开/关>
+ * 示例: /配方开关 my_recipe 开
+ * 示例: /配方开关 my_recipe 关闭
  * 
  * @param {Object} player - 玩家对象
  * @param {Array} args - 命令参数
@@ -1319,9 +1487,9 @@ function handleRecipeSwitchCommand(player, args) {
     }
     
     if (args.length < 2) {
-        sendMessageToPlayer(player, '§e用法: !配方开关 <配方ID> <开/关>');
-        sendMessageToPlayer(player, '§7示例: !配方开关 my_recipe 开');
-        sendMessageToPlayer(player, '§7示例: !配方开关 my_recipe 关闭');
+        sendMessageToPlayer(player, '§e用法: /配方开关 <配方ID> <开/关>');
+        sendMessageToPlayer(player, '§7示例: /配方开关 my_recipe 开');
+        sendMessageToPlayer(player, '§7示例: /配方开关 my_recipe 关闭');
         sendMessageToPlayer(player, '§7可用值: 开, 开启, 启用, true, 1, 关, 关闭, 禁用, false, 0');
         return false;
     }
@@ -1360,8 +1528,8 @@ function handleRecipeSwitchCommand(player, args) {
 /**
  * 处理配方状态命令
  * 
- * 格式: !配方状态 <配方ID>
- * 示例: !配方状态 my_recipe
+ * 格式: /配方信息 <配方ID>
+ * 示例: /配方信息 my_recipe
  * 
  * @param {Object} player - 玩家对象
  * @param {Array} args - 命令参数
@@ -1374,8 +1542,8 @@ function handleRecipeStatusCommand(player, args) {
     }
     
     if (args.length < 1) {
-        sendMessageToPlayer(player, '§e用法: !配方状态 <配方ID>');
-        sendMessageToPlayer(player, '§7示例: !配方状态 my_recipe');
+        sendMessageToPlayer(player, '§e用法: /配方状态 <配方ID>');
+        sendMessageToPlayer(player, '§7示例: /配方状态 my_recipe');
         return false;
     }
     
@@ -1398,7 +1566,7 @@ function handleRecipeStatusCommand(player, args) {
     }
     
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
-    sendMessageToPlayer(player, '§7使用 §e!配方开关 ' + recipeId + ' ' + (enabled ? '关' : '开') + ' §7切换状态');
+    sendMessageToPlayer(player, '§7使用 §e/配方开关 ' + recipeId + ' ' + (enabled ? '关' : '开') + ' §7切换状态');
     
     return true;
 }
@@ -1406,7 +1574,7 @@ function handleRecipeStatusCommand(player, args) {
 /**
  * 处理已启用配方列表命令
  * 
- * 格式: !配方列表已启用
+ * 格式: /配方列表已启用
  * 
  * @param {Object} player - 玩家对象
  * @returns {boolean} 是否处理成功
@@ -1442,8 +1610,8 @@ function handleEnabledListCommand(player) {
     }
     
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
-    sendMessageToPlayer(player, '§7使用 §e!配方状态 <配方ID> §7查看详细状态');
-    sendMessageToPlayer(player, '§7使用 §e!配方列表已禁用 §7查看禁用的配方列表');
+    sendMessageToPlayer(player, '§7使用 §e/配方状态 <配方ID> §7查看详细状态');
+    sendMessageToPlayer(player, '§7使用 §e/配方列表已禁用 §7查看禁用的配方列表');
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     
     return true;
@@ -1452,7 +1620,7 @@ function handleEnabledListCommand(player) {
 /**
  * 处理已禁用配方列表命令
  * 
- * 格式: !配方列表已禁用
+ * 格式: /配方列表已禁用
  * 
  * @param {Object} player - 玩家对象
  * @returns {boolean} 是否处理成功
@@ -1488,8 +1656,8 @@ function handleDisabledListCommand(player) {
     }
     
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
-    sendMessageToPlayer(player, '§7使用 §e!配方状态 <配方ID> §7查看详细状态');
-    sendMessageToPlayer(player, '§7使用 §e!配方开关 <配方ID> 开 §7启用配方');
+    sendMessageToPlayer(player, '§7使用 §e/配方状态 <配方ID> §7查看详细状态');
+    sendMessageToPlayer(player, '§7使用 §e/配方开关 <配方ID> 开 §7启用配方');
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     
     return true;
@@ -1498,7 +1666,7 @@ function handleDisabledListCommand(player) {
 /**
  * 处理配方配置重置命令
  * 
- * 格式: !配方重置配置
+ * 格式: /配方重置配置
  * 
  * @param {Object} player - 玩家对象
  * @returns {boolean} 是否处理成功
@@ -1520,7 +1688,7 @@ function handleRecipeConfigResetCommand(player) {
     sendMessageToPlayer(player, '§7这将清除所有 ' + configCount + ' 个配方的加载设置');
     sendMessageToPlayer(player, '§7所有配方将恢复为默认启用状态');
     sendMessageToPlayer(player, '§c此操作不可撤销！');
-    sendMessageToPlayer(player, '§7输入 §e!配方确认重置 §7继续操作');
+    sendMessageToPlayer(player, '§7输入 §e/配方确认重置 §7继续操作');
     
     // 设置确认标记
     global.shanhaiRecipeConfigResetPending = true;
@@ -1532,7 +1700,7 @@ function handleRecipeConfigResetCommand(player) {
 /**
  * 处理配方确认重置命令
  * 
- * 格式: !配方确认重置
+ * 格式: /配方确认重置
  * 
  * @param {Object} player - 玩家对象
  * @returns {boolean} 是否处理成功
@@ -1545,7 +1713,7 @@ function handleRecipeConfirmResetCommand(player) {
     
     if (!global.shanhaiRecipeConfigResetPending) {
         sendMessageToPlayer(player, '§e提示: 没有待确认的配置重置操作');
-        sendMessageToPlayer(player, '§7请先使用 §e!配方重置配置 §7命令');
+        sendMessageToPlayer(player, '§7请先使用 §e/配方重置配置 §7命令');
         return false;
     }
     
@@ -1588,7 +1756,7 @@ ServerEvents.commandRegistry(function(event) {
     var Commands = event.commands;
     var Arguments = event.arguments;
     
-    // 注册 !配方修改 命令
+    // 注册 /配方修改 命令
     event.register( 
         Commands.literal('配方修改')
             .requires(function(source) {
@@ -1621,7 +1789,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方信息 命令
+    // 注册 /配方信息 命令
     event.register(
         Commands.literal('配方信息')
             .requires(function(source) {
@@ -1648,7 +1816,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方列表 命令
+    // 注册 /配方列表 命令
     event.register(
         Commands.literal('配方列表')
             .requires(function(source) {
@@ -1679,7 +1847,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方帮助 命令
+    // 注册 /配方帮助 命令
     event.register(
         Commands.literal('配方帮助')
             .requires(function(source) {
@@ -1696,13 +1864,13 @@ ServerEvents.commandRegistry(function(event) {
                 if (player) {
                     handleHelpCommand(player);
                 } else {
-                    console.log('配方控制API帮助 - 可用命令: !配方修改, !配方信息, !配方列表, !配方帮助');
+                    console.log('配方控制API帮助 - 可用命令: /配方修改, /配方信息, /配方列表, /配方帮助');
                 }
                 return 1;
             })
     );
     
-    // 注册 !配方开关 命令
+    // 注册 /配方开关 命令
     event.register(
         Commands.literal('配方开关')
             .requires(function(source) {
@@ -1743,7 +1911,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方状态 命令
+    // 注册 /配方状态 命令
     event.register(
         Commands.literal('配方状态')
             .requires(function(source) {
@@ -1770,7 +1938,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方列表已启用 命令
+    // 注册 /配方列表已启用 命令
     event.register(
         Commands.literal('配方列表已启用')
             .requires(function(source) {
@@ -1797,7 +1965,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方列表已禁用 命令
+    // 注册 /配方列表已禁用 命令
     event.register(
         Commands.literal('配方列表已禁用')
             .requires(function(source) {
@@ -1824,7 +1992,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方重置配置 命令
+    // 注册 /配方重置配置 命令
     event.register(
         Commands.literal('配方重置配置')
             .requires(function(source) {
@@ -1854,7 +2022,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方确认重置 命令
+    // 注册 /配方确认重置 命令
     event.register(
         Commands.literal('配方确认重置')
             .requires(function(source) {
@@ -1942,13 +2110,15 @@ info('全局API错误保护已启用，共保护 ' + Object.keys(rawAPI).length 
 // =============== 初始化日志 ==================
 // =====================================================
 
+
+
 info('§6═══════════════════════════════════════════════════════════');
 
 info('§a✨ 山海私货 · 配方控制API 加载完成！');
 info('§6═══════════════════════════════════════════════════════════');
 info('§b📋 配方控制API已就绪');
 info('§7新增功能: §e配方加载控制§7 - 允许单独配置配方是否加载');
-info('§7聊天命令: §e!配方修改§7, §e!配方信息§7, §e!配方列表§7, §e!配方开关§7, §e!配方状态§7, §e!配方列表已启用§7, §e!配方列表已禁用§7, §e!配方帮助');
+info('§7聊天命令: §e/配方修改§7, §e/配方信息§7, §e/配方列表§7, §e/配方开关§7, §e/配方状态§7, §e/配方列表已启用§7, §e/配方列表已禁用§7, §e/配方帮助 (也支持 ! 前缀)');
 info('§7全局API: §eglobal.shanhaiRecipeControlAPI');
 info('§7权限要求: §c仅限OP玩家使用');
 info('§6═══════════════════════════════════════════════════════════');

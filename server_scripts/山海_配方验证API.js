@@ -4,11 +4,11 @@
 // 描述: 提供全面的配方验证、冲突检测和平衡性分析功能
 // 作者: 山海恒长在/dishanhai
 // 使用方法: 将此文件放入server_scripts目录，重启服务器即可使用
-// 聊天命令: !配方验证 <配方ID>
-//           !配方验证全部
-//           !配方验证报告
-//           !配方冲突检测
-//           !配方平衡分析
+// 聊天命令: /配方验证 <配方ID>
+//           /配方验证全部
+//           /配方验证报告
+//           /配方冲突检测
+//           /配方平衡分析
 // =====================================================
 
 // ========== 重要提示 ==========
@@ -1130,7 +1130,7 @@ function sendMessageToPlayer(player, message) {
 
 /**
  * 处理配方验证命令
- * 格式: !配方验证 <配方ID>
+ * 格式: /配方验证 <配方ID>
  */
 function handleValidateCommand(player, args) {
     if (!isPlayerOp(player)) {
@@ -1139,8 +1139,8 @@ function handleValidateCommand(player, args) {
     }
     
     if (args.length < 1) {
-        sendMessageToPlayer(player, '§e用法: !配方验证 <配方ID>');
-        sendMessageToPlayer(player, '§7示例: !配方验证 dishanhai:my_recipe');
+        sendMessageToPlayer(player, '§e用法: /配方验证 <配方ID>');
+        sendMessageToPlayer(player, '§7示例: /配方验证 dishanhai:my_recipe');
         return false;
     }
     
@@ -1233,7 +1233,7 @@ function handleValidateCommand(player, args) {
 
 /**
  * 处理全部验证命令
- * 格式: !配方验证全部
+ * 格式: /配方验证全部
  */
 function handleValidateAllCommand(player) {
     if (!isPlayerOp(player)) {
@@ -1273,7 +1273,7 @@ function handleValidateAllCommand(player) {
 
 /**
  * 处理验证报告命令
- * 格式: !配方验证报告
+ * 格式: /配方验证报告
  */
 function handleValidateReportCommand(player) {
     if (!isPlayerOp(player)) {
@@ -1317,7 +1317,7 @@ function handleValidateReportCommand(player) {
 
 /**
  * 处理冲突检测命令
- * 格式: !配方冲突检测
+ * 格式: /配方冲突检测
  */
 function handleConflictDetectionCommand(player) {
     if (!isPlayerOp(player)) {
@@ -1372,7 +1372,7 @@ function handleConflictDetectionCommand(player) {
 
 /**
  * 处理平衡分析命令
- * 格式: !配方平衡分析 <配方ID>
+ * 格式: /配方平衡分析 <配方ID>
  */
 function handleBalanceAnalysisCommand(player, args) {
     if (!isPlayerOp(player)) {
@@ -1381,8 +1381,8 @@ function handleBalanceAnalysisCommand(player, args) {
     }
     
     if (args.length < 1) {
-        sendMessageToPlayer(player, '§e用法: !配方平衡分析 <配方ID>');
-        sendMessageToPlayer(player, '§7示例: !配方平衡分析 dishanhai:my_recipe');
+        sendMessageToPlayer(player, '§e用法: /配方平衡分析 <配方ID>');
+        sendMessageToPlayer(player, '§7示例: /配方平衡分析 dishanhai:my_recipe');
         return false;
     }
     
@@ -1482,7 +1482,7 @@ function handleBalanceAnalysisCommand(player, args) {
 
 /**
  * 处理帮助命令
- * 格式: !配方验证帮助
+ * 格式: /配方验证帮助
  */
 function handleHelpCommand(player) {
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
@@ -1490,12 +1490,12 @@ function handleHelpCommand(player) {
     sendMessageToPlayer(player, '§7版本: v1.0.0 - 仅限OP玩家使用');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e可用命令:');
-    sendMessageToPlayer(player, '§7!配方验证 <配方ID> §f- 验证单个配方');
-    sendMessageToPlayer(player, '§7!配方验证全部 §f- 验证所有配方');
-    sendMessageToPlayer(player, '§7!配方验证报告 §f- 生成详细验证报告');
-    sendMessageToPlayer(player, '§7!配方冲突检测 §f- 检测配方ID冲突');
-    sendMessageToPlayer(player, '§7!配方平衡分析 <配方ID> §f- 分析配方平衡性');
-    sendMessageToPlayer(player, '§7!配方验证帮助 §f- 显示此帮助信息');
+    sendMessageToPlayer(player, '§7/配方验证 <配方ID> §f- 验证单个配方');
+    sendMessageToPlayer(player, '§7/配方验证全部 §f- 验证所有配方');
+    sendMessageToPlayer(player, '§7/配方验证报告 §f- 生成详细验证报告');
+    sendMessageToPlayer(player, '§7/配方冲突检测 §f- 检测配方ID冲突');
+    sendMessageToPlayer(player, '§7/配方平衡分析 <配方ID> §f- 分析配方平衡性');
+    sendMessageToPlayer(player, '§7/配方验证帮助 §f- 显示此帮助信息');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e验证功能说明:');
     sendMessageToPlayer(player, '§7• §f基本验证 §7- 检查必需字段和类型');
@@ -1505,9 +1505,9 @@ function handleHelpCommand(player) {
     sendMessageToPlayer(player, '§7• §f冲突检测 §7- 检测重复ID和配方重叠');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e示例:');
-    sendMessageToPlayer(player, '§7!配方验证 dishanhai:my_recipe');
-    sendMessageToPlayer(player, '§7!配方验证全部');
-    sendMessageToPlayer(player, '§7!配方平衡分析 dishanhai:powerful_recipe');
+    sendMessageToPlayer(player, '§7/配方验证 dishanhai:my_recipe');
+    sendMessageToPlayer(player, '§7/配方验证全部');
+    sendMessageToPlayer(player, '§7/配方平衡分析 dishanhai:powerful_recipe');
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     return true;
 }
@@ -1520,7 +1520,7 @@ ServerEvents.commandRegistry(function(event) {
     var Commands = event.commands;
     var Arguments = event.arguments;
     
-    // 注册 !配方验证 命令
+    // 注册 /配方验证 命令
     event.register(
         Commands.literal('配方验证')
             .requires(function(source) {
@@ -1553,7 +1553,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方验证全部 命令
+    // 注册 /配方验证全部 命令
     event.register(
         Commands.literal('配方验证全部')
             .requires(function(source) {
@@ -1578,7 +1578,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方验证报告 命令
+    // 注册 /配方验证报告 命令
     event.register(
         Commands.literal('配方验证报告')
             .requires(function(source) {
@@ -1603,7 +1603,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方冲突检测 命令
+    // 注册 /配方冲突检测 命令
     event.register(
         Commands.literal('配方冲突检测')
             .requires(function(source) {
@@ -1628,7 +1628,7 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
-    // 注册 !配方平衡分析 命令
+    // 注册 /配方平衡分析 命令
     event.register(
         Commands.literal('配方平衡分析')
             .requires(function(source) {
@@ -1661,7 +1661,7 @@ ServerEvents.commandRegistry(function(event) {
             )
     );
     
-    // 注册 !配方验证帮助 命令
+    // 注册 /配方验证帮助 命令
     event.register(
         Commands.literal('配方验证帮助')
             .requires(function(source) {
@@ -1678,7 +1678,7 @@ ServerEvents.commandRegistry(function(event) {
                 if (player) {
                     handleHelpCommand(player);
                 } else {
-                    console.log('配方验证API帮助 - 可用命令: !配方验证, !配方验证全部, !配方验证报告, !配方冲突检测, !配方平衡分析, !配方验证帮助');
+                    console.log('配方验证API帮助 - 可用命令: /配方验证, /配方验证全部, /配方验证报告, /配方冲突检测, /配方平衡分析, /配方验证帮助');
                 }
                 return 1;
             })
@@ -1735,7 +1735,7 @@ info('§a✨ 山海私货 · 配方验证API 加载完成！');
 info('§6═══════════════════════════════════════════════════════════');
 info('§d📋 配方验证API已就绪');
 info('§7功能: §e基本验证§7, §e语法验证§7, §e兼容性验证§7, §e平衡性分析§7, §e冲突检测');
-info('§7聊天命令: §e!配方验证§7, §e!配方验证全部§7, §e!配方验证报告§7, §e!配方冲突检测§7, §e!配方平衡分析§7, §e!配方验证帮助');
+info('§7聊天命令: §e/配方验证§7, §e/配方验证全部§7, §e/配方验证报告§7, §e/配方冲突检测§7, §e/配方平衡分析§7, §e/配方验证帮助');
 info('§7全局API: §eglobal.shanhaiRecipeValidationAPI');
 info('§7权限要求: §c仅限OP玩家使用');
 info('§6═══════════════════════════════════════════════════════════');
