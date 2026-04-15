@@ -1707,7 +1707,8 @@ ServerEvents.recipes(e => {
     const [ULV,LV,MV,HV,EV,IV,LuV,ZPM,UV,UHV,UEV,UIV,UXV,OpV,MAX] = VA;
     const [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = VA;
     // =====================================================
-    // =============== safeAddRecipe (配方) ==========
+    // =============== safeAddRecipe (配方加载系统主控安全添加配方) ==========
+    // =============== 配方加载系统主控集成 (v2.4新增) ==========
     // =====================================================
     function safeAddRecipe(arg1,arg2,arg3,arg4){
         let type,id,recipeFunc,recipeObj;

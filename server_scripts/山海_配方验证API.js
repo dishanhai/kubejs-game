@@ -134,13 +134,19 @@ function getAllRecipeArrays() {
  * 移除所有空格、下划线、连字符，转换为小写
  */
 function normalizeRecipeId(id) {
-    if (typeof id !== 'string') return '';
-    return id.toLowerCase()
-        .replace(/\s+/g, '')     // 移除所有空格
-        .replace(/_/g, '')       // 移除下划线
-        .replace(/-/g, '')       // 移除连字符
-        .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
-        .trim();
+    if (id === null || id === undefined) return '';
+    try {
+        var strId = String(id);
+        return strId.toLowerCase()
+            .replace(/\s+/g, '')     // 移除所有空格
+            .replace(/_/g, '')       // 移除下划线
+            .replace(/-/g, '')       // 移除连字符
+            .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
+            .trim();
+    } catch (err) {
+        debug('normalizeRecipeId: 无法将id转换为字符串 - ' + err.message);
+        return '';
+    }
 }
 
 /**
@@ -148,9 +154,24 @@ function normalizeRecipeId(id) {
  * 支持多种ID格式：原样匹配、小写匹配、移除空格和下划线后匹配
  */
 function findRecipeById(id) {
-    if (!id || typeof id !== 'string') {
+    if (id === null || id === undefined) {
+        debug('findRecipeById: 输入id为null或undefined');
         return null;
     }
+    
+    try {
+        id = String(id);
+    } catch (err) {
+        debug('findRecipeById: 无法将id转换为字符串 - ' + err.message);
+        return null;
+    }
+    
+    if (!id.trim()) {
+        debug('findRecipeById: id为空字符串');
+        return null;
+    }
+    
+    debug('findRecipeById: 查找配方ID="' + id + '"');
     
     var arrays = getAllRecipeArrays();
     var normalizedId = normalizeRecipeId(id);
@@ -165,6 +186,7 @@ function findRecipeById(id) {
             
             // 1. 精确匹配
             if (recipe.id === id) {
+                debug('findRecipeById: 精确匹配找到配方 "' + id + '" 位于 ' + arrays[i].name + '[' + j + ']');
                 return {
                     recipe: recipe,
                     arrayName: arrays[i].name,
@@ -174,6 +196,7 @@ function findRecipeById(id) {
             
             // 2. 小写匹配
             if (recipe.id.toLowerCase() === id.toLowerCase()) {
+                debug('findRecipeById: 小写匹配找到配方 "' + id + '" 位于 ' + arrays[i].name + '[' + j + ']');
                 return {
                     recipe: recipe,
                     arrayName: arrays[i].name,
@@ -184,6 +207,7 @@ function findRecipeById(id) {
             // 3. 规范化匹配（移除空格、下划线、连字符等）
             var recipeNormalizedId = normalizeRecipeId(recipe.id);
             if (recipeNormalizedId === normalizedId) {
+                debug('findRecipeById: 规范化匹配找到配方 "' + id + '" 位于 ' + arrays[i].name + '[' + j + ']');
                 return {
                     recipe: recipe,
                     arrayName: arrays[i].name,
@@ -193,6 +217,7 @@ function findRecipeById(id) {
         }
     }
     
+    debug('findRecipeById: 未找到配方ID="' + id + '"');
     return null;
 }
 
@@ -209,8 +234,13 @@ function getAllRecipeIds() {
         
         for (var j = 0; j < arr.length; j++) {
             var recipe = arr[j];
-            if (recipe && recipe.id && typeof recipe.id === 'string') {
-                ids.push(recipe.id);
+            if (recipe && recipe.id) {
+                try {
+                    var idStr = String(recipe.id);
+                    ids.push(idStr);
+                } catch (err) {
+                    // 忽略转换错误
+                }
             }
         }
     }
@@ -236,18 +266,41 @@ function validateBasicStructure(recipe) {
     if (!recipe) {
         result.valid = false;
         result.errors.push('配方对象为空');
-        return result;
+        debug('validateRecipe: 验证完成，配方ID="' + recipeId + '"，有效=' + result.valid + '，错误=' + errorCount + '，警告=' + warningCount);
+    return result;
     }
     
     // 检查必需字段
-    if (!recipe.id || typeof recipe.id !== 'string') {
+    if (!recipe.id) {
         result.valid = false;
-        result.errors.push('配方ID缺失或不是字符串');
+        result.errors.push('配方ID缺失');
+    } else {
+        try {
+            var idStr = String(recipe.id);
+            if (!idStr.trim()) {
+                result.valid = false;
+                result.errors.push('配方ID为空字符串');
+            }
+        } catch (err) {
+            result.valid = false;
+            result.errors.push('配方ID无法转换为字符串，实际类型: ' + typeof recipe.id);
+        }
     }
     
-    if (!recipe.type || typeof recipe.type !== 'string') {
+    if (!recipe.type) {
         result.valid = false;
-        result.errors.push('机器类型缺失或不是字符串');
+        result.errors.push('机器类型缺失');
+    } else {
+        try {
+            var typeStr = String(recipe.type);
+            if (!typeStr.trim()) {
+                result.valid = false;
+                result.errors.push('机器类型为空字符串');
+            }
+        } catch (err) {
+            result.valid = false;
+            result.errors.push('机器类型无法转换为字符串，实际类型: ' + typeof recipe.type);
+        }
     }
     
     // 检查duration字段（GT机器必需）
@@ -270,9 +323,14 @@ function validateBasicStructure(recipe) {
     
     // 检查机器类型有效性
     var gtr = getGtrObject();
-    if (gtr && recipe.type && typeof recipe.type === 'string') {
-        if (!gtr[recipe.type]) {
-            result.warnings.push('未知机器类型: ' + recipe.type + '（在当前的gtr对象中未找到）');
+    if (gtr && recipe.type) {
+        try {
+            var typeStr = String(recipe.type);
+            if (!gtr[typeStr]) {
+                result.warnings.push('未知机器类型: ' + typeStr + '（在当前的gtr对象中未找到）');
+            }
+        } catch (err) {
+            // 忽略转换错误
         }
     }
     
@@ -288,8 +346,12 @@ function validateBasicStructure(recipe) {
  * 检查物品字符串格式是否正确
  */
 function validateItemFormat(itemStr) {
-    if (typeof itemStr !== 'string') {
-        return { valid: false, error: '物品格式必须是字符串，实际类型: ' + typeof itemStr };
+    // 安全转换输入为字符串
+    var str;
+    try {
+        str = String(itemStr);
+    } catch (err) {
+        return { valid: false, error: '物品格式无法转换为字符串，实际类型: ' + typeof itemStr };
     }
     
     // 常见物品格式：
@@ -297,7 +359,7 @@ function validateItemFormat(itemStr) {
     // 2. "物品ID" 如 "minecraft:iron_ingot"（默认1个）
     // 3. "标签#标签名" 如 "#forge:ingots/iron"
     
-    var parts = itemStr.trim().split(' ');
+    var parts = str.trim().split(' ');
     
     if (parts.length === 1) {
         // 只有物品ID
@@ -337,15 +399,19 @@ function validateItemFormat(itemStr) {
  * 检查流体字符串格式是否正确
  */
 function validateFluidFormat(fluidStr) {
-    if (typeof fluidStr !== 'string') {
-        return { valid: false, error: '流体格式必须是字符串，实际类型: ' + typeof fluidStr };
+    // 安全转换输入为字符串
+    var str;
+    try {
+        str = String(fluidStr);
+    } catch (err) {
+        return { valid: false, error: '流体格式无法转换为字符串，实际类型: ' + typeof fluidStr };
     }
     
     // 常见流体格式：
     // 1. "流体ID 数量" 如 "minecraft:water 1000"
     // 2. "流体ID" 如 "minecraft:water"（可能默认1mb）
     
-    var parts = fluidStr.trim().split(' ');
+    var parts = str.trim().split(' ');
     
     if (parts.length === 1) {
         // 只有流体ID
@@ -825,9 +891,21 @@ function analyzeRecipeBalance(recipe) {
     
     // 3. 检查电路配置
     if (recipe.circuit != null) {
-        if (typeof recipe.circuit !== 'number' && typeof recipe.circuit !== 'string') {
-            result.issues.push('circuit参数类型异常: ' + typeof recipe.circuit);
-            score -= 5;
+        var circuitType = typeof recipe.circuit;
+        if (circuitType !== 'number' && circuitType !== 'string') {
+            // 对于对象类型，尝试检查是否可以转换为字符串
+            if (circuitType === 'object' && recipe.circuit != null) {
+                try {
+                    String(recipe.circuit);
+                    // 如果可以转换为字符串，则认为是有效的
+                } catch (err) {
+                    result.issues.push('circuit参数类型异常: ' + circuitType);
+                    score -= 5;
+                }
+            } else {
+                result.issues.push('circuit参数类型异常: ' + circuitType);
+                score -= 5;
+            }
         }
     }
     
@@ -856,6 +934,7 @@ function analyzeRecipeBalance(recipe) {
  * 执行所有验证模块
  */
 function validateRecipe(recipeId) {
+    debug('validateRecipe: 开始验证配方ID="' + recipeId + '"');
     var result = {
         recipeId: recipeId,
         found: false,
@@ -871,6 +950,7 @@ function validateRecipe(recipeId) {
     // 查找配方
     var recipeResult = findRecipeById(recipeId);
     if (!recipeResult) {
+        warn('validateRecipe: 未找到配方 "' + recipeId + '"');
         result.summary = '❌ 未找到配方: ' + recipeId;
         return result;
     }
@@ -1375,6 +1455,7 @@ function handleConflictDetectionCommand(player) {
  * 格式: /配方平衡分析 <配方ID>
  */
 function handleBalanceAnalysisCommand(player, args) {
+    debug('handleBalanceAnalysisCommand: 玩家 ' + (player ? player.name : '控制台') + ' 请求分析配方，参数=' + JSON.stringify(args));
     if (!isPlayerOp(player)) {
         sendMessageToPlayer(player, '§c错误: 只有OP玩家可以使用此命令！');
         return false;

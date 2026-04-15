@@ -240,8 +240,108 @@ function normalizeRecipeId(id) {
     }
 }
 
+/**
+ * 查找配方配置键
+ * 使用与isRecipeEnabled相同的匹配逻辑查找配方在配置中的键
+ * 
+ * @param {string} recipeId - 配方ID
+ * @returns {string|null} 匹配的配置键，如果未找到则返回null
+ */
+function findRecipeConfigKey(recipeId) {
+    // 支持Java字符串对象
+    if (recipeId === null || recipeId === undefined) {
+        return null;
+    }
+    
+    // 检查配置是否可能已损坏或未加载（条目数量极少）
+    var keyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+    if (keyCount < 3) {
+        // 配置条目很少，可能未正确加载，尝试重新加载一次
+        debug('配置条目很少（' + keyCount + '），尝试重新加载配置...');
+        try {
+            initRecipeLoadConfig();
+            var newKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+            if (newKeyCount > keyCount) {
+                debug('配置重新加载成功: ' + keyCount + ' -> ' + newKeyCount + ' 个条目');
+            }
+        } catch (reloadErr) {
+            debug('配置重新加载失败: ' + reloadErr.message);
+        }
+    }
+    
+    // 将recipeId转换为字符串（支持Java字符串对象）
+    try {
+        recipeId = String(recipeId);
+    } catch (err) {
+        debug('findRecipeConfigKey: 无法将recipeId转换为字符串 - ' + err.message);
+        return null;
+    }
+    
+    if (!recipeId.trim()) {
+        return null;
+    }
+    
+    // 1. 直接匹配
+    if (recipeLoadConfig.hasOwnProperty(recipeId)) {
+        debug('配方配置键查找（直接匹配）: ' + recipeId);
+        return recipeId;
+    }
+    
+    // 2. 尝试处理dishanhai:/dishanahi:前缀的兼容性
+    // 如果ID以dishanhai:开头，也检查去掉前缀的版本
+    if (recipeId.startsWith('dishanhai:')) {
+        var shortId = recipeId.substring(10); // 去掉'dishanhai:'前缀
+        if (recipeLoadConfig.hasOwnProperty(shortId)) {
+            debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
+            return shortId;
+        }
+    } 
+    // 如果ID以dishanahi:开头，也检查去掉前缀的版本
+    else if (recipeId.startsWith('dishanahi:')) {
+        var shortId = recipeId.substring(9); // 去掉'dishanahi:'前缀
+        if (recipeLoadConfig.hasOwnProperty(shortId)) {
+            debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
+            return shortId;
+        }
+    }
+    // 如果ID不以dishanhai:或dishanahi:开头，也检查加上前缀的版本
+    else if (!recipeId.includes(':')) {
+        // 检查dishanhai:前缀
+        var prefixedId = 'dishanhai:' + recipeId;
+        if (recipeLoadConfig.hasOwnProperty(prefixedId)) {
+            debug('配方配置键查找（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId);
+            return prefixedId;
+        }
+        // 检查dishanahi:前缀
+        var prefixedId2 = 'dishanahi:' + recipeId;
+        if (recipeLoadConfig.hasOwnProperty(prefixedId2)) {
+            debug('配方配置键查找（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId2);
+            return prefixedId2;
+        }
+    }
+    
+    // 3. 尝试规范化匹配（移除空格、下划线、连字符、冒号，转换为小写）
+    var normalizedRecipeId = normalizeRecipeId(recipeId);
+    if (normalizedRecipeId) {
+        // 遍历所有配置键，查找规范化匹配
+        for (var key in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(key)) {
+                var normalizedKey = normalizeRecipeId(key);
+                if (normalizedKey === normalizedRecipeId) {
+                    debug('配方配置键查找（规范化匹配）: ' + recipeId + ' -> ' + key + ' (规范化: ' + normalizedRecipeId + ')');
+                    return key;
+                }
+            }
+        }
+    }
+    
+    // 未找到匹配的配置键
+    debug('配方配置键查找（未找到）: ' + recipeId);
+    return null;
+}
+
 // 配方查找函数
-// 注意：此函数假设配方数组已定义为全局变量（如 global.assrecipes）
+// 注意：此函数假设配方数组已定义为全局变量（如 global.assrecipes)
 // 如果您的配方数组是局部变量，请修改此函数以引用正确的变量
 function findRecipeById(id) {
     // 支持Java字符串对象
@@ -382,46 +482,124 @@ var recipeLoadConfig = {};
  */
 function initRecipeLoadConfig() {
     debug('开始初始化配方加载配置...');
+    debug('当前recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
     
     try {
         // 首先尝试从文件加载
         var loaded = false;
         try {
             var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+            debug('尝试从文件加载配置: ' + CONFIG_PATH);
+            debug('JsonIO类型: ' + typeof JsonIO + ', JsonIO.read类型: ' + (typeof JsonIO !== 'undefined' ? typeof JsonIO.read : 'undefined'));
+            
+            // 方法1：使用 JsonIO（首选）
             if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
                 var fileConfig = JsonIO.read(CONFIG_PATH);
+                debug('JsonIO.read返回类型: ' + typeof fileConfig + ', 值: ' + (fileConfig ? '非空' : '空'));
+                
                 if (fileConfig && typeof fileConfig === 'object') {
                     recipeLoadConfig = fileConfig;
                     loaded = true;
                     debug('配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                    debug('加载的配置键示例: ' + (Object.keys(recipeLoadConfig).slice(0, 5).join(', ') || '无'));
+                } else {
+                    debug('JsonIO返回无效配置: 类型=' + typeof fileConfig + ', 值=' + fileConfig);
+                    
+                    // JsonIO返回null或undefined，尝试使用fs模块检查文件是否存在
+                    try {
+                        var fs = require('fs');
+                        if (fs.existsSync(CONFIG_PATH)) {
+                            debug('文件存在，但JsonIO读取失败，尝试使用fs读取...');
+                            try {
+                                var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
+                                debug('文件内容长度: ' + fileContent.length + ' 字符');
+                                debug('文件内容前200字符: ' + fileContent.substring(0, 200));
+                                
+                                // 尝试解析JSON
+                                var parsedConfig = JSON.parse(fileContent);
+                                if (parsedConfig && typeof parsedConfig === 'object') {
+                                    recipeLoadConfig = parsedConfig;
+                                    loaded = true;
+                                    debug('通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                                } else {
+                                    debug('fs读取的JSON无效: 类型=' + typeof parsedConfig);
+                                }
+                            } catch (parseErr) {
+                                debug('解析JSON失败: ' + parseErr.message);
+                            }
+                        } else {
+                            debug('配置文件不存在: ' + CONFIG_PATH);
+                        }
+                    } catch (fsErr) {
+                        debug('检查文件存在性失败: ' + fsErr.message);
+                    }
+                }
+            } else {
+                debug('JsonIO API不可用，尝试使用fs模块...');
+                try {
+                    var fs = require('fs');
+                    if (fs.existsSync(CONFIG_PATH)) {
+                        var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
+                        var parsedConfig = JSON.parse(fileContent);
+                        if (parsedConfig && typeof parsedConfig === 'object') {
+                            recipeLoadConfig = parsedConfig;
+                            loaded = true;
+                            debug('通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                        }
+                    } else {
+                        debug('配置文件不存在: ' + CONFIG_PATH);
+                    }
+                } catch (fsErr) {
+                    debug('fs模块加载失败: ' + fsErr.message);
                 }
             }
         } catch (fsErr) {
             debug('从文件加载配置失败: ' + fsErr.message);
+            debug('错误堆栈: ' + (fsErr.stack || '无堆栈信息'));
         }
         
         // 如果文件加载失败，尝试从 global 加载
-        if (!loaded && typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig) {
-            recipeLoadConfig = global.shanhaiRecipeLoadConfig;
-            loaded = true;
-            debug('配方加载配置已从全局存储加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+        if (!loaded && typeof global !== 'undefined') {
+            debug('检查global.shanhaiRecipeLoadConfig: ' + (global.shanhaiRecipeLoadConfig ? '已定义' : '未定义'));
+            if (global.shanhaiRecipeLoadConfig) {
+                recipeLoadConfig = global.shanhaiRecipeLoadConfig;
+                loaded = true;
+                debug('配方加载配置已从全局存储加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+            }
         }
         
-        // 如果都没有，初始化为空配置
+        // 如果都没有，检查当前recipeLoadConfig是否有数据
         if (!loaded) {
-            recipeLoadConfig = {};
-            debug('配方加载配置已初始化（空配置）');
+            // 检查当前的recipeLoadConfig是否已经有数据
+            var currentKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' && !Array.isArray(recipeLoadConfig) ? Object.keys(recipeLoadConfig).length : 0;
+            
+            if (currentKeyCount > 0) {
+                // 当前已经有数据，保留现有配置
+                debug('无法从存储加载配置，但当前已有 ' + currentKeyCount + ' 个配方配置，保留当前配置');
+                debug('当前配置键: ' + Object.keys(recipeLoadConfig).slice(0, 10).join(', '));
+            } else {
+                // 当前没有数据，初始化为空配置
+                recipeLoadConfig = {};
+                debug('配方加载配置已初始化（空配置） - 未找到任何现有配置');
+            }
         }
         
         // 清理配置：只保留有效的布尔值
         var cleanConfig = {};
+        var filteredKeys = [];
         for (var key in recipeLoadConfig) {
             if (recipeLoadConfig.hasOwnProperty(key) && 
                 typeof recipeLoadConfig[key] === 'boolean') {
                 cleanConfig[key] = recipeLoadConfig[key];
+            } else {
+                filteredKeys.push(key);
             }
         }
         recipeLoadConfig = cleanConfig;
+        
+        if (filteredKeys.length > 0) {
+            debug('清理配置时过滤掉 ' + filteredKeys.length + ' 个非布尔值键: ' + filteredKeys.slice(0, 5).join(', '));
+        }
         
         // 显示已配置的配方（如果有）
         var keys = Object.keys(recipeLoadConfig);
@@ -440,10 +618,70 @@ function initRecipeLoadConfig() {
 }
 
 /**
+ * 重新加载配方加载配置
+ * 强制从文件重新加载配置，用于手动修改配置文件后的更新
+ * 
+ * @returns {number} 重新加载的配置条目数量，-1表示失败
+ */
+function reloadRecipeLoadConfig() {
+    debug('手动重新加载配方加载配置...');
+    var previousCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+    
+    try {
+        // 保存当前配置的备份，以防重新加载失败
+        var backupConfig = {};
+        for (var key in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(key)) {
+                backupConfig[key] = recipeLoadConfig[key];
+            }
+        }
+        
+        // 调用初始化函数重新加载配置
+        initRecipeLoadConfig();
+        
+        var newCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+        debug('配置重新加载完成: ' + previousCount + ' -> ' + newCount + ' 个条目');
+        
+        if (newCount === 0 && previousCount > 0) {
+            warn('重新加载后配置为空！恢复备份配置...');
+            recipeLoadConfig = backupConfig;
+            newCount = Object.keys(recipeLoadConfig).length;
+            debug('已恢复备份配置: ' + newCount + ' 个条目');
+        }
+        
+        return newCount;
+    } catch (err) {
+        error('重新加载配方加载配置失败: ' + err.message);
+        return -1;
+    }
+}
+
+/**
  * 保存配方加载配置到持久化存储
  */
 function saveRecipeLoadConfig() {
     try {
+        debug('开始保存配方加载配置...');
+        debug('当前recipeLoadConfig键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
+        
+        // 检查配置是否可能已损坏（条目数量极少）
+        var keyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+        if (keyCount === 0) {
+            warn('警告：尝试保存空的配方加载配置！这可能表示配置加载失败。');
+            debug('尝试重新初始化配置...');
+            try {
+                initRecipeLoadConfig();
+                keyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+                debug('重新初始化后键数量: ' + keyCount);
+            } catch (initErr) {
+                warn('重新初始化失败: ' + initErr.message);
+            }
+        } else if (keyCount < 5) {
+            // 如果配置条目很少，记录警告（可能丢失了数据）
+            warn('警告：配方加载配置只有 ' + keyCount + ' 个条目，这可能不正常。配置可能已损坏或丢失。');
+            debug('当前配置键: ' + Object.keys(recipeLoadConfig).join(', '));
+        }
+        
         // 清理无效数据，只保存有效的布尔值
         var cleanConfig = {};
         for (var key in recipeLoadConfig) {
@@ -506,62 +744,30 @@ function saveRecipeLoadConfig() {
  * @returns {boolean} 配方是否应该加载（默认true）
  */
 function isRecipeEnabled(recipeId) {
-    if (!recipeId || typeof recipeId !== 'string') {
+    // 支持Java字符串对象
+    if (recipeId === null || recipeId === undefined) {
         return true; // 无效ID默认启用
     }
     
-    // 检查配置中是否有此配方的设置（直接匹配）
-    if (recipeLoadConfig.hasOwnProperty(recipeId)) {
-        debug('配方加载状态检查（直接匹配）: ' + recipeId + ' = ' + recipeLoadConfig[recipeId]);
-        return recipeLoadConfig[recipeId] === true;
+    // 将recipeId转换为字符串（支持Java字符串对象）
+    try {
+        recipeId = String(recipeId);
+    } catch (err) {
+        debug('isRecipeEnabled: 无法将recipeId转换为字符串 - ' + err.message);
+        return true; // 转换失败默认启用
     }
     
-    // 尝试处理dishanhai:/dishanahi:前缀的兼容性
-    // 如果ID以dishanhai:开头，也检查去掉前缀的版本
-    if (recipeId.startsWith('dishanhai:')) {
-        var shortId = recipeId.substring(10); // 去掉'dishanhai:'前缀
-        if (recipeLoadConfig.hasOwnProperty(shortId)) {
-            debug('配方加载状态检查（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId + ' = ' + recipeLoadConfig[shortId]);
-            return recipeLoadConfig[shortId] === true;
-        }
-    } 
-    // 如果ID以dishanahi:开头，也检查去掉前缀的版本
-    else if (recipeId.startsWith('dishanahi:')) {
-        var shortId = recipeId.substring(9); // 去掉'dishanahi:'前缀
-        if (recipeLoadConfig.hasOwnProperty(shortId)) {
-            debug('配方加载状态检查（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId + ' = ' + recipeLoadConfig[shortId]);
-            return recipeLoadConfig[shortId] === true;
-        }
-    }
-    // 如果ID不以dishanhai:或dishanahi:开头，也检查加上前缀的版本
-    else if (!recipeId.includes(':')) {
-        // 检查dishanhai:前缀
-        var prefixedId = 'dishanhai:' + recipeId;
-        if (recipeLoadConfig.hasOwnProperty(prefixedId)) {
-            debug('配方加载状态检查（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId + ' = ' + recipeLoadConfig[prefixedId]);
-            return recipeLoadConfig[prefixedId] === true;
-        }
-        // 检查dishanahi:前缀
-        var prefixedId2 = 'dishanahi:' + recipeId;
-        if (recipeLoadConfig.hasOwnProperty(prefixedId2)) {
-            debug('配方加载状态检查（添加前缀匹配）: ' + recipeId + ' -> ' + prefixedId2 + ' = ' + recipeLoadConfig[prefixedId2]);
-            return recipeLoadConfig[prefixedId2] === true;
-        }
+    if (!recipeId.trim()) {
+        return true; // 空字符串默认启用
     }
     
-    // 尝试规范化匹配（移除空格、下划线、连字符、冒号，转换为小写）
-    var normalizedRecipeId = normalizeRecipeId(recipeId);
-    if (normalizedRecipeId) {
-        // 遍历所有配置键，查找规范化匹配
-        for (var key in recipeLoadConfig) {
-            if (recipeLoadConfig.hasOwnProperty(key)) {
-                var normalizedKey = normalizeRecipeId(key);
-                if (normalizedKey === normalizedRecipeId) {
-                    debug('配方加载状态检查（规范化匹配）: ' + recipeId + ' -> ' + key + ' = ' + recipeLoadConfig[key] + ' (规范化: ' + normalizedRecipeId + ')');
-                    return recipeLoadConfig[key] === true;
-                }
-            }
-        }
+    // 使用统一的配置键查找函数
+    var configKey = findRecipeConfigKey(recipeId);
+    
+    if (configKey !== null && recipeLoadConfig.hasOwnProperty(configKey)) {
+        var configValue = recipeLoadConfig[configKey];
+        debug('配方加载状态检查: ' + recipeId + ' -> ' + configKey + ' = ' + configValue);
+        return configValue === true;
     }
     
     // 默认启用所有配方
@@ -578,6 +784,7 @@ function isRecipeEnabled(recipeId) {
  */
 function setRecipeEnabled(recipeId, enabled) {
     debug('setRecipeEnabled 被调用: recipeId="' + recipeId + '", enabled=' + enabled);
+    debug('调用时recipeLoadConfig状态 - 类型: ' + typeof recipeLoadConfig + ', 是数组: ' + Array.isArray(recipeLoadConfig) + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
     
     // 检查 recipeId 是否为 null 或 undefined
     if (recipeId === null || recipeId === undefined) {
@@ -625,10 +832,35 @@ function setRecipeEnabled(recipeId, enabled) {
     }
     
     // 确保recipeLoadConfig是有效对象
+    debug('检查recipeLoadConfig有效性 - 值: ' + recipeLoadConfig + ', 类型: ' + typeof recipeLoadConfig + ', 是数组: ' + Array.isArray(recipeLoadConfig));
     if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
-        warn('recipeLoadConfig不是有效对象，正在修复... 类型: ' + typeof recipeLoadConfig);
-        recipeLoadConfig = {};
-        debug('已重置recipeLoadConfig为空对象');
+        warn('recipeLoadConfig不是有效对象，正在尝试重新初始化... 类型: ' + typeof recipeLoadConfig);
+        debug('当前配置键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
+        debug('当前配置键列表: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).join(', ') : 'N/A'));
+        
+        // 尝试重新初始化配置
+        try {
+            debug('开始调用initRecipeLoadConfig()...');
+            initRecipeLoadConfig();
+            debug('已重新调用initRecipeLoadConfig()');
+            
+            // 检查重新初始化后的状态
+            if (recipeLoadConfig && typeof recipeLoadConfig === 'object' && !Array.isArray(recipeLoadConfig)) {
+                var keyCount = Object.keys(recipeLoadConfig).length;
+                debug('重新初始化成功，当前配置包含 ' + keyCount + ' 个配方');
+                debug('重新初始化后配置键列表: ' + (keyCount > 0 ? Object.keys(recipeLoadConfig).slice(0, 10).join(', ') : '空'));
+            } else {
+                warn('重新初始化后recipeLoadConfig仍然无效，将使用空对象');
+                recipeLoadConfig = {};
+                debug('已重置recipeLoadConfig为空对象');
+            }
+        } catch (initErr) {
+            warn('重新初始化失败: ' + initErr.message);
+            recipeLoadConfig = {};
+            debug('已重置recipeLoadConfig为空对象');
+        }
+    } else {
+        debug('recipeLoadConfig有效，当前包含 ' + Object.keys(recipeLoadConfig).length + ' 个配方');
     }
     
     // 更新配置
@@ -930,8 +1162,9 @@ try {
  * 
  * 扫描所有已导出的配方数组，自动为每个配方创建默认启用配置。
  * 这允许配方控制API自动发现所有可用配方，无需手动注册。
+ * 注意：此函数仅注册新配方，不会覆盖已存在的配方配置。
  * 
- * @param {boolean} force - 是否强制重新注册所有配方（默认false）
+ * @param {boolean} force - 此参数已弃用，保留以保持API兼容性
  * @returns {number} 新注册的配方数量
  */
 function autoRegisterRecipesFromArrays(force) {
@@ -943,8 +1176,10 @@ function autoRegisterRecipesFromArrays(force) {
     var recipeArrays = global.shanhaiRecipeArrays;
     var totalRegistered = 0;
     var totalSkipped = 0;
+    var totalPreserved = 0; // 新增：保留现有状态的配方数量
     
     debug('开始自动从配方数组注册配方...');
+    debug('当前已配置配方数量: ' + Object.keys(recipeLoadConfig).length);
     
     for (var arrayName in recipeArrays) {
         var recipeArray = recipeArrays[arrayName];
@@ -953,22 +1188,50 @@ function autoRegisterRecipesFromArrays(force) {
         }
         
         var arrayCount = 0;
+        var arrayPreserved = 0;
         for (var i = 0; i < recipeArray.length; i++) {
             var recipe = recipeArray[i];
-            if (!recipe || typeof recipe !== 'object') {
+            if (recipe === null || recipe === undefined || typeof recipe !== 'object') {
                 continue;
             }
             
-            // 尝试从不同字段提取配方ID
+            // 尝试从不同字段提取配方ID（支持Java字符串对象）
             var recipeId = null;
             
-            if (recipe.id && typeof recipe.id === 'string') {
-                recipeId = recipe.id;
-            } else if (recipe.name && typeof recipe.name === 'string') {
-                recipeId = recipe.name;
-            } else if (recipe.output && typeof recipe.output === 'string') {
-                // 有些配方可能使用output作为标识
-                recipeId = recipe.output;
+            // 尝试从id字段提取
+            if (recipe.id !== null && recipe.id !== undefined) {
+                try {
+                    var idStr = String(recipe.id).trim();
+                    if (idStr) {
+                        recipeId = idStr;
+                    }
+                } catch (err) {
+                    // 转换失败，继续尝试其他字段
+                }
+            }
+            
+            // 如果id字段无效，尝试name字段
+            if (!recipeId && recipe.name !== null && recipe.name !== undefined) {
+                try {
+                    var nameStr = String(recipe.name).trim();
+                    if (nameStr) {
+                        recipeId = nameStr;
+                    }
+                } catch (err) {
+                    // 转换失败，继续尝试其他字段
+                }
+            }
+            
+            // 如果id和name都无效，尝试output字段
+            if (!recipeId && recipe.output !== null && recipe.output !== undefined) {
+                try {
+                    var outputStr = String(recipe.output).trim();
+                    if (outputStr) {
+                        recipeId = outputStr;
+                    }
+                } catch (err) {
+                    // 转换失败
+                }
             }
             
             if (!recipeId) {
@@ -976,53 +1239,72 @@ function autoRegisterRecipesFromArrays(force) {
                 continue;
             }
             
-            // 清理配方ID：移除可能的命名空间前缀
-            var cleanRecipeId = recipeId;
-            if (cleanRecipeId.includes(':')) {
-                cleanRecipeId = cleanRecipeId.split(':')[1] || cleanRecipeId;
+            // ID规范化：与setRecipeEnabled保持一致
+            // 对于dishanhai:/dishanahi:前缀的ID，使用去掉前缀的版本以保持一致性
+            var normalizedId = recipeId;
+            if (recipeId.startsWith('dishanhai:')) {
+                normalizedId = recipeId.substring(10); // 去掉'dishanhai:'前缀 (10个字符)
+            } else if (recipeId.startsWith('dishanahi:')) {
+                normalizedId = recipeId.substring(9); // 去掉'dishanahi:'前缀 (9个字符)
+            } else if (recipeId.includes(':')) {
+                // 对于其他命名空间前缀，也移除前缀以保持一致性
+                normalizedId = recipeId.split(':')[1] || recipeId;
             }
             
             // 检查是否已经配置过此配方
             var alreadyConfigured = false;
+            var existingValue = undefined;
             
-            // 检查直接匹配
-            if (recipeLoadConfig.hasOwnProperty(cleanRecipeId)) {
-                alreadyConfigured = true;
+            // 检查多种可能的ID格式
+            var possibleIds = [
+                normalizedId,
+                'dishanhai:' + normalizedId,
+                'dishanahi:' + normalizedId,
+                recipeId // 原始ID
+            ];
+            
+            // 移除重复的ID
+            var uniqueIds = [];
+            for (var j = 0; j < possibleIds.length; j++) {
+                if (uniqueIds.indexOf(possibleIds[j]) === -1) {
+                    uniqueIds.push(possibleIds[j]);
+                }
             }
             
-            // 检查带dishanhai:前缀的版本
-            if (!alreadyConfigured && recipeLoadConfig.hasOwnProperty('dishanhai:' + cleanRecipeId)) {
-                alreadyConfigured = true;
+            // 检查所有可能的ID
+            for (var j = 0; j < uniqueIds.length; j++) {
+                var testId = uniqueIds[j];
+                if (recipeLoadConfig.hasOwnProperty(testId)) {
+                    alreadyConfigured = true;
+                    existingValue = recipeLoadConfig[testId];
+                    debug('ID匹配: "' + recipeId + '" -> "' + testId + '" (值=' + existingValue + ')');
+                    break;
+                }
             }
             
-            // 检查带dishanahi:前缀的版本
-            if (!alreadyConfigured && recipeLoadConfig.hasOwnProperty('dishanahi:' + cleanRecipeId)) {
-                alreadyConfigured = true;
-            }
-            
-            if (!alreadyConfigured || force) {
-                // 默认启用所有配方
-                recipeLoadConfig[cleanRecipeId] = true;
+            if (!alreadyConfigured) {
+                // 只有未配置的配方才设置为 true
+                recipeLoadConfig[normalizedId] = true;
                 arrayCount++;
                 totalRegistered++;
-                
-                // 只在调试模式下显示前几个注册的配方
-                var showDebug = (typeof debugMode !== 'undefined' ? debugMode : true);
-                if (showDebug && arrayCount <= 3) {
-                    debug('自动注册配方: ' + cleanRecipeId + ' (来自 ' + arrayName + ')');
-                }
             } else {
-                totalSkipped++;
+                // 已存在的配方，保留原有状态（不要覆盖）
+                totalPreserved++;
+                arrayPreserved++;
+                debug('配方已存在，保留状态: ' + normalizedId + ' = ' + existingValue + ' (原始ID: ' + recipeId + ')');
             }
         }
         
         if (arrayCount > 0) {
-            debug('从 ' + arrayName + ' 自动注册了 ' + arrayCount + ' 个配方');
+            debug('从 ' + arrayName + ' 自动注册了 ' + arrayCount + ' 个新配方');
+        }
+        if (arrayPreserved > 0) {
+            debug('从 ' + arrayName + ' 保留了 ' + arrayPreserved + ' 个已有配方的状态');
         }
     }
     
     if (totalRegistered > 0) {
-        info('自动配方注册完成: 新增 ' + totalRegistered + ' 个配方，跳过 ' + totalSkipped + ' 个已配置配方');
+        info('自动配方注册完成: 新增 ' + totalRegistered + ' 个配方，保留 ' + totalPreserved + ' 个现有配方，跳过 ' + totalSkipped + ' 个无效配方');
         
         // 自动保存新配置
         try {
@@ -1031,8 +1313,10 @@ function autoRegisterRecipesFromArrays(force) {
         } catch (saveErr) {
             warn('自动保存新配置失败: ' + saveErr.message);
         }
+    } else if (totalPreserved > 0) {
+        info('自动配方注册完成: 无新配方，保留了 ' + totalPreserved + ' 个现有配方的状态，跳过 ' + totalSkipped + ' 个无效配方');
     } else {
-        debug('没有新配方需要注册（已跳过 ' + totalSkipped + ' 个已配置配方）');
+        debug('没有新配方需要注册（跳过 ' + totalSkipped + ' 个无效配方）');
     }
     
     return totalRegistered;
@@ -1151,8 +1435,23 @@ function modifyRecipe(id, modifications) {
  * @returns {boolean} 是否成功更新
  */
 function updateRecipeField(id, field, value) {
-    if (!field || typeof field !== 'string') {
-        error('字段名必须是字符串: ' + typeof field);
+    // 支持Java字符串对象
+    if (field === null || field === undefined) {
+        error('字段名不能为null或undefined');
+        return false;
+    }
+    
+    // 将field转换为字符串（支持Java字符串对象）
+    try {
+        field = String(field);
+    } catch (err) {
+        error('字段名必须是字符串，转换失败: ' + err.message);
+        return false;
+    }
+    
+    // 检查字段名是否为空
+    if (!field.trim()) {
+        error('字段名不能为空字符串');
         return false;
     }
     
@@ -1206,8 +1505,8 @@ function validateRecipeModification(id, modifications) {
                 result.errors.push('EUt必须是数字，实际类型: ' + typeof newValue);
             } else if (key === 'duration' && newValue !== null && typeof newValue !== 'number') {
                 result.errors.push('duration必须是数字，实际类型: ' + typeof newValue);
-            } else if (key === 'type' && typeof newValue !== 'string') {
-                result.errors.push('type必须是字符串，实际类型: ' + typeof newValue);
+            } else if (key === 'type' && (newValue === null || newValue === undefined || String(newValue).trim() === '')) {
+                result.errors.push('type必须是有效的非空字符串，实际类型: ' + typeof newValue);
             } else if ((key === 'itemInputs' || key === 'itemOutputs') && newValue !== null && !Array.isArray(newValue)) {
                 result.errors.push(key + '必须是数组，实际类型: ' + typeof newValue);
             } else if ((key === 'inputFluids' || key === 'outputFluids') && newValue !== null && !Array.isArray(newValue)) {
@@ -1215,7 +1514,7 @@ function validateRecipeModification(id, modifications) {
             }
             
             // 检查机器类型是否有效（如果修改了type字段）
-            if (key === 'type' && typeof newValue === 'string') {
+            if (key === 'type' && newValue !== null && newValue !== undefined && String(newValue).trim()) {
                 try {
                     // 尝试获取gtr对象进行验证（如果可用）
                     var gtr = null;
@@ -1678,16 +1977,19 @@ function handleRecipeStatusCommand(player, args) {
     
     sendMessageToPlayer(player, '§a正在查询配方加载状态: §e' + recipeId);
     
+    var configKey = findRecipeConfigKey(recipeId);
     var enabled = isRecipeEnabled(recipeId);
-    var configValue = recipeLoadConfig.hasOwnProperty(recipeId);
+    var hasConfig = configKey !== null && recipeLoadConfig.hasOwnProperty(configKey);
     
     sendMessageToPlayer(player, '§6═══════════════════════════════════════════════════════════');
     sendMessageToPlayer(player, '§a配方加载状态: §e' + recipeId);
     sendMessageToPlayer(player, '§7当前状态: §e' + (enabled ? '开启 (启用)' : '关闭 (禁用)'));
-    sendMessageToPlayer(player, '§7配置设置: §e' + (configValue ? '已配置' : '未配置 (使用默认值)'));
+    sendMessageToPlayer(player, '§7配置设置: §e' + (hasConfig ? '已配置' : '未配置 (使用默认值)'));
     
-    if (configValue) {
-        sendMessageToPlayer(player, '§7配置值: §e' + (recipeLoadConfig[recipeId] ? 'true' : 'false'));
+    if (hasConfig) {
+        var configValue = recipeLoadConfig[configKey];
+        sendMessageToPlayer(player, '§7配置键: §e' + configKey);
+        sendMessageToPlayer(player, '§7配置值: §e' + (configValue ? 'true' : 'false'));
     } else {
         sendMessageToPlayer(player, '§7默认值: §etrue (所有配方默认启用)');
     }
@@ -2352,6 +2654,7 @@ var rawAPI = {
     exportRecipeLoadConfig: exportRecipeLoadConfig,
     exportRecipeArrays: exportRecipeArrays,
     autoRegisterRecipesFromArrays: autoRegisterRecipesFromArrays,
+    reloadRecipeLoadConfig: reloadRecipeLoadConfig,
     
     // 配置访问（高级）
     recipeLoadConfig: function() { return getAllRecipeLoadConfig(); }
