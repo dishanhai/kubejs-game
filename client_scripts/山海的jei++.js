@@ -269,7 +269,7 @@ e.addAdvanced('dishanhai:god_forge_mod', (item, advanced, text) => {
         text.add('§3当引力坍缩至极限，物质与时空一同碎裂，唯有物质幸存');
         text.add('§5撕裂中子星的简并压力，将星核的碎片重新编织成可供锻造的素材');
         text.add('§7唯有驾驭终焉之人，方能从死亡的余烬中淬炼出新生');
-        text.add('§9星骸不灭，终焉为始，创世基石，至高神选');
+        text.add('§9星骸不灭，终焉为始，创世基石，至高之选');
         text.add('§a——从死亡的星核中提炼不朽星辰');
     }else{
         text.add('                                                          §5按住shift查看引言')
