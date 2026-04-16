@@ -5,8 +5,8 @@
 //iife就绪
 // 版本: 2.6 - 添加API控制系统
 
-var Version = '2.2.6fix1(日志系统版本2.6)'
-var API_Version = '2.6.0'
+var Version = '2.2.6fix2(日志系统版本2.6.3)'
+var API_Version = '2.6.2'
 
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
@@ -3683,7 +3683,7 @@ PlayerEvents.loggedIn(event => {
             } else if (failed === 0) {
                 player.tell(Component.green(`§a✓ 配方库加载完成！`));
                 player.tell(Component.green(`§a📦 成功加载: §e${success}§a 个配方`));
-                player.tell(Component.yellow("§e⚠ 注意：统计包含已禁用的配方，实际启用配方数量可能更少。"));
+                player.tell(Component.yellow("§e⚠ 注意：统计不包含已禁用的配方"));
                 player.tell(Component.green(`§a😋 配方库检测无报错 祝领航员航行无阻!`))
                 player.tell(Component.green(`💽 当前神人私货版本:v${Version}`))
                 player.tell(Component.green(`💽 当前API总控系统版本为${API_Version}`))
