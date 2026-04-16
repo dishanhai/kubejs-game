@@ -136,12 +136,15 @@ function getAllRecipeArrays() {
 function normalizeRecipeId(id) {
     if (id === null || id === undefined) return '';
     try {
+        // 支持Java字符串对象
         var strId = String(id);
         return strId.toLowerCase()
             .replace(/\s+/g, '')     // 移除所有空格
             .replace(/_/g, '')       // 移除下划线
             .replace(/-/g, '')       // 移除连字符
             .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
+            .replace(/'/g, '')       // 移除单引号
+            .replace(/"/g, '')       // 移除双引号
             .trim();
     } catch (err) {
         debug('normalizeRecipeId: 无法将id转换为字符串 - ' + err.message);

@@ -13,6 +13,8 @@
 //            /配方列表已禁用
 //            /配方重置配置
 //            /配方确认重置
+//            /配方诊断
+//            /配方扫描注册
 // =====================================================
 
 // ========== 重要提示 ==========
@@ -29,6 +31,7 @@
 var LOG_PREFIX = '§b[配方控制API]§r';
 var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 var currentLogLevel = LOG_LEVEL.DEBUG;
+var isConfigInitialized = false;
 
 function getTimestamp() {
     var now = new Date();
@@ -220,7 +223,7 @@ function protectAllAPIFunctions(apiObject) {
 
 /**
  * 规范化配方ID，用于模糊匹配
- * 移除所有空格、下划线、连字符，转换为小写
+ * 移除所有空格、下划线、连字符、冒号、单引号和双引号，转换为小写
  * 与山海_配方验证API.js中的normalizeRecipeId函数保持一致
  */
 function normalizeRecipeId(id) {
@@ -234,6 +237,7 @@ function normalizeRecipeId(id) {
             .replace(/_/g, '')       // 移除下划线
             .replace(/-/g, '')       // 移除连字符
             .replace(/:/g, '')       // 移除冒号（命名空间分隔符）
+            .replace(/['"]/g, '')    // 移除单引号和双引号
             .trim();
     } catch (err) {
         return '';
@@ -259,7 +263,7 @@ function findRecipeConfigKey(recipeId) {
         // 配置条目很少，可能未正确加载，尝试重新加载一次
         debug('配置条目很少（' + keyCount + '），尝试重新加载配置...');
         try {
-            initRecipeLoadConfig();
+            initRecipeLoadConfig(true);
             var newKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
             if (newKeyCount > keyCount) {
                 debug('配置重新加载成功: ' + keyCount + ' -> ' + newKeyCount + ' 个条目');
@@ -480,7 +484,13 @@ var recipeLoadConfig = {};
  * 初始化配方加载配置
  * 从持久化存储加载配置，如果不存在则使用默认值
  */
-function initRecipeLoadConfig() {
+function initRecipeLoadConfig(forceReload) {
+    // 如果已经初始化且不是强制重新加载，则跳过
+    if (isConfigInitialized && forceReload !== true) {
+        debug('配置已初始化，跳过重复初始化');
+        return;
+    }
+    
     debug('开始初始化配方加载配置...');
     debug('当前recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
     
@@ -587,18 +597,26 @@ function initRecipeLoadConfig() {
         // 清理配置：只保留有效的布尔值
         var cleanConfig = {};
         var filteredKeys = [];
+        var keptKeys = [];
         for (var key in recipeLoadConfig) {
-            if (recipeLoadConfig.hasOwnProperty(key) && 
-                typeof recipeLoadConfig[key] === 'boolean') {
-                cleanConfig[key] = recipeLoadConfig[key];
-            } else {
-                filteredKeys.push(key);
+            if (recipeLoadConfig.hasOwnProperty(key)) {
+                var value = recipeLoadConfig[key];
+                var valueType = typeof value;
+                if (valueType === 'boolean') {
+                    cleanConfig[key] = value;
+                    keptKeys.push(key + '=' + value + '(' + valueType + ')');
+                } else {
+                    filteredKeys.push(key + '=' + value + '(' + valueType + ')');
+                }
             }
         }
         recipeLoadConfig = cleanConfig;
         
         if (filteredKeys.length > 0) {
             debug('清理配置时过滤掉 ' + filteredKeys.length + ' 个非布尔值键: ' + filteredKeys.slice(0, 5).join(', '));
+        }
+        if (keptKeys.length > 0) {
+            debug('清理配置时保留 ' + keptKeys.length + ' 个布尔值键: ' + keptKeys.slice(0, 10).join(', '));
         }
         
         // 显示已配置的配方（如果有）
@@ -614,7 +632,12 @@ function initRecipeLoadConfig() {
         recipeLoadConfig = {};
     }
     
-    debug('配方加载配置初始化完成');
+    var finalKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+    debug('配方加载配置初始化完成，共 ' + finalKeyCount + ' 个配方配置');
+    isConfigInitialized = true;
+    if (finalKeyCount === 0) {
+        warn('警告：配方加载配置为空！所有配方将默认启用。');
+    }
 }
 
 /**
@@ -636,8 +659,8 @@ function reloadRecipeLoadConfig() {
             }
         }
         
-        // 调用初始化函数重新加载配置
-        initRecipeLoadConfig();
+        // 调用初始化函数重新加载配置（强制重新加载）
+        initRecipeLoadConfig(true);
         
         var newCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
         debug('配置重新加载完成: ' + previousCount + ' -> ' + newCount + ' 个条目');
@@ -670,7 +693,7 @@ function saveRecipeLoadConfig() {
             warn('警告：尝试保存空的配方加载配置！这可能表示配置加载失败。');
             debug('尝试重新初始化配置...');
             try {
-                initRecipeLoadConfig();
+                initRecipeLoadConfig(true);
                 keyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
                 debug('重新初始化后键数量: ' + keyCount);
             } catch (initErr) {
@@ -694,6 +717,68 @@ function saveRecipeLoadConfig() {
         // 方法1：使用 JsonIO 保存到文件（最可靠）
         var fileSaved = false;
         var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+        
+        // ========== 新增：防止空配置覆盖保护 ==========
+        // 如果当前内存中的配置为空（或条目极少，可能是未加载完全），
+        // 但磁盘上存在一个非空的配置文件，则拒绝保存，防止数据丢失。
+        
+        // 尝试读取现有文件，看看磁盘上是否有数据
+        var existingConfig = null;
+        try {
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                existingConfig = JsonIO.read(CONFIG_PATH);
+            } else {
+                var fs = require('fs');
+                if (fs.existsSync(CONFIG_PATH)) {
+                    existingConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+                }
+            }
+        } catch (e) {
+            debug('检查现有配置文件失败: ' + e.message);
+        }
+        
+        var cleanConfigCount = Object.keys(cleanConfig).length;
+        var existingConfigCount = existingConfig && typeof existingConfig === 'object' ? Object.keys(existingConfig).length : 0;
+        
+        // 情况1：内存配置为空，磁盘配置非空 -> 严重错误，必须阻止
+        if (cleanConfigCount === 0 && existingConfigCount > 0) {
+            error('❌ 严重警告：尝试用空配置覆盖非空的配置文件！保存操作已阻止。');
+            error('这通常是因为配方数组尚未加载完成，自动注册误判导致。');
+            // 重要：将磁盘配置恢复到内存中，并清理无效数据
+            var restoredConfig = {};
+            for (var key in existingConfig) {
+                if (existingConfig.hasOwnProperty(key) && 
+                    typeof existingConfig[key] === 'boolean') {
+                    restoredConfig[key] = existingConfig[key];
+                }
+            }
+            recipeLoadConfig = restoredConfig;
+            var restoredCount = Object.keys(restoredConfig).length;
+            debug('已将磁盘配置重新加载到内存，清理后共 ' + restoredCount + ' 个有效条目（原始 ' + existingConfigCount + ' 个条目）');
+            return false;
+        }
+        
+        // 情况2：内存配置条目数远少于磁盘配置（可能丢失了大量数据）
+        // 阈值：磁盘配置至少有5个条目，且内存配置少于磁盘配置的50%且少于5个条目
+        if (existingConfigCount >= 5 && cleanConfigCount > 0 && 
+            cleanConfigCount < Math.max(5, existingConfigCount * 0.5)) {
+            warn('⚠️ 警告：内存配置条目数(' + cleanConfigCount + ')远少于磁盘配置(' + existingConfigCount + ')。');
+            warn('这可能表示配方数组尚未完全加载，保存操作可能导致数据丢失。');
+            warn('保存操作已阻止，建议等待配方完全加载后再尝试保存。');
+            // 将磁盘配置恢复到内存中，并清理无效数据，防止数据不一致
+            var restoredConfig = {};
+            for (var key in existingConfig) {
+                if (existingConfig.hasOwnProperty(key) && 
+                    typeof existingConfig[key] === 'boolean') {
+                    restoredConfig[key] = existingConfig[key];
+                }
+            }
+            recipeLoadConfig = restoredConfig;
+            var restoredCount = Object.keys(restoredConfig).length;
+            debug('已将磁盘配置重新加载到内存，清理后共 ' + restoredCount + ' 个有效条目（原始 ' + existingConfigCount + ' 个条目）');
+            return false;
+        }
+        // ========================================
         
         if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
             try {
@@ -745,33 +830,49 @@ function saveRecipeLoadConfig() {
  */
 function isRecipeEnabled(recipeId) {
     // 支持Java字符串对象
+    info('🔍 isRecipeEnabled被调用，检查配方: ' + recipeId);
     if (recipeId === null || recipeId === undefined) {
+        debug('isRecipeEnabled: 配方ID为null或undefined，默认启用');
         return true; // 无效ID默认启用
     }
     
     // 将recipeId转换为字符串（支持Java字符串对象）
     try {
         recipeId = String(recipeId);
+        debug('isRecipeEnabled: 转换后的配方ID: ' + recipeId + ' (原始类型: ' + typeof arguments[0] + ')');
     } catch (err) {
         debug('isRecipeEnabled: 无法将recipeId转换为字符串 - ' + err.message);
         return true; // 转换失败默认启用
     }
     
     if (!recipeId.trim()) {
+        debug('isRecipeEnabled: 配方ID为空字符串，默认启用');
         return true; // 空字符串默认启用
     }
     
     // 使用统一的配置键查找函数
+    debug('isRecipeEnabled: 正在查找配方配置键...');
     var configKey = findRecipeConfigKey(recipeId);
+    debug('isRecipeEnabled: 查找到的配置键: ' + (configKey || '未找到'));
     
     if (configKey !== null && recipeLoadConfig.hasOwnProperty(configKey)) {
         var configValue = recipeLoadConfig[configKey];
-        debug('配方加载状态检查: ' + recipeId + ' -> ' + configKey + ' = ' + configValue);
+        // 如果配方被禁用，使用info级别日志；如果启用，使用debug级别
+        if (configValue === false) {
+            info('🚫 配方加载状态检查: ' + recipeId + ' -> ' + configKey + ' = ' + configValue + ' (禁用)');
+        } else {
+            debug('✅ 配方加载状态检查: ' + recipeId + ' -> ' + configKey + ' = ' + configValue + ' (启用)');
+        }
         return configValue === true;
     }
     
     // 默认启用所有配方
-    debug('配方加载状态检查（默认启用）: ' + recipeId);
+    warn('⚠️ 配方加载状态检查（默认启用）: ' + recipeId);
+    if (configKey === null) {
+        warn('警告：配方 "' + recipeId + '" 未找到配置，将默认启用。请检查配方ID是否正确或使用/配方开关命令添加配置。');
+    } else {
+        warn('警告：配方 "' + recipeId + '" 配置键 "' + configKey + '" 不在配置中，将默认启用。');
+    }
     return true;
 }
 
@@ -841,7 +942,7 @@ function setRecipeEnabled(recipeId, enabled) {
         // 尝试重新初始化配置
         try {
             debug('开始调用initRecipeLoadConfig()...');
-            initRecipeLoadConfig();
+            initRecipeLoadConfig(true);
             debug('已重新调用initRecipeLoadConfig()');
             
             // 检查重新初始化后的状态
@@ -1322,22 +1423,9 @@ function autoRegisterRecipesFromArrays(force) {
     return totalRegistered;
 }
 
-// 自动注册配方（如果启用了自动注册）
-try {
-    // 检查是否启用自动注册（默认启用）
-    var autoRegister = typeof global !== 'undefined' && global.AUTO_REGISTER_RECIPES !== false;
-    if (autoRegister) {
-        debug('自动从配方数组注册配方到加载配置...');
-        var registeredCount = autoRegisterRecipesFromArrays(false);
-        if (registeredCount > 0) {
-            info('自动注册了 ' + registeredCount + ' 个配方到加载配置');
-        }
-    } else {
-        debug('配方自动注册已禁用，如需手动注册请调用 autoRegisterRecipesFromArrays()');
-    }
-} catch (err) {
-    warn('自动注册配方失败: ' + err.message);
-}
+// 注意：自动配方注册功能已移至更合适的时机调用
+// 原自动注册逻辑可能因配方数组未完全导出导致配置覆盖问题
+// 建议在 ServerEvents.loaded 事件中调用，或通过管理员命令手动触发
 
 // =====================================================
 // =============== 配方修改API ==================
@@ -1870,6 +1958,7 @@ function handleHelpCommand(player) {
     sendMessageToPlayer(player, '§7/配方重置配置 §f- 重置所有配置（需要确认）');
     sendMessageToPlayer(player, '§7/配方确认重置 §f- 确认重置配置操作');
     sendMessageToPlayer(player, '§7/配方诊断 §f- 诊断API状态和配置问题');
+    sendMessageToPlayer(player, '§7/配方扫描注册 §f- 扫描配方数组并自动注册新配方');
     sendMessageToPlayer(player, '§7/配方帮助 §f- 显示此帮助信息');
     sendMessageToPlayer(player, '§6───────────────────────────────────────────────────────────');
     sendMessageToPlayer(player, '§e常用字段:');
@@ -2258,6 +2347,75 @@ function handleRecipeDiagnosticCommand(player) {
     return true;
 }
 
+/**
+ * 处理配方扫描注册命令
+ * 
+ * 格式: /配方扫描注册
+ * 功能: 手动触发从配方数组自动注册配方到加载配置
+ * 
+ * @param {Object} player - 玩家对象
+ * @returns {boolean} 是否处理成功
+ */
+function handleRecipeScanRegisterCommand(player) {
+    if (!isPlayerOp(player)) {
+        sendMessageToPlayer(player, '§c错误: 只有OP玩家可以使用此命令！');
+        return false;
+    }
+    
+    sendMessageToPlayer(player, '§6=== 配方扫描注册 ===');
+    sendMessageToPlayer(player, '§7正在扫描配方数组并自动注册配方...');
+    
+    // 检查配方数组是否已导出
+    if (typeof global === 'undefined' || !global.shanhaiRecipeArrays) {
+        sendMessageToPlayer(player, '§c错误: 配方数组尚未导出到全局对象！');
+        sendMessageToPlayer(player, '§7这可能是因为配方脚本尚未完全加载。');
+        sendMessageToPlayer(player, '§7建议等待服务器完全启动后再执行此命令。');
+        return false;
+    }
+    
+    // 获取当前配置状态
+    var beforeCount = Object.keys(recipeLoadConfig).length;
+    sendMessageToPlayer(player, '§7当前配置条目数: §e' + beforeCount);
+    sendMessageToPlayer(player, '§7配方数组数量: §e' + Object.keys(global.shanhaiRecipeArrays).length);
+    
+    // 执行自动注册
+    try {
+        var registeredCount = autoRegisterRecipesFromArrays(true); // force=true 强制重新扫描
+        
+        if (registeredCount > 0) {
+            sendMessageToPlayer(player, '§a✅ 扫描注册完成！');
+            sendMessageToPlayer(player, '§7新增注册: §e' + registeredCount + ' §7个配方');
+            
+            // 获取更新后的配置状态
+            var afterCount = Object.keys(recipeLoadConfig).length;
+            sendMessageToPlayer(player, '§7配置条目数变化: §e' + beforeCount + ' §7→ §a' + afterCount);
+            
+            // 尝试保存配置
+            sendMessageToPlayer(player, '§7正在保存配置...');
+            var saved = saveRecipeLoadConfig();
+            if (saved) {
+                sendMessageToPlayer(player, '§a✅ 配置已成功保存到文件');
+            } else {
+                sendMessageToPlayer(player, '§c⚠️ 配置保存失败，但内存中的配置已更新');
+            }
+        } else {
+            sendMessageToPlayer(player, '§7扫描完成，未发现需要注册的新配方');
+            sendMessageToPlayer(player, '§7当前配置已包含所有配方数组中的配方');
+            
+            // 检查是否有跳过或保留的配方
+            // 这里可以添加更详细的统计信息
+        }
+        
+        sendMessageToPlayer(player, '§6=== 扫描注册完成 ===');
+        return true;
+    } catch (err) {
+        sendMessageToPlayer(player, '§c❌ 扫描注册过程中出错！');
+        sendMessageToPlayer(player, '§7错误信息: §c' + err.message);
+        error('配方扫描注册失败: ' + err.message);
+        return false;
+    }
+}
+
 // =====================================================
 // =============== 聊天命令注册 ==================
 // =====================================================
@@ -2607,6 +2765,74 @@ ServerEvents.commandRegistry(function(event) {
             })
     );
     
+    // 注册 /配方扫描注册 命令
+    event.register(
+        Commands.literal('配方扫描注册')
+            .requires(function(source) {
+                if (source.getEntity && source.getEntity()) {
+                    var player = source.getEntity();
+                    return isPlayerOp(player);
+                }
+                return source.hasPermission(2);
+            })
+            .executes(function(ctx) {
+                var source = ctx.source;
+                var player = source.getEntity ? source.getEntity() : null;
+                
+                if (player) {
+                    handleRecipeScanRegisterCommand(player);
+                } else {
+                    console.log('控制台执行配方扫描注册');
+                    console.log('正在扫描配方数组并自动注册配方...');
+                    
+                    // 检查配方数组是否已导出
+                    if (typeof global === 'undefined' || !global.shanhaiRecipeArrays) {
+                        console.log('错误: 配方数组尚未导出到全局对象！');
+                        console.log('这可能是因为配方脚本尚未完全加载。');
+                        return 1;
+                    }
+                    
+                    // 获取当前配置状态
+                    var beforeCount = Object.keys(recipeLoadConfig).length;
+                    console.log('当前配置条目数: ' + beforeCount);
+                    console.log('配方数组数量: ' + Object.keys(global.shanhaiRecipeArrays).length);
+                    
+                    // 执行自动注册
+                    try {
+                        var registeredCount = autoRegisterRecipesFromArrays(true); // force=true 强制重新扫描
+                        
+                        if (registeredCount > 0) {
+                            console.log('✅ 扫描注册完成！');
+                            console.log('新增注册: ' + registeredCount + ' 个配方');
+                            
+                            // 获取更新后的配置状态
+                            var afterCount = Object.keys(recipeLoadConfig).length;
+                            console.log('配置条目数变化: ' + beforeCount + ' → ' + afterCount);
+                            
+                            // 尝试保存配置
+                            console.log('正在保存配置...');
+                            var saved = saveRecipeLoadConfig();
+                            if (saved) {
+                                console.log('✅ 配置已成功保存到文件');
+                            } else {
+                                console.log('⚠️ 配置保存失败，但内存中的配置已更新');
+                            }
+                        } else {
+                            console.log('扫描完成，未发现需要注册的新配方');
+                            console.log('当前配置已包含所有配方数组中的配方');
+                        }
+                        
+                        console.log('=== 扫描注册完成 ===');
+                    } catch (err) {
+                        console.log('❌ 扫描注册过程中出错！');
+                        console.log('错误信息: ' + err.message);
+                        error('配方扫描注册失败: ' + err.message);
+                    }
+                }
+                return 1;
+            })
+    );
+    
     info('配方控制API聊天命令已注册（包含配方加载控制命令）');
 });
 
@@ -2641,6 +2867,7 @@ var rawAPI = {
     handleRecipeConfigResetCommand: handleRecipeConfigResetCommand,
     handleRecipeConfirmResetCommand: handleRecipeConfirmResetCommand,
     handleRecipeDiagnosticCommand: handleRecipeDiagnosticCommand,
+    handleRecipeScanRegisterCommand: handleRecipeScanRegisterCommand,
     
     // 配方加载控制函数
     isRecipeEnabled: isRecipeEnabled,
@@ -2679,7 +2906,7 @@ info('§b📋 配方控制API已就绪');
 info('§7新增功能: §e配方加载控制§7 - 允许单独配置配方是否加载');
 info('§7新增功能: §e配方数组导出§7 - 导出所有配方数组到全局对象');
 info('§7新增功能: §e自动配方注册§7 - 自动发现并注册所有可用配方');
-info('§7聊天命令: §e/配方修改§7, §e/配方信息§7, §e/配方列表§7, §e/配方开关§7, §e/配方状态§7, §e/配方列表已启用§7, §e/配方列表已禁用§7, §e/配方诊断§7, §e/配方帮助 (也支持 ! 前缀)');
+info('§7聊天命令: §e/配方修改§7, §e/配方信息§7, §e/配方列表§7, §e/配方开关§7, §e/配方状态§7, §e/配方列表已启用§7, §e/配方列表已禁用§7, §e/配方诊断§7, §e/配方扫描注册§7, §e/配方帮助 (也支持 ! 前缀)');
 info('§7全局API: §eglobal.shanhaiRecipeControlAPI');
 info('§7权限要求: §c仅限OP玩家使用');
 info('§6═══════════════════════════════════════════════════════════');
