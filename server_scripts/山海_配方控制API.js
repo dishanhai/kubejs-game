@@ -853,11 +853,7 @@ function saveRecipeLoadConfig() {
  */
 function isRecipeEnabled(recipeId) {
     // 支持Java字符串对象
-    info('🔍 isRecipeEnabled被调用，检查配方: ' + recipeId);
-    // 添加配置状态检查
-    info('当前recipeLoadConfig状态: 类型=' + typeof recipeLoadConfig + 
-          ', 键数量=' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
-    info('当前配置键: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).join(', ') : '无'));
+    debug('🔍 isRecipeEnabled检查配方: ' + recipeId + '，配置键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
     if (recipeId === null || recipeId === undefined) {
         debug('isRecipeEnabled: 配方ID为null或undefined，默认启用');
         return true; // 无效ID默认启用
