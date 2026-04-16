@@ -133,10 +133,11 @@ function createProtectedFunction(originalFunc, functionName, defaultValue) {
 function getDefaultValueForFunction(functionName) {
     // 根据函数名称返回适当的默认值
     switch(functionName) {
-        // 布尔值函数 - 返回true（默认启用/允许）
+        // 布尔值函数 - 返回适当默认值
         case 'isRecipeEnabled':
+            return false;  // 配方控制函数出错时默认禁用，确保安全
         case 'isPlayerOp':
-            return true;
+            return true;   // 权限检查函数出错时默认不允许
         
         // 数组函数 - 返回空数组
         case 'getEnabledRecipes':
@@ -295,16 +296,24 @@ function findRecipeConfigKey(recipeId) {
     // 如果ID以dishanhai:开头，也检查去掉前缀的版本
     if (recipeId.startsWith('dishanhai:')) {
         var shortId = recipeId.substring(10); // 去掉'dishanhai:'前缀
+        // 添加详细日志
+        debug('尝试去掉dishanhai:前缀匹配: ' + recipeId + ' -> ' + shortId);
+        debug('配置中是否存在 ' + shortId + ': ' + recipeLoadConfig.hasOwnProperty(shortId));
         if (recipeLoadConfig.hasOwnProperty(shortId)) {
             debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
+            debug('找到的配置值: ' + shortId + ' = ' + recipeLoadConfig[shortId]);
             return shortId;
         }
     } 
     // 如果ID以dishanahi:开头，也检查去掉前缀的版本
     else if (recipeId.startsWith('dishanahi:')) {
         var shortId = recipeId.substring(9); // 去掉'dishanahi:'前缀
+        // 添加详细日志
+        debug('尝试去掉dishanahi:前缀匹配: ' + recipeId + ' -> ' + shortId);
+        debug('配置中是否存在 ' + shortId + ': ' + recipeLoadConfig.hasOwnProperty(shortId));
         if (recipeLoadConfig.hasOwnProperty(shortId)) {
             debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
+            debug('找到的配置值: ' + shortId + ' = ' + recipeLoadConfig[shortId]);
             return shortId;
         }
     }
@@ -497,75 +506,89 @@ function initRecipeLoadConfig(forceReload) {
     try {
         // 首先尝试从文件加载
         var loaded = false;
-        try {
-            var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
-            debug('尝试从文件加载配置: ' + CONFIG_PATH);
-            debug('JsonIO类型: ' + typeof JsonIO + ', JsonIO.read类型: ' + (typeof JsonIO !== 'undefined' ? typeof JsonIO.read : 'undefined'));
-            
-            // 方法1：使用 JsonIO（首选）
-            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
-                var fileConfig = JsonIO.read(CONFIG_PATH);
-                debug('JsonIO.read返回类型: ' + typeof fileConfig + ', 值: ' + (fileConfig ? '非空' : '空'));
+        
+        // 尝试多个可能的配置文件路径
+        var possiblePaths = [
+            'kubejs/data/shanhai_recipe_load_config.json',  // 原路径
+            'data/shanhai_recipe_load_config.json',         // 如果kubejs是工作目录
+            './data/shanhai_recipe_load_config.json',       // 相对路径
+            '../kubejs/data/shanhai_recipe_load_config.json' // 如果从其他目录调用
+        ];
+        
+        for (var i = 0; i < possiblePaths.length && !loaded; i++) {
+            var CONFIG_PATH = possiblePaths[i];
+            try {
+                debug('尝试从文件加载配置 [' + (i+1) + '/' + possiblePaths.length + ']: ' + CONFIG_PATH);
+                debug('JsonIO类型: ' + typeof JsonIO + ', JsonIO.read类型: ' + (typeof JsonIO !== 'undefined' ? typeof JsonIO.read : 'undefined'));
                 
-                if (fileConfig && typeof fileConfig === 'object') {
-                    recipeLoadConfig = fileConfig;
-                    loaded = true;
-                    debug('配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-                    debug('加载的配置键示例: ' + (Object.keys(recipeLoadConfig).slice(0, 5).join(', ') || '无'));
-                } else {
-                    debug('JsonIO返回无效配置: 类型=' + typeof fileConfig + ', 值=' + fileConfig);
+                // 方法1：使用 JsonIO（首选）
+                if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                    var fileConfig = JsonIO.read(CONFIG_PATH);
+                    debug('JsonIO.read返回类型: ' + typeof fileConfig + ', 值: ' + (fileConfig ? '非空' : '空'));
                     
-                    // JsonIO返回null或undefined，尝试使用fs模块检查文件是否存在
+                    if (fileConfig && typeof fileConfig === 'object') {
+                        recipeLoadConfig = fileConfig;
+                        loaded = true;
+                        debug('✅ 配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                        debug('加载的配置键示例: ' + (Object.keys(recipeLoadConfig).slice(0, 5).join(', ') || '无'));
+                        break; // 加载成功，跳出循环
+                    } else {
+                        debug('JsonIO返回无效配置: 类型=' + typeof fileConfig + ', 值=' + fileConfig);
+                        
+                        // JsonIO返回null或undefined，尝试使用fs模块检查文件是否存在
+                        try {
+                            var fs = require('fs');
+                            if (fs.existsSync(CONFIG_PATH)) {
+                                debug('文件存在，但JsonIO读取失败，尝试使用fs读取...');
+                                try {
+                                    var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
+                                    debug('文件内容长度: ' + fileContent.length + ' 字符');
+                                    debug('文件内容前200字符: ' + fileContent.substring(0, 200));
+                                    
+                                    // 尝试解析JSON
+                                    var parsedConfig = JSON.parse(fileContent);
+                                    if (parsedConfig && typeof parsedConfig === 'object') {
+                                        recipeLoadConfig = parsedConfig;
+                                        loaded = true;
+                                        debug('✅ 通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                                        break; // 加载成功，跳出循环
+                                    } else {
+                                        debug('fs读取的JSON无效: 类型=' + typeof parsedConfig);
+                                    }
+                                } catch (parseErr) {
+                                    debug('解析JSON失败: ' + parseErr.message);
+                                }
+                            } else {
+                                debug('配置文件不存在: ' + CONFIG_PATH);
+                            }
+                        } catch (fsErr) {
+                            debug('检查文件存在性失败: ' + fsErr.message);
+                        }
+                    }
+                } else {
+                    debug('JsonIO API不可用，尝试使用fs模块...');
                     try {
                         var fs = require('fs');
                         if (fs.existsSync(CONFIG_PATH)) {
-                            debug('文件存在，但JsonIO读取失败，尝试使用fs读取...');
-                            try {
-                                var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
-                                debug('文件内容长度: ' + fileContent.length + ' 字符');
-                                debug('文件内容前200字符: ' + fileContent.substring(0, 200));
-                                
-                                // 尝试解析JSON
-                                var parsedConfig = JSON.parse(fileContent);
-                                if (parsedConfig && typeof parsedConfig === 'object') {
-                                    recipeLoadConfig = parsedConfig;
-                                    loaded = true;
-                                    debug('通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-                                } else {
-                                    debug('fs读取的JSON无效: 类型=' + typeof parsedConfig);
-                                }
-                            } catch (parseErr) {
-                                debug('解析JSON失败: ' + parseErr.message);
+                            var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
+                            var parsedConfig = JSON.parse(fileContent);
+                            if (parsedConfig && typeof parsedConfig === 'object') {
+                                recipeLoadConfig = parsedConfig;
+                                loaded = true;
+                                debug('✅ 通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                                break; // 加载成功，跳出循环
                             }
                         } else {
                             debug('配置文件不存在: ' + CONFIG_PATH);
                         }
                     } catch (fsErr) {
-                        debug('检查文件存在性失败: ' + fsErr.message);
+                        debug('fs模块加载失败: ' + fsErr.message);
                     }
                 }
-            } else {
-                debug('JsonIO API不可用，尝试使用fs模块...');
-                try {
-                    var fs = require('fs');
-                    if (fs.existsSync(CONFIG_PATH)) {
-                        var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
-                        var parsedConfig = JSON.parse(fileContent);
-                        if (parsedConfig && typeof parsedConfig === 'object') {
-                            recipeLoadConfig = parsedConfig;
-                            loaded = true;
-                            debug('通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-                        }
-                    } else {
-                        debug('配置文件不存在: ' + CONFIG_PATH);
-                    }
-                } catch (fsErr) {
-                    debug('fs模块加载失败: ' + fsErr.message);
-                }
+            } catch (fsErr) {
+                debug('从文件加载配置失败 (路径: ' + CONFIG_PATH + '): ' + fsErr.message);
+                debug('错误堆栈: ' + (fsErr.stack || '无堆栈信息'));
             }
-        } catch (fsErr) {
-            debug('从文件加载配置失败: ' + fsErr.message);
-            debug('错误堆栈: ' + (fsErr.stack || '无堆栈信息'));
         }
         
         // 如果文件加载失败，尝试从 global 加载
@@ -831,6 +854,10 @@ function saveRecipeLoadConfig() {
 function isRecipeEnabled(recipeId) {
     // 支持Java字符串对象
     info('🔍 isRecipeEnabled被调用，检查配方: ' + recipeId);
+    // 添加配置状态检查
+    info('当前recipeLoadConfig状态: 类型=' + typeof recipeLoadConfig + 
+          ', 键数量=' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
+    info('当前配置键: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).join(', ') : '无'));
     if (recipeId === null || recipeId === undefined) {
         debug('isRecipeEnabled: 配方ID为null或undefined，默认启用');
         return true; // 无效ID默认启用
