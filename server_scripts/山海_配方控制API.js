@@ -23,6 +23,23 @@
 // ==============================
 //IIFE已就绪...
 (function() {
+    // 加载Java类（KubeJS 6兼容性）- 使用 try-catch 防止类过滤器阻止
+    var File = null, FileReader = null, BufferedReader = null;
+    if (typeof Java !== 'undefined' && typeof Java.loadClass === 'function') {
+        try {
+            File = Java.loadClass('java.io.File');
+            FileReader = Java.loadClass('java.io.FileReader');
+            BufferedReader = Java.loadClass('java.io.BufferedReader');
+            console.log('§b[配方控制API] Java类加载完成');
+        } catch (e) {
+            console.log('§e[配方控制API] Java类加载被阻止（KubeJS安全机制），将使用JsonIO备选方案');
+            File = null;
+            FileReader = null;
+            BufferedReader = null;
+        }
+    } else {
+        console.log('§e[配方控制API] Java API不可用，将使用JsonIO');
+    }
 
 // =====================================================
 // =============== 日志模块 ==================
@@ -32,6 +49,8 @@ var LOG_PREFIX = '§b[配方控制API]§r';
 var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 var currentLogLevel = LOG_LEVEL.DEBUG;
 var isConfigInitialized = false;
+var DEFAULT_CONFIG_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
+var defaultConfig;
 
 function getTimestamp() {
     var now = new Date();
@@ -498,6 +517,39 @@ function initRecipeLoadConfig(forceReload) {
     debug('当前recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
     
     try {
+        // ========== 新增：优先从默认值文件恢复 ==========
+        // DEFAULT_CONFIG_PATH 已在外部定义
+        defaultConfig = null;
+        
+        // 尝试加载默认配置
+        try {
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                defaultConfig = JsonIO.read(DEFAULT_CONFIG_PATH);
+            } else {
+                // 使用 Java 文件操作
+                if (!File || !FileReader || !BufferedReader) {
+                    console.error('§c[配方控制API] Java类未加载，无法读取默认配置文件');
+                } else {
+                    var file = new File(DEFAULT_CONFIG_PATH);
+                    if (file.exists()) {
+                        var reader = new FileReader(file);
+                        var buffer = new BufferedReader(reader);
+                        var content = '';
+                        var line;
+                        while ((line = buffer.readLine()) !== null) {
+                            content += line + '\n';
+                        }
+                        buffer.close();
+                        reader.close();
+                        defaultConfig = JSON.parse(content);
+                    }
+                }
+            }
+        } catch (err) {
+            debug('加载默认配置失败: ' + err.message);
+        }
+        // ========== 新增结束 ==========
+        
         // 首先尝试从文件加载
         var loaded = false;
         
@@ -531,52 +583,78 @@ function initRecipeLoadConfig(forceReload) {
                         
                         // JsonIO返回null或undefined，尝试使用fs模块检查文件是否存在
                         try {
-                            var fs = require('fs');
-                            if (fs.existsSync(CONFIG_PATH)) {
-                                debug('文件存在，但JsonIO读取失败，尝试使用fs读取...');
-                                try {
-                                    var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
-                                    debug('文件内容长度: ' + fileContent.length + ' 字符');
-                                    debug('文件内容前200字符: ' + fileContent.substring(0, 200));
-                                    
-                                    // 尝试解析JSON
-                                    var parsedConfig = JSON.parse(fileContent);
-                                    if (parsedConfig && typeof parsedConfig === 'object') {
-                                        recipeLoadConfig = parsedConfig;
-                                        loaded = true;
-                                        debug('✅ 通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
-                                        break; // 加载成功，跳出循环
-                                    } else {
-                                        debug('fs读取的JSON无效: 类型=' + typeof parsedConfig);
-                                    }
-                                } catch (parseErr) {
-                                    debug('解析JSON失败: ' + parseErr.message);
-                                }
+                            if (!File || !FileReader || !BufferedReader) {
+                                debug('Java类未加载，无法使用文件操作');
                             } else {
-                                debug('配置文件不存在: ' + CONFIG_PATH);
+                                var file = new File(CONFIG_PATH);
+                                if (file.exists()) {
+                                    debug('文件存在，但JsonIO读取失败，尝试使用Java文件操作读取...');
+                                    try {
+                                        var reader = new FileReader(file);
+                                        var buffer = new BufferedReader(reader);
+                                        var fileContent = '';
+                                        var line;
+                                        while ((line = buffer.readLine()) !== null) {
+                                            fileContent += line + '\n';
+                                        }
+                                        buffer.close();
+                                        reader.close();
+                                        
+                                        debug('文件内容长度: ' + fileContent.length + ' 字符');
+                                        debug('文件内容前200字符: ' + fileContent.substring(0, 200));
+                                        
+                                        // 尝试解析JSON
+                                        var parsedConfig = JSON.parse(fileContent);
+                                        if (parsedConfig && typeof parsedConfig === 'object') {
+                                            recipeLoadConfig = parsedConfig;
+                                            loaded = true;
+                                            debug('✅ 通过Java文件操作加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                                            break; // 加载成功，跳出循环
+                                        } else {
+                                            debug('Java文件操作读取的JSON无效: 类型=' + typeof parsedConfig);
+                                        }
+                                    } catch (parseErr) {
+                                        debug('解析JSON失败: ' + parseErr.message);
+                                    }
+                                } else {
+                                    debug('配置文件不存在: ' + CONFIG_PATH);
+                                }
                             }
                         } catch (fsErr) {
                             debug('检查文件存在性失败: ' + fsErr.message);
                         }
                     }
                 } else {
-                    debug('JsonIO API不可用，尝试使用fs模块...');
+                    debug('JsonIO API不可用，尝试使用Java文件操作...');
                     try {
-                        var fs = require('fs');
-                        if (fs.existsSync(CONFIG_PATH)) {
-                            var fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
-                            var parsedConfig = JSON.parse(fileContent);
-                            if (parsedConfig && typeof parsedConfig === 'object') {
-                                recipeLoadConfig = parsedConfig;
-                                loaded = true;
-                                debug('✅ 通过fs模块加载配置成功: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
-                                break; // 加载成功，跳出循环
-                            }
+                        if (!File || !FileReader || !BufferedReader) {
+                            debug('Java类未加载，无法使用文件操作');
                         } else {
-                            debug('配置文件不存在: ' + CONFIG_PATH);
+                            var file = new File(CONFIG_PATH);
+                            if (file.exists()) {
+                                var reader = new FileReader(file);
+                                var buffer = new BufferedReader(reader);
+                                var fileContent = '';
+                                var line;
+                                while ((line = buffer.readLine()) !== null) {
+                                    fileContent += line + '\n';
+                                }
+                                buffer.close();
+                                reader.close();
+                                
+                                var parsedConfig = JSON.parse(fileContent);
+                                if (parsedConfig && typeof parsedConfig === 'object') {
+                                    recipeLoadConfig = parsedConfig;
+                                    loaded = true;
+                                    debug('✅ 通过Java文件操作加载配置成功');
+                                    break;
+                                }
+                            } else {
+                                debug('配置文件不存在: ' + CONFIG_PATH);
+                            }
                         }
                     } catch (fsErr) {
-                        debug('fs模块加载失败: ' + fsErr.message);
+                        debug('Java文件操作加载失败: ' + fsErr.message);
                     }
                 }
             } catch (fsErr) {
@@ -584,6 +662,30 @@ function initRecipeLoadConfig(forceReload) {
                 debug('错误堆栈: ' + (fsErr.stack || '无堆栈信息'));
             }
         }
+        
+        // ========== 修复：如果文件配置为空，使用默认配置 ==========
+        if (!loaded || (recipeLoadConfig && typeof recipeLoadConfig === 'object' && Object.keys(recipeLoadConfig).length === 0)) {
+            if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+                recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
+                loaded = true;
+                debug('✅ 使用默认配置初始化，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                
+                // 立即保存默认配置到文件
+                try {
+                    if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+                        JsonIO.write(possiblePaths[0], recipeLoadConfig);
+                        debug('默认配置已保存到文件');
+                    }
+                } catch (saveErr) {
+                    debug('保存默认配置失败: ' + saveErr.message);
+                }
+            } else {
+                // 如果没有默认配置，才初始化为空
+                recipeLoadConfig = {};
+                debug('配方加载配置已初始化（空配置）');
+            }
+        }
+        // ========== 修复结束 ==========
         
         // 如果文件加载失败，尝试从 global 加载
         if (!loaded && typeof global !== 'undefined') {
@@ -605,11 +707,151 @@ function initRecipeLoadConfig(forceReload) {
                 debug('无法从存储加载配置，但当前已有 ' + currentKeyCount + ' 个配方配置，保留当前配置');
                 debug('当前配置键: ' + Object.keys(recipeLoadConfig).slice(0, 10).join(', '));
             } else {
-                // 当前没有数据，初始化为空配置
-                recipeLoadConfig = {};
-                debug('配方加载配置已初始化（空配置） - 未找到任何现有配置');
+                // 当前没有数据，尝试从备份文件恢复
+                debug('当前配置为空，尝试从备份文件恢复...');
+                var backupLoaded = false;
+                var BACKUP_PATH = 'kubejs/data/shanhai_recipe_load_config_backup.json';
+                
+                try {
+                    if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                        var backupConfig = JsonIO.read(BACKUP_PATH);
+                        if (backupConfig && typeof backupConfig === 'object' && Object.keys(backupConfig).length > 0) {
+                            recipeLoadConfig = backupConfig;
+                            backupLoaded = true;
+                            debug('✅ 已从备份文件恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                        }
+                    }
+                } catch (backupErr) {
+                    debug('使用JsonIO读取备份文件失败: ' + backupErr.message);
+                }
+                
+                // 如果JsonIO失败，尝试fs模块
+                if (!backupLoaded) {
+                    try {
+                        if (!File || !FileReader || !BufferedReader) {
+                            debug('Java类未加载，无法读取备份文件');
+                        } else {
+                            var file = new File(BACKUP_PATH);
+                            if (file.exists()) {
+                                var reader = new FileReader(file);
+                                var buffer = new BufferedReader(reader);
+                                var fileContent = '';
+                                var line;
+                                while ((line = buffer.readLine()) !== null) {
+                                    fileContent += line + '\n';
+                                }
+                                buffer.close();
+                                reader.close();
+                                
+                                var parsedBackup = JSON.parse(fileContent);
+                                if (parsedBackup && typeof parsedBackup === 'object' && Object.keys(parsedBackup).length > 0) {
+                                    recipeLoadConfig = parsedBackup;
+                                    backupLoaded = true;
+                                    debug('✅ 已从备份文件恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                                }
+                            } else {
+                                debug('备份文件不存在: ' + BACKUP_PATH);
+                            }
+                        }
+                    } catch (fsErr) {
+                        debug('使用Java文件操作读取备份文件失败: ' + fsErr.message);
+                    }
+                }
+                
+                if (!backupLoaded) {
+                    // 尝试使用默认配置
+                    if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+                        recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
+                        debug('✅ 从默认配置恢复，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                    } else {
+                        debug('无法从备份文件恢复，初始化为空配置');
+                        recipeLoadConfig = {};
+                    }
+                }
             }
         }
+        
+        // ========== 智能默认值加载和配置完整性检查 ==========
+        var currentKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' && !Array.isArray(recipeLoadConfig) ? Object.keys(recipeLoadConfig).length : 0;
+        debug('当前配置有 ' + currentKeyCount + ' 个条目');
+        
+        // 总是尝试加载默认值文件，用于补充缺失的配置
+        defaultConfig = null;
+        
+        try {
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                defaultConfig = JsonIO.read(DEFAULT_CONFIG_PATH);
+            } else {
+                try {
+                    if (!File || !FileReader || !BufferedReader) {
+                        debug('Java类未加载，无法读取默认值文件');
+                    } else {
+                        var file = new File(DEFAULT_CONFIG_PATH);
+                        if (file.exists()) {
+                            var reader = new FileReader(file);
+                            var buffer = new BufferedReader(reader);
+                            var fileContent = '';
+                            var line;
+                            while ((line = buffer.readLine()) !== null) {
+                                fileContent += line + '\n';
+                            }
+                            buffer.close();
+                            reader.close();
+                            defaultConfig = JSON.parse(fileContent);
+                        }
+                    }
+                } catch (fsErr) {
+                    debug('使用Java文件操作读取默认值文件失败: ' + fsErr.message);
+                }
+            }
+            
+            if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+                var defaultKeyCount = Object.keys(defaultConfig).length;
+                debug('默认值文件包含 ' + defaultKeyCount + ' 个条目');
+                
+                // 合并默认值到现有配置（不覆盖现有值）
+                var mergedCount = 0;
+                for (var key in defaultConfig) {
+                    if (defaultConfig.hasOwnProperty(key)) {
+                        var value = defaultConfig[key];
+                        // 确保值是布尔值
+                        if (value === true || value === false) {
+                            // 如果当前配置中没有这个键，则添加
+                            if (!recipeLoadConfig.hasOwnProperty(key)) {
+                                recipeLoadConfig[key] = value;
+                                mergedCount++;
+                            }
+                        }
+                    }
+                }
+                
+                if (mergedCount > 0) {
+                    currentKeyCount = Object.keys(recipeLoadConfig).length;
+                    debug('✅ 已从默认值文件合并 ' + mergedCount + ' 个新配置，现在共有 ' + currentKeyCount + ' 个条目');
+                    
+                    // 立即保存合并后的配置
+                    saveRecipeLoadConfig();
+                } else {
+                    debug('默认值文件已加载，但所有键都已存在于当前配置中');
+                }
+                
+                // 检查配置完整性：如果配置条目太少，警告用户
+                if (currentKeyCount < 20) {
+                    warn('⚠️ 警告：配方加载配置只有 ' + currentKeyCount + ' 个条目，这可能不是完整配置！');
+                    warn('⚠️ 如果您的配方配置丢失，请检查备份文件或重新生成配置。');
+                }
+                
+                // 如果默认值文件条目也少于20，说明默认值文件可能不完整
+                if (defaultKeyCount < 20) {
+                    warn('⚠️ 默认值文件只有 ' + defaultKeyCount + ' 个条目，可能不包含所有配方！');
+                }
+            } else {
+                debug('默认值文件不存在或为空');
+            }
+        } catch (err) {
+            debug('从默认值文件加载失败: ' + err.message);
+        }
+        // ========== 结束智能默认值加载 ==========
         
         // 清理配置：只保留有效的布尔值
         var cleanConfig = {};
@@ -680,7 +922,65 @@ function initRecipeLoadConfig(forceReload) {
         }
     } catch (err) {
         warn('加载配方加载配置时出错: ' + err.message);
-        recipeLoadConfig = {};
+        warn('错误堆栈: ' + (err.stack || '无堆栈信息'));
+        
+        // 尝试从备份文件恢复
+        try {
+            var BACKUP_PATH = 'kubejs/data/shanhai_recipe_load_config_backup.json';
+            debug('尝试从备份文件恢复: ' + BACKUP_PATH);
+            
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                var backupConfig = JsonIO.read(BACKUP_PATH);
+                if (backupConfig && typeof backupConfig === 'object' && Object.keys(backupConfig).length > 0) {
+                    recipeLoadConfig = backupConfig;
+                    warn('✅ 已从备份文件恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                } else {
+                    // 备份文件无效，尝试使用Java文件操作
+                    if (!File || !FileReader || !BufferedReader) {
+                        debug('Java类未加载，无法读取备份文件');
+                    } else {
+                        try {
+                            var file = new File(BACKUP_PATH);
+                            if (file.exists()) {
+                                var reader = new FileReader(file);
+                                var buffer = new BufferedReader(reader);
+                                var fileContent = '';
+                                var line;
+                                while ((line = buffer.readLine()) !== null) {
+                                    fileContent += line + '\n';
+                                }
+                                buffer.close();
+                                reader.close();
+                                
+                                var parsedBackup = JSON.parse(fileContent);
+                                if (parsedBackup && typeof parsedBackup === 'object' && Object.keys(parsedBackup).length > 0) {
+                                    recipeLoadConfig = parsedBackup;
+                                    warn('✅ 已从备份文件恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                                }
+                            }
+                        } catch (fsErr) {
+                            debug('Java文件操作读取备份文件失败: ' + fsErr.message);
+                        }
+                    }
+                }
+            }
+        } catch (backupErr) {
+            debug('备份恢复失败: ' + backupErr.message);
+            // 如果备份恢复也失败，检查当前是否有有效配置
+            var currentKeys = recipeLoadConfig && typeof recipeLoadConfig === 'object' && !Array.isArray(recipeLoadConfig) ? Object.keys(recipeLoadConfig).length : 0;
+            if (currentKeys === 0) {
+                // 尝试使用默认配置
+                if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+                    recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
+                    warn('✅ 从默认配置恢复，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                } else {
+                    warn('无法恢复配置，初始化为空配置');
+                    recipeLoadConfig = {};
+                }
+            } else {
+                warn('无法从备份恢复，但当前已有 ' + currentKeys + ' 个配置，保留当前配置');
+            }
+        }
     }
     
     var finalKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
@@ -786,9 +1086,27 @@ function saveRecipeLoadConfig() {
             if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
                 existingConfig = JsonIO.read(CONFIG_PATH);
             } else {
-                var fs = require('fs');
-                if (fs.existsSync(CONFIG_PATH)) {
-                    existingConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+                // 使用Java文件操作
+                if (!File || !FileReader || !BufferedReader) {
+                    debug('Java类未加载，无法检查配置文件');
+                } else {
+                    try {
+                        var file = new File(CONFIG_PATH);
+                        if (file.exists()) {
+                            var reader = new FileReader(file);
+                            var buffer = new BufferedReader(reader);
+                            var fileContent = '';
+                            var line;
+                            while ((line = buffer.readLine()) !== null) {
+                                fileContent += line + '\n';
+                            }
+                            buffer.close();
+                            reader.close();
+                            existingConfig = JSON.parse(fileContent);
+                        }
+                    } catch (fsErr) {
+                        debug('Java文件操作读取配置文件失败: ' + fsErr.message);
+                    }
                 }
             }
         } catch (e) {
@@ -842,10 +1160,15 @@ function saveRecipeLoadConfig() {
             try {
                 // 尝试确保目录存在（可选的，JsonIO 通常会处理）
                 try {
-                    var fs = require('fs');
-                    var configDir = 'kubejs/data';
-                    if (!fs.existsSync(configDir)) {
-                        fs.mkdirSync(configDir, { recursive: true });
+                    if (!File) {
+                        // File类未加载，跳过目录创建
+                    } else {
+                        var configDir = 'kubejs/data';
+                        var file = new File(configDir);
+                        if (!file.exists()) {
+                            file.mkdirs();
+                            debug('已创建配置目录: ' + configDir);
+                        }
                     }
                 } catch (fsErr) {
                     // 忽略目录创建错误，JsonIO 通常会处理
@@ -1153,22 +1476,127 @@ function getDisabledRecipes() {
 }
 
 /**
- * 重置配方加载配置（清除所有设置）
+ * 重置配方加载配置到默认值（不再清除所有设置）
  * 
  * @returns {boolean} 是否成功重置
  */
 function resetRecipeLoadConfig() {
-    var count = Object.keys(recipeLoadConfig).length;
-    recipeLoadConfig = {};
-    var saved = saveRecipeLoadConfig();
+    info('开始重置配方加载配置到默认值...');
     
-    if (saved) {
-        info('配方加载配置已重置: 清除了 ' + count + ' 个条目');
-    } else {
-        warn('配方加载配置重置但保存失败');
+    // 首先尝试调用主API的 resetRecipeLoadConfigToDefaults 函数
+    if (typeof global !== 'undefined' && 
+        global.shanhaiRecipeAPI && 
+        typeof global.shanhaiRecipeAPI.resetRecipeLoadConfigToDefaults === 'function') {
+        info('检测到主API，使用 resetRecipeLoadConfigToDefaults 函数');
+        try {
+            var result = global.shanhaiRecipeAPI.resetRecipeLoadConfigToDefaults();
+            if (result && result.success) {
+                info('✅ 通过主API重置成功: ' + (result.message || ''));
+                // 重新加载配置以同步
+                initRecipeLoadConfig(true);
+                return true;
+            } else {
+                warn('主API重置失败: ' + (result ? result.message : '未知错误'));
+                // 继续尝试其他方法
+            }
+        } catch (err) {
+            warn('调用主API重置函数失败: ' + err.message);
+            // 继续尝试其他方法
+        }
     }
     
-    return saved;
+    // 方法2：尝试从默认值文件加载
+    info('尝试从默认值文件加载配置...');
+    try {
+        // DEFAULT_CONFIG_PATH 已在外部定义
+        defaultConfig = null;
+        
+        // 尝试读取默认值文件
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+            defaultConfig = JsonIO.read(DEFAULT_CONFIG_PATH);
+        } else {
+            try {
+                if (!File || !FileReader || !BufferedReader) {
+                    debug('Java类未加载，无法读取默认值文件');
+                } else {
+                    var file = new File(DEFAULT_CONFIG_PATH);
+                    if (file.exists()) {
+                        var reader = new FileReader(file);
+                        var buffer = new BufferedReader(reader);
+                        var content = '';
+                        var line;
+                        while ((line = buffer.readLine()) !== null) {
+                            content += line + '\n';
+                        }
+                        buffer.close();
+                        reader.close();
+                        defaultConfig = JSON.parse(content);
+                    }
+                }
+            } catch (fsErr) {
+                debug('使用Java文件操作读取默认值文件失败: ' + fsErr.message);
+            }
+        }
+        
+        if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+            // 使用默认值重置配置（合并模式，不清空现有配置）
+            var oldCount = Object.keys(recipeLoadConfig).length;
+            var defaultKeyCount = Object.keys(defaultConfig).length;
+            
+            // 创建新配置对象
+            var newConfig = {};
+            
+            // 步骤1：复制所有默认值
+            var importedDefaults = 0;
+            for (var key in defaultConfig) {
+                if (defaultConfig.hasOwnProperty(key)) {
+                    var value = defaultConfig[key];
+                    // 确保值是布尔值
+                    if (value === true || value === false) {
+                        newConfig[key] = value;
+                        importedDefaults++;
+                    }
+                }
+            }
+            
+            // 步骤2：保留没有默认值的现有配置
+            var keptExisting = 0;
+            for (var key in recipeLoadConfig) {
+                if (recipeLoadConfig.hasOwnProperty(key) && !defaultConfig.hasOwnProperty(key)) {
+                    var value = recipeLoadConfig[key];
+                    // 确保值是布尔值
+                    if (value === true || value === false) {
+                        newConfig[key] = value;
+                        keptExisting++;
+                    }
+                }
+            }
+            
+            // 更新配置
+            recipeLoadConfig = newConfig;
+            
+            var saved = saveRecipeLoadConfig();
+            if (saved) {
+                info('✅ 从默认值文件重置成功: 导入 ' + importedDefaults + ' 个默认值，保留 ' + keptExisting + ' 个现有配置（原配置有 ' + oldCount + ' 个条目，默认值有 ' + defaultKeyCount + ' 个）');
+                return true;
+            } else {
+                warn('从默认值文件重置但保存失败');
+                return false;
+            }
+        } else {
+            info('默认值文件不存在或为空，跳过重置');
+            // 方法3：不重置，只重新加载当前配置（安全回退）
+            info('安全回退：重新加载当前配置，不清空数据');
+            initRecipeLoadConfig(true);
+            return true;
+        }
+    } catch (err) {
+        error('重置配方加载配置失败: ' + err.message);
+        // 方法3：安全回退，不清空配置
+        info('错误处理：重新加载当前配置，防止数据丢失');
+        initRecipeLoadConfig(true);
+        return false;
+    }
 }
 
 /**

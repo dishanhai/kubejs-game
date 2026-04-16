@@ -1095,6 +1095,113 @@ global.shanhaiRecipeAPI = {
     },
 
     /**
+     * 设置配方启用状态
+     * @memberof shanhaiRecipeAPI
+     * @param {string} recipeId - 配方ID
+     * @param {boolean} enabled - 是否启用
+     * @returns {boolean} 是否成功设置
+     * @example
+     * let success = global.shanhaiRecipeAPI.setRecipeEnabled('test_recipe', true);
+     * console.log('设置启用状态结果:', success);
+     */
+    setRecipeEnabled: function(recipeId, enabled) {
+        return setRecipeEnabled(recipeId, enabled);
+    },
+
+    /**
+     * 设置配方默认值
+     * @memberof shanhaiRecipeAPI
+     * @param {string} recipeId - 配方ID
+     * @param {boolean} defaultValue - 默认值（true/false）
+     * @returns {boolean} 是否成功设置
+     * @example
+     * let success = global.shanhaiRecipeAPI.setRecipeDefault('test_recipe', false);
+     * console.log('设置默认值结果:', success);
+     */
+    setRecipeDefault: function(recipeId, defaultValue) {
+        return setRecipeDefault(recipeId, defaultValue);
+    },
+
+    /**
+     * 获取配方默认值
+     * @memberof shanhaiRecipeAPI
+     * @param {string} recipeId - 配方ID
+     * @returns {boolean|null} 默认值（如果不存在则返回null）
+     * @example
+     * let defaultValue = global.shanhaiRecipeAPI.getRecipeDefault('test_recipe');
+     * console.log('配方默认值:', defaultValue);
+     */
+    getRecipeDefault: function(recipeId) {
+        return getRecipeDefault(recipeId);
+    },
+
+    /**
+     * 批量设置配方默认值
+     * @memberof shanhaiRecipeAPI
+     * @param {Object} defaults - 默认值对象 {recipeId: defaultValue, ...}
+     * @returns {Object} 结果对象 {success: number, failed: number}
+     * @example
+     * let result = global.shanhaiRecipeAPI.batchSetRecipeDefaults({
+     *     'recipe_a': false,
+     *     'recipe_b': true,
+     *     'recipe_c': false
+     * });
+     * console.log('批量设置结果:', result);
+     */
+    batchSetRecipeDefaults: function(defaults) {
+        return batchSetRecipeDefaults(defaults);
+    },
+
+    /**
+     * 获取所有配方默认值配置
+     * @memberof shanhaiRecipeAPI
+     * @returns {Object} 默认值配置对象
+     * @example
+     * let allDefaults = global.shanhaiRecipeAPI.getAllRecipeDefaults();
+     * console.log('默认值总数:', Object.keys(allDefaults).length);
+     */
+    getAllRecipeDefaults: function() {
+        return getAllRecipeDefaults();
+    },
+
+    /**
+     * 为所有现有配方初始化默认值（如果尚未设置）
+     * @memberof shanhaiRecipeAPI
+     * @param {boolean} defaultValue - 默认值（默认为false）
+     * @returns {Object} 结果对象 {initialized: number, skipped: number}
+     * @example
+     * let result = global.shanhaiRecipeAPI.initializeMissingDefaults(false);
+     * console.log('初始化结果:', result);
+     */
+    initializeMissingDefaults: function(defaultValue) {
+        return initializeMissingDefaults(defaultValue);
+    },
+
+    /**
+     * 重置配方加载配置到默认值
+     * @memberof shanhaiRecipeAPI
+     * @returns {boolean} 是否成功重置
+     * @example
+     * let success = global.shanhaiRecipeAPI.resetRecipeLoadConfigToDefaults();
+     * console.log('重置结果:', success);
+     */
+    resetRecipeLoadConfigToDefaults: function() {
+        return resetRecipeLoadConfigToDefaults();
+    },
+
+    /**
+     * 重置配方加载配置（现在会恢复默认值）
+     * @memberof shanhaiRecipeAPI
+     * @returns {boolean} 是否成功重置
+     * @example
+     * let success = global.shanhaiRecipeAPI.resetRecipeLoadConfig();
+     * console.log('重置结果:', success);
+     */
+    resetRecipeLoadConfig: function() {
+        return resetRecipeLoadConfigToDefaults();
+    },
+
+    /**
      * @memberof shanhaiRecipeAPI
      * @param {number} r - 红色 (0-255)
      * @param {number} g - 绿色 (0-255)
@@ -1987,7 +2094,7 @@ const universalRecipes = [
     { id: 'distort_polyethylene_oxygen', type: 'distort', itemInputs: ['64x gtceu:carbon_dust'], inputFluids: ['minecraft:water 64000'], outputFluids: ['gtceu:oxygen 150000', 'gtceu:polyethylene 150000'], EUt: zpm, duration: 20, notConsumable: 'dishanhai:wzmk2', blastFurnaceTemp: 9000, circuit: 20 },
     { id: 'wzcz_bronze_ingot', type: 'assembler', itemInputs: ['minecraft:copper_ingot', 'gtceu:tin_ingot'], notConsumable: 'dishanhai:wzcz1', itemOutputs: ['gtceu:bronze_ingot'], EUt: lv, duration: 20 },
     { id: 'sulfuric_acid', type: 'chemical_reactor', itemInputs: ['gtceu:sulfur_dust'], inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:sulfuric_acid 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
-    { id: 'assembler_dye_law_cleaning_gravity_configuration_maintenance_hatch', type: 'assembler', itemInputs: ['gtceu:maintenance_hatch', 'minecraft:red_dye', 'minecraft:blue_dye'], itemOutputs: ['gtceu:law_cleaning_gravity_configuration_maintenance_hatch'], EUt: mv, duration: 20 },
+    { id: 'assembler_dye_law_cleaning_gravity_configuration_maintenance_hatch',notConsumable:'32x dishanhai:wzcz1', type: 'assembler', itemInputs: ['gtceu:maintenance_hatch', 'minecraft:red_dye', 'minecraft:blue_dye'], itemOutputs: ['gtceu:law_cleaning_gravity_configuration_maintenance_hatch'], EUt: mv, duration: 20 },
     { id: 'all_exquisite_gems_output', type: 'laser_engraver', notConsumable: ['64x dishanhai:wzmk2', 'gtceu:glass_lens'],itemInputs: ['gtceu:silicon_dust'],circuit: 20,EUt: mv,duration: 20,dynamicOutputs: true},
     {id:'Dye_component_pack',type:'assembler',itemInputs: ['minecraft:dandelion'],dy_cell:true, EUt: ulv, duration: 20 },
 ];
@@ -3745,7 +3852,9 @@ function normalizeRecipeId(id) {
 
 // 配方加载状态配置存储
 var recipeLoadConfig = {};
+var recipeDefaultConfig = {};
 var isConfigInitialized = false;
+var isDefaultConfigInitialized = false;
 
 /**
  * 初始化配方加载配置
@@ -3760,7 +3869,29 @@ function initRecipeLoadConfig(forceReload) {
     
     debug('开始初始化配方加载配置...');
     
+    // 加载默认值配置（如果尚未加载）
+    if (!isDefaultConfigInitialized) {
+        loadRecipeDefaultConfig();
+    }
+    
     try {
+        // ========== 优先从默认值文件加载 ==========
+        var DEFAULT_CONFIG_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
+        var defaultConfig = null;
+        
+        try {
+            if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                defaultConfig = JsonIO.read(DEFAULT_CONFIG_PATH);
+            } else {
+                var fs = require('fs');
+                if (fs.existsSync(DEFAULT_CONFIG_PATH)) {
+                    defaultConfig = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+                }
+            }
+        } catch (err) {
+            debug('加载默认配置失败: ' + err.message);
+        }
+        
         // 首先尝试从文件加载
         var loaded = false;
         var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
@@ -3769,112 +3900,408 @@ function initRecipeLoadConfig(forceReload) {
         if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
             try {
                 var fileConfig = JsonIO.read(CONFIG_PATH);
-                if (fileConfig && typeof fileConfig === 'object') {
+                if (fileConfig && typeof fileConfig === 'object' && Object.keys(fileConfig).length > 0) {
                     recipeLoadConfig = fileConfig;
                     loaded = true;
-                    debug('✅ 配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                    debug('✅ 配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
                 }
             } catch (fileErr) {
                 debug('从文件加载配置失败: ' + fileErr.message);
             }
         }
         
-        // 方法2：如果文件加载失败，尝试从全局存储加载
-        if (!loaded && typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig) {
+        // 方法2：使用 fs 模块
+        if (!loaded) {
+            try {
+                var fs = require('fs');
+                if (fs.existsSync(CONFIG_PATH)) {
+                    var content = fs.readFileSync(CONFIG_PATH, 'utf8');
+                    var fileConfig = JSON.parse(content);
+                    if (fileConfig && typeof fileConfig === 'object' && Object.keys(fileConfig).length > 0) {
+                        recipeLoadConfig = fileConfig;
+                        loaded = true;
+                        debug('✅ 配方加载配置已通过 fs 从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                    }
+                }
+            } catch (fsErr) {
+                debug('fs 加载配置失败: ' + fsErr.message);
+            }
+        }
+        
+        // ========== 修复：如果文件配置为空或不存在，使用默认配置 ==========
+        if (!loaded || (recipeLoadConfig && typeof recipeLoadConfig === 'object' && Object.keys(recipeLoadConfig).length === 0)) {
+            if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+                recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
+                loaded = true;
+                debug('✅ 使用默认配置初始化，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                
+                // 立即保存默认配置到文件
+                setTimeout(function() {
+                    try {
+                        if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+                            JsonIO.write(CONFIG_PATH, recipeLoadConfig);
+                            debug('默认配置已保存到文件');
+                        } else {
+                            var fs = require('fs');
+                            fs.writeFileSync(CONFIG_PATH, JSON.stringify(recipeLoadConfig, null, 2));
+                            debug('默认配置已通过 fs 保存到文件');
+                        }
+                    } catch (saveErr) {
+                        debug('保存默认配置失败: ' + saveErr.message);
+                    }
+                }, 500);
+            } else {
+                // 如果没有默认配置，才初始化为空
+                recipeLoadConfig = {};
+                debug('配方加载配置已初始化（空配置） - 未找到默认配置');
+            }
+        }
+        
+        // 如果文件加载失败但已有内存配置，尝试从 global 加载
+        if (!loaded && typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig && 
+            Object.keys(global.shanhaiRecipeLoadConfig).length > 0) {
             recipeLoadConfig = global.shanhaiRecipeLoadConfig;
             loaded = true;
             debug('配方加载配置已从全局存储加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
         }
         
-        // 方法3：如果都没有，初始化为空配置
-        if (!loaded) {
-            recipeLoadConfig = {};
-            debug('配方加载配置已初始化（空配置） - 未找到任何现有配置');
+        // ========== 智能默认值合并 ==========
+        // 总是尝试从默认值文件补充缺失的配置
+        if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
+            var mergedCount = 0;
+            for (var key in defaultConfig) {
+                if (defaultConfig.hasOwnProperty(key)) {
+                    var value = defaultConfig[key];
+                    if ((value === true || value === false) && !recipeLoadConfig.hasOwnProperty(key)) {
+                        recipeLoadConfig[key] = value;
+                        mergedCount++;
+                    }
+                }
+            }
+            if (mergedCount > 0) {
+                debug('✅ 从默认值文件补充了 ' + mergedCount + ' 个缺失的配置');
+            }
         }
+        // ========== 结束智能默认值合并 ==========
         
         // 清理配置：只保留有效的布尔值
         var cleanConfig = {};
-        var filteredKeys = [];
-        var keptKeys = [];
         for (var key in recipeLoadConfig) {
             if (recipeLoadConfig.hasOwnProperty(key)) {
                 var value = recipeLoadConfig[key];
-                var valueType = typeof value;
-                
-                // 布尔值检查，处理JsonIO可能返回的对象包装的布尔值
-                var isBoolean = false;
-                var booleanValue = null;
-                
-                if (valueType === 'boolean') {
-                    // 原生布尔值
-                    isBoolean = true;
-                    booleanValue = value;
-                } else if (valueType === 'object' && value !== null) {
-                    // 可能是Java包装的布尔值，尝试获取原始值
-                    try {
-                        var strValue = String(value).toLowerCase().trim();
-                        if (strValue === 'true' || strValue === 'false') {
-                            isBoolean = true;
-                            booleanValue = strValue === 'true';
-                        }
-                    } catch (e) {
-                        // 转换失败，不是布尔值
-                    }
-                } else if (valueType === 'string') {
-                    // 字符串形式的布尔值
-                    var strValue = value.toLowerCase().trim();
-                    if (strValue === 'true' || strValue === 'false') {
-                        isBoolean = true;
-                        booleanValue = strValue === 'true';
-                    }
-                } else if (valueType === 'number') {
-                    // 数字形式的布尔值 (0=false, 其他=true)
-                    isBoolean = true;
-                    booleanValue = value !== 0;
-                }
-                
-                if (isBoolean) {
-                    cleanConfig[key] = booleanValue;
-                    keptKeys.push(key + '=' + booleanValue + '(' + valueType + ')');
-                } else {
-                    filteredKeys.push(key + '=' + value + '(' + valueType + ')');
+                if (value === true || value === false) {
+                    cleanConfig[key] = value;
+                } else if (typeof value === 'string' && (value.toLowerCase() === 'true' || value.toLowerCase() === 'false')) {
+                    cleanConfig[key] = value.toLowerCase() === 'true';
+                } else if (typeof value === 'number') {
+                    cleanConfig[key] = value !== 0;
                 }
             }
         }
         recipeLoadConfig = cleanConfig;
         
-        if (filteredKeys.length > 0) {
-            debug('清理配置时过滤掉 ' + filteredKeys.length + ' 个非布尔值键');
-        }
-        if (keptKeys.length > 0) {
-            debug('清理配置时保留 ' + keptKeys.length + ' 个布尔值键');
+        var finalKeyCount = Object.keys(recipeLoadConfig).length;
+        debug('配方加载配置初始化完成，共 ' + finalKeyCount + ' 个配方配置');
+        
+        // 确保全局变量同步
+        if (typeof global !== 'undefined') {
+            global.shanhaiRecipeLoadConfig = recipeLoadConfig;
+            debug('配方加载配置已同步到全局变量');
         }
         
-        // 显示已配置的配方（如果有）
-        var keys = Object.keys(recipeLoadConfig);
-        if (keys.length > 0) {
-            debug('已配置的配方: ' + keys.slice(0, 10).join(', '));
-            if (keys.length > 10) {
-                debug('... 还有 ' + (keys.length - 10) + ' 个');
-            }
+        isConfigInitialized = true;
+        if (finalKeyCount === 0) {
+            warn('⚠️ 警告：配方加载配置为空！所有配方将默认启用。');
+            warn('⚠️ 请确保 ' + CONFIG_PATH + ' 或 ' + DEFAULT_CONFIG_PATH + ' 文件存在且包含有效配置');
         }
+        
     } catch (err) {
         warn('加载配方加载配置时出错: ' + err.message);
         recipeLoadConfig = {};
+        isConfigInitialized = true;
+    }
+}
+
+/**
+ * 加载配方默认值配置
+ * @returns {boolean} 是否成功加载
+ */
+function loadRecipeDefaultConfig() {
+    try {
+        var DEFAULTS_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
+        
+        // 方法1：使用 JsonIO（首选）
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+            try {
+                var fileDefaults = JsonIO.read(DEFAULTS_PATH);
+                if (fileDefaults && typeof fileDefaults === 'object') {
+                    recipeDefaultConfig = fileDefaults;
+                    debug('✅ 配方默认值配置已从文件加载: ' + Object.keys(recipeDefaultConfig).length + ' 个条目 (路径: ' + DEFAULTS_PATH + ')');
+                    isDefaultConfigInitialized = true;
+                    return true;
+                }
+            } catch (fileErr) {
+                debug('从文件加载默认值配置失败: ' + fileErr.message);
+            }
+        }
+        
+        // 方法2：如果文件加载失败，尝试从全局存储加载
+        if (typeof global !== 'undefined' && global.shanhaiRecipeDefaultConfig) {
+            recipeDefaultConfig = global.shanhaiRecipeDefaultConfig;
+            debug('配方默认值配置已从全局存储加载: ' + Object.keys(recipeDefaultConfig).length + ' 个条目');
+            isDefaultConfigInitialized = true;
+            return true;
+        }
+        
+        // 方法3：如果都没有，初始化为空配置
+        recipeDefaultConfig = {};
+        debug('配方默认值配置已初始化（空配置） - 未找到任何现有默认值');
+        isDefaultConfigInitialized = true;
+        return true;
+    } catch (err) {
+        warn('加载配方默认值配置时出错: ' + err.message);
+        recipeDefaultConfig = {};
+        isDefaultConfigInitialized = false;
+        return false;
+    }
+}
+
+/**
+ * 保存配方默认值配置
+ * @returns {boolean} 是否成功保存
+ */
+function saveRecipeDefaultConfig() {
+    try {
+        debug('开始保存配方默认值配置...');
+        debug('当前recipeDefaultConfig键数量: ' + (recipeDefaultConfig && typeof recipeDefaultConfig === 'object' ? Object.keys(recipeDefaultConfig).length : 0));
+        
+        // 清理配置：只保留有效的布尔值
+        var cleanConfig = {};
+        for (var key in recipeDefaultConfig) {
+            if (recipeDefaultConfig.hasOwnProperty(key)) {
+                var value = recipeDefaultConfig[key];
+                if (typeof value === 'boolean') {
+                    cleanConfig[key] = value;
+                } else {
+                    warn('默认值配置清理: 键 ' + key + ' 的值不是布尔值 (类型: ' + typeof value + ')，将被过滤');
+                }
+            }
+        }
+        
+        debug('清理后默认值配置键数量: ' + Object.keys(cleanConfig).length);
+        
+        // 保存到全局变量（向后兼容）
+        global.shanhaiRecipeDefaultConfig = cleanConfig;
+        debug('默认值配置已保存到全局变量: ' + Object.keys(cleanConfig).length + ' 个条目');
+        
+        // 方法1：使用 JsonIO 保存到文件（最可靠）
+        var fileSaved = false;
+        var DEFAULTS_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
+        
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+            try {
+                JsonIO.write(DEFAULTS_PATH, cleanConfig);
+                fileSaved = true;
+                debug('默认值配置已通过 JsonIO 保存到文件: ' + DEFAULTS_PATH);
+            } catch (fileErr) {
+                warn('保存默认值配置到文件失败: ' + fileErr.message);
+            }
+        }
+        
+        // 方法2：如果 JsonIO 不可用，尝试使用 fs 模块（备用）
+        if (!fileSaved && typeof fs !== 'undefined' && typeof fs.writeFileSync === 'function') {
+            try {
+                fs.writeFileSync(DEFAULTS_PATH, JSON.stringify(cleanConfig, null, 2));
+                fileSaved = true;
+                debug('默认值配置已通过 fs 模块保存到文件: ' + DEFAULTS_PATH);
+            } catch (fsErr) {
+                warn('通过 fs 模块保存默认值配置到文件失败: ' + fsErr.message);
+            }
+        }
+        
+        if (fileSaved) {
+            info('✅ 配方默认值配置已成功保存到文件: ' + DEFAULTS_PATH + ' (' + Object.keys(cleanConfig).length + ' 个条目)');
+        } else {
+            warn('⚠️ 配方默认值配置仅保存到全局变量，未保存到文件（缺少文件写入模块）');
+        }
+        
+        return true;
+    } catch (err) {
+        error('保存配方默认值配置时出错: ' + err.message);
+        return false;
+    }
+}
+
+/**
+ * 设置配方默认值
+ * @param {string} recipeId - 配方ID
+ * @param {boolean} defaultValue - 默认值（true/false）
+ * @returns {boolean} 是否成功设置
+ */
+function setRecipeDefault(recipeId, defaultValue) {
+    if (!recipeId || typeof recipeId !== 'string') {
+        error('设置配方默认值失败: 无效的配方ID');
+        return false;
     }
     
-    var finalKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
-    debug('配方加载配置初始化完成，共 ' + finalKeyCount + ' 个配方配置');
+    var oldValue = recipeDefaultConfig[recipeId];
+    var newValue = defaultValue === true;
     
-    // 确保全局变量同步
-    if (typeof global !== 'undefined') {
-        global.shanhaiRecipeLoadConfig = recipeLoadConfig;
-        debug('配方加载配置已同步到全局变量，共 ' + finalKeyCount + ' 个条目');
+    if (oldValue === newValue) {
+        debug('配方默认值未变化: ' + recipeId + ' = ' + newValue);
+        return true;
     }
     
-    isConfigInitialized = true;
-    if (finalKeyCount === 0) {
-        warn('警告：配方加载配置为空！所有配方将默认启用。');
+    recipeDefaultConfig[recipeId] = newValue;
+    var saved = saveRecipeDefaultConfig();
+    
+    if (saved) {
+        info('配方默认值已更新: ' + recipeId + ' = ' + newValue + ' (之前: ' + (oldValue !== undefined ? oldValue : '未设置') + ')');
+    } else {
+        warn('配方默认值更新但保存失败: ' + recipeId + ' = ' + newValue);
+    }
+    
+    return saved;
+}
+
+/**
+ * 获取配方默认值
+ * @param {string} recipeId - 配方ID
+ * @returns {boolean|null} 默认值（如果不存在则返回null）
+ */
+function getRecipeDefault(recipeId) {
+    if (!recipeId || typeof recipeId !== 'string') {
+        error('获取配方默认值失败: 无效的配方ID');
+        return null;
+    }
+    
+    if (recipeDefaultConfig.hasOwnProperty(recipeId)) {
+        return recipeDefaultConfig[recipeId] === true;
+    }
+    
+    return null;
+}
+
+/**
+ * 批量设置配方默认值
+ * @param {Object} defaults - 默认值对象 {recipeId: defaultValue, ...}
+ * @returns {Object} 结果对象 {success: number, failed: number}
+ */
+function batchSetRecipeDefaults(defaults) {
+    if (!defaults || typeof defaults !== 'object') {
+        return { success: 0, failed: 0, errors: ['参数必须是对象'] };
+    }
+    
+    var result = { success: 0, failed: 0, errors: [] };
+    
+    for (var recipeId in defaults) {
+        if (defaults.hasOwnProperty(recipeId)) {
+            try {
+                var success = setRecipeDefault(recipeId, defaults[recipeId]);
+                if (success) result.success++;
+                else { result.failed++; result.errors.push('设置失败: ' + recipeId); }
+            } catch (err) {
+                result.failed++;
+                result.errors.push('设置出错: ' + recipeId + ' - ' + err.message);
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * 获取所有配方默认值配置
+ * @returns {Object} 默认值配置对象
+ */
+function getAllRecipeDefaults() {
+    if (!isDefaultConfigInitialized) {
+        loadRecipeDefaultConfig();
+    }
+    return recipeDefaultConfig;
+}
+
+/**
+ * 为所有现有配方初始化默认值（如果尚未设置）
+ * @param {boolean} defaultValue - 默认值（默认为false）
+ * @returns {Object} 结果对象 {initialized: number, skipped: number}
+ */
+function initializeMissingDefaults(defaultValue) {
+    if (!isDefaultConfigInitialized) {
+        loadRecipeDefaultConfig();
+    }
+    
+    // 确保配方加载配置已初始化
+    if (!isConfigInitialized) {
+        initRecipeLoadConfig();
+    }
+    
+    var initialized = 0;
+    var skipped = 0;
+    
+    for (var recipeId in recipeLoadConfig) {
+        if (recipeLoadConfig.hasOwnProperty(recipeId)) {
+            if (!recipeDefaultConfig.hasOwnProperty(recipeId)) {
+                recipeDefaultConfig[recipeId] = defaultValue === undefined ? false : defaultValue === true;
+                initialized++;
+            } else {
+                skipped++;
+            }
+        }
+    }
+    
+    if (initialized > 0) {
+        saveRecipeDefaultConfig();
+        info('已为 ' + initialized + ' 个配方初始化默认值，跳过 ' + skipped + ' 个已有默认值的配方');
+    } else {
+        debug('没有需要初始化默认值的配方，所有配方已有默认值');
+    }
+    
+    return { initialized: initialized, skipped: skipped };
+}
+
+/**
+ * 重置配方加载配置到默认值
+ * @returns {boolean} 是否成功重置
+ */
+function resetRecipeLoadConfigToDefaults() {
+    try {
+        // 确保默认值配置已加载
+        if (!isDefaultConfigInitialized) {
+            loadRecipeDefaultConfig();
+        }
+        
+        var countBefore = Object.keys(recipeLoadConfig).length;
+        
+        // 如果有默认值，则恢复默认值；否则设为true（向后兼容）
+        var newConfig = {};
+        for (var recipeId in recipeDefaultConfig) {
+            if (recipeDefaultConfig.hasOwnProperty(recipeId)) {
+                newConfig[recipeId] = recipeDefaultConfig[recipeId];
+            }
+        }
+        
+        // 保留没有默认值的现有配置（不修改它们）
+        for (var recipeId in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(recipeId) && !recipeDefaultConfig.hasOwnProperty(recipeId)) {
+                newConfig[recipeId] = recipeLoadConfig[recipeId];
+            }
+        }
+        
+        recipeLoadConfig = newConfig;
+        var saved = saveRecipeLoadConfig();
+        
+        if (saved) {
+            var countAfter = Object.keys(recipeLoadConfig).length;
+            info('配方加载配置已重置到默认值: 重置了 ' + Object.keys(recipeDefaultConfig).length + ' 个配方，总配置数 ' + countAfter + ' (之前: ' + countBefore + ')');
+        } else {
+            warn('配方加载配置重置但保存失败');
+        }
+        
+        return saved;
+    } catch (err) {
+        error('重置配方加载配置到默认值时出错: ' + err.message);
+        return false;
     }
 }
 
@@ -3888,7 +4315,29 @@ function saveRecipeLoadConfig() {
         
         // 确保recipeLoadConfig是有效对象
         if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
-            recipeLoadConfig = {};
+            warn('recipeLoadConfig无效，尝试重新初始化...');
+            warn('recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 是否为数组: ' + Array.isArray(recipeLoadConfig));
+            
+            // 尝试调用initRecipeLoadConfig重新初始化
+            try {
+                if (typeof initRecipeLoadConfig === 'function') {
+                    initRecipeLoadConfig(true); // 强制重新加载
+                    debug('已调用initRecipeLoadConfig重新初始化');
+                }
+            } catch (initErr) {
+                debug('调用initRecipeLoadConfig失败: ' + initErr.message);
+            }
+            
+            // 再次检查是否有效
+            if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
+                warn('重新初始化后recipeLoadConfig仍然无效，创建空配置作为最后手段');
+                recipeLoadConfig = {};
+                warn('⚠️ 警告：创建了空配置，这可能导致配方配置丢失！');
+                warn('⚠️ 请检查日志以了解初始化失败的原因。');
+            } else {
+                info('✅ recipeLoadConfig已通过重新初始化恢复');
+                debug('恢复后的配置有 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+            }
         }
         
         // 清理无效数据，只保存有效的布尔值
@@ -3914,30 +4363,100 @@ function saveRecipeLoadConfig() {
                         fs.mkdirSync(configDir, { recursive: true });
                     }
                 } catch (fsErr) {
-                    // 忽略目录创建错误
+                    debug('无法创建配置目录（可能无权限）: ' + fsErr.message);
                 }
                 
                 JsonIO.write(CONFIG_PATH, cleanConfig);
                 fileSaved = true;
-                debug('配置已通过 JsonIO 保存到文件: ' + CONFIG_PATH);
+                debug('✅ 配置已通过 JsonIO 保存到文件: ' + CONFIG_PATH);
+                debug('   保存了 ' + Object.keys(cleanConfig).length + ' 个配方配置');
             } catch (fileErr) {
                 warn('保存配置到文件失败: ' + fileErr.message);
+                debug('尝试备用保存方法...');
             }
         } else {
-            debug('JsonIO API不可用，跳过文件保存');
+            debug('JsonIO API不可用，尝试备用保存方法');
         }
         
-        // 方法2：同时保存到 global（向后兼容）
+        // 方法2：如果 JsonIO 失败，尝试使用 fs 模块直接保存
+        if (!fileSaved && typeof require !== 'undefined') {
+            try {
+                var fs = require('fs');
+                var path = require('path');
+                var configDir = 'kubejs/data';
+                var configPath = path.join(configDir, 'shanhai_recipe_load_config.json');
+                
+                // 确保目录存在
+                if (!fs.existsSync(configDir)) {
+                    fs.mkdirSync(configDir, { recursive: true });
+                }
+                
+                // 写入文件
+                fs.writeFileSync(configPath, JSON.stringify(cleanConfig, null, 2));
+                fileSaved = true;
+                debug('✅ 配置已通过 fs 模块保存到文件: ' + configPath);
+                debug('   保存了 ' + Object.keys(cleanConfig).length + ' 个配方配置');
+            } catch (fsErr) {
+                warn('通过 fs 模块保存配置失败: ' + fsErr.message);
+            }
+        }
+        
+        // 方法3：如果文件保存失败，尝试保存到临时位置
+        if (!fileSaved) {
+            try {
+                // 尝试保存到 kubejs 根目录作为备用
+                var backupPath = 'kubejs/shanhai_recipe_load_config.json';
+                if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+                    JsonIO.write(backupPath, cleanConfig);
+                    debug('⚠ 配置已保存到备用位置: ' + backupPath);
+                    fileSaved = true;
+                }
+            } catch (backupErr) {
+                debug('备用保存位置也失败: ' + backupErr.message);
+            }
+        }
+        
+        // 方法4：同时保存到 global（向后兼容）和持久化全局存储
+        var globalSaved = false;
         if (typeof global !== 'undefined') {
-            global.shanhaiRecipeLoadConfig = cleanConfig;
-            debug('配置已保存到 global.shanhaiRecipeLoadConfig，共 ' + Object.keys(cleanConfig).length + ' 个条目');
+            try {
+                global.shanhaiRecipeLoadConfig = cleanConfig;
+                
+                // 尝试保存到持久化全局存储
+                if (typeof PersistentStorage !== 'undefined' && typeof PersistentStorage.set !== 'undefined') {
+                    try {
+                        PersistentStorage.set('shanhai_recipe_load_config', JSON.stringify(cleanConfig));
+                        debug('配置已保存到 PersistentStorage');
+                    } catch (psErr) {
+                        debug('无法保存到 PersistentStorage: ' + psErr.message);
+                    }
+                }
+                
+                globalSaved = true;
+                debug('配置已保存到全局变量，共 ' + Object.keys(cleanConfig).length + ' 个条目');
+            } catch (globalErr) {
+                warn('保存到全局变量失败: ' + globalErr.message);
+            }
+        }
+        
+        // 记录保存结果
+        if (fileSaved) {
+            if (Object.keys(cleanConfig).length > 0) {
+                var sampleKeys = Object.keys(cleanConfig).slice(0, 3);
+                debug('已保存的配方示例: ' + sampleKeys.join(', ') + 
+                      (Object.keys(cleanConfig).length > 3 ? '...' : ''));
+            } else {
+                debug('⚠ 注意: 保存的配置为空 (0个条目)');
+            }
         }
         
         // 只要至少有一种方式成功就返回 true
-        var success = fileSaved || (typeof global !== 'undefined');
+        var success = fileSaved || globalSaved;
         
-        if (success && Object.keys(cleanConfig).length > 0) {
-            debug('已保存的配方: ' + Object.keys(cleanConfig).slice(0, 5).join(', '));
+        if (!success) {
+            error('❌ 所有保存方法都失败了！');
+            error('   当前配置: ' + JSON.stringify(cleanConfig));
+            error('   这可能意味着没有文件系统访问权限或存储系统不可用');
         }
         
         return success;
@@ -4225,9 +4744,66 @@ function setRecipeEnabled(recipeId, enabled) {
     // 确保recipeLoadConfig是有效对象
     if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
         warn('recipeLoadConfig不是有效对象，正在尝试重新初始化...');
-        initRecipeLoadConfig(true);
+        warn('recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 是否为数组: ' + Array.isArray(recipeLoadConfig));
+        
+        // 尝试调用initRecipeLoadConfig重新初始化
+        var initSuccess = false;
+        try {
+            if (typeof initRecipeLoadConfig === 'function') {
+                initRecipeLoadConfig(true); // 强制重新加载
+                debug('已调用initRecipeLoadConfig重新初始化');
+                initSuccess = true;
+            }
+        } catch (initErr) {
+            warn('调用initRecipeLoadConfig失败: ' + initErr.message);
+        }
+        
+        // 再次检查是否有效
         if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
-            recipeLoadConfig = {};
+            warn('重新初始化后recipeLoadConfig仍然无效，尝试直接备份恢复...');
+            
+            // 尝试直接从备份文件恢复
+            var backupLoaded = false;
+            try {
+                var BACKUP_PATH = 'kubejs/data/shanhai_recipe_load_config_backup.json';
+                if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                    var backupConfig = JsonIO.read(BACKUP_PATH);
+                    if (backupConfig && typeof backupConfig === 'object' && Object.keys(backupConfig).length > 0) {
+                        recipeLoadConfig = backupConfig;
+                        backupLoaded = true;
+                        warn('✅ 已从备份文件直接恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                    }
+                }
+            } catch (backupErr) {
+                debug('直接备份恢复失败: ' + backupErr.message);
+            }
+            
+            // 如果JsonIO失败，尝试fs模块
+            if (!backupLoaded) {
+                try {
+                    var fs = require('fs');
+                    if (fs.existsSync(BACKUP_PATH)) {
+                        var fileContent = fs.readFileSync(BACKUP_PATH, 'utf8');
+                        var parsedBackup = JSON.parse(fileContent);
+                        if (parsedBackup && typeof parsedBackup === 'object' && Object.keys(parsedBackup).length > 0) {
+                            recipeLoadConfig = parsedBackup;
+                            backupLoaded = true;
+                            warn('✅ 已从备份文件直接恢复配置: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+                        }
+                    }
+                } catch (fsErr) {
+                    debug('使用fs直接备份恢复失败: ' + fsErr.message);
+                }
+            }
+            
+            if (!backupLoaded) {
+                warn('所有恢复方法均失败，创建空配置作为最后手段');
+                recipeLoadConfig = {};
+                warn('⚠️ 警告：创建了空配置，这可能导致配方配置丢失！');
+            }
+        } else {
+            info('✅ recipeLoadConfig已通过重新初始化恢复');
+            debug('恢复后的配置有 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
         }
     }
     
@@ -4373,11 +4949,8 @@ global.shanhaiRecipeControlAPI = {
     
     resetRecipeLoadConfig: protectAPI(
         function() {
-            recipeLoadConfig = {};
-            isConfigInitialized = false;
-            saveRecipeLoadConfig();
-            info('配方加载配置已重置');
-            return true;
+            // 调用重置到默认值的函数
+            return resetRecipeLoadConfigToDefaults();
         },
         [], // 无参数
         { logPerformance: false }

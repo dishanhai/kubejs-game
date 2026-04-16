@@ -1,7 +1,8 @@
 ---
 alwaysApply: true
 ---
-检测token用量是否超过模型限制 随时进行压缩上下文
+检测token用量是否超过模型限制 自主进行压缩上下文
+kubejs-forge-2001.6.5-build.14 forge 1.20.1
 主要文件列表(按重要顺序):
 "D:\minecraft\gtl\.minecraft\versions\六周目2\.minecraft\versions\GTL六周目\kubejs"路径下
 山海的big私货.js(代称:主文件)
