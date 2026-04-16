@@ -1750,7 +1750,7 @@ ServerEvents.recipes(e => {
         
         if (!recipeEnabled) {
             info('⏭️ 配方加载已禁用，跳过: ' + id + ' (' + type + ')');
-            recordRecipe(type, true, id, '配方加载已禁用（跳过）');
+            debug('配方 ' + id + ' (' + type + ') 已被禁用，不计入统计');
             return true; // 返回true表示"成功跳过"，不视为失败
         }
 
@@ -3683,6 +3683,7 @@ PlayerEvents.loggedIn(event => {
             } else if (failed === 0) {
                 player.tell(Component.green(`§a✓ 配方库加载完成！`));
                 player.tell(Component.green(`§a📦 成功加载: §e${success}§a 个配方`));
+                player.tell(Component.yellow("§e⚠ 注意：统计包含已禁用的配方，实际启用配方数量可能更少。"));
                 player.tell(Component.green(`§a😋 配方库检测无报错 祝领航员航行无阻!`))
                 player.tell(Component.green(`💽 当前神人私货版本:v${Version}`))
                 player.tell(Component.green(`💽 当前API总控系统版本为${API_Version}`))
@@ -3760,26 +3761,120 @@ function initRecipeLoadConfig(forceReload) {
     debug('开始初始化配方加载配置...');
     
     try {
-        // 尝试从全局存储加载
-        if (typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig) {
+        // 首先尝试从文件加载
+        var loaded = false;
+        var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+        
+        // 方法1：使用 JsonIO（首选）
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+            try {
+                var fileConfig = JsonIO.read(CONFIG_PATH);
+                if (fileConfig && typeof fileConfig === 'object') {
+                    recipeLoadConfig = fileConfig;
+                    loaded = true;
+                    debug('✅ 配方加载配置已从文件加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目 (路径: ' + CONFIG_PATH + ')');
+                }
+            } catch (fileErr) {
+                debug('从文件加载配置失败: ' + fileErr.message);
+            }
+        }
+        
+        // 方法2：如果文件加载失败，尝试从全局存储加载
+        if (!loaded && typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig) {
             recipeLoadConfig = global.shanhaiRecipeLoadConfig;
+            loaded = true;
             debug('配方加载配置已从全局存储加载: ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-        } else {
-            // 初始化为空配置
+        }
+        
+        // 方法3：如果都没有，初始化为空配置
+        if (!loaded) {
             recipeLoadConfig = {};
-            debug('配方加载配置已初始化（空配置）');
+            debug('配方加载配置已初始化（空配置） - 未找到任何现有配置');
+        }
+        
+        // 清理配置：只保留有效的布尔值
+        var cleanConfig = {};
+        var filteredKeys = [];
+        var keptKeys = [];
+        for (var key in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(key)) {
+                var value = recipeLoadConfig[key];
+                var valueType = typeof value;
+                
+                // 布尔值检查，处理JsonIO可能返回的对象包装的布尔值
+                var isBoolean = false;
+                var booleanValue = null;
+                
+                if (valueType === 'boolean') {
+                    // 原生布尔值
+                    isBoolean = true;
+                    booleanValue = value;
+                } else if (valueType === 'object' && value !== null) {
+                    // 可能是Java包装的布尔值，尝试获取原始值
+                    try {
+                        var strValue = String(value).toLowerCase().trim();
+                        if (strValue === 'true' || strValue === 'false') {
+                            isBoolean = true;
+                            booleanValue = strValue === 'true';
+                        }
+                    } catch (e) {
+                        // 转换失败，不是布尔值
+                    }
+                } else if (valueType === 'string') {
+                    // 字符串形式的布尔值
+                    var strValue = value.toLowerCase().trim();
+                    if (strValue === 'true' || strValue === 'false') {
+                        isBoolean = true;
+                        booleanValue = strValue === 'true';
+                    }
+                } else if (valueType === 'number') {
+                    // 数字形式的布尔值 (0=false, 其他=true)
+                    isBoolean = true;
+                    booleanValue = value !== 0;
+                }
+                
+                if (isBoolean) {
+                    cleanConfig[key] = booleanValue;
+                    keptKeys.push(key + '=' + booleanValue + '(' + valueType + ')');
+                } else {
+                    filteredKeys.push(key + '=' + value + '(' + valueType + ')');
+                }
+            }
+        }
+        recipeLoadConfig = cleanConfig;
+        
+        if (filteredKeys.length > 0) {
+            debug('清理配置时过滤掉 ' + filteredKeys.length + ' 个非布尔值键');
+        }
+        if (keptKeys.length > 0) {
+            debug('清理配置时保留 ' + keptKeys.length + ' 个布尔值键');
+        }
+        
+        // 显示已配置的配方（如果有）
+        var keys = Object.keys(recipeLoadConfig);
+        if (keys.length > 0) {
+            debug('已配置的配方: ' + keys.slice(0, 10).join(', '));
+            if (keys.length > 10) {
+                debug('... 还有 ' + (keys.length - 10) + ' 个');
+            }
         }
     } catch (err) {
         warn('加载配方加载配置时出错: ' + err.message);
         recipeLoadConfig = {};
     }
     
-    isConfigInitialized = true;
+    var finalKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
+    debug('配方加载配置初始化完成，共 ' + finalKeyCount + ' 个配方配置');
     
     // 确保全局变量同步
     if (typeof global !== 'undefined') {
         global.shanhaiRecipeLoadConfig = recipeLoadConfig;
-        debug('配方加载配置已同步到全局变量，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
+        debug('配方加载配置已同步到全局变量，共 ' + finalKeyCount + ' 个条目');
+    }
+    
+    isConfigInitialized = true;
+    if (finalKeyCount === 0) {
+        warn('警告：配方加载配置为空！所有配方将默认启用。');
     }
 }
 
@@ -3789,15 +3884,66 @@ function initRecipeLoadConfig(forceReload) {
 function saveRecipeLoadConfig() {
     try {
         debug('开始保存配方加载配置...');
-        // 保存到全局存储
-        if (typeof global !== 'undefined') {
-            global.shanhaiRecipeLoadConfig = recipeLoadConfig;
-            debug('配置已保存到 global.shanhaiRecipeLoadConfig，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-            return true;
+        debug('当前recipeLoadConfig键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0));
+        
+        // 确保recipeLoadConfig是有效对象
+        if (!recipeLoadConfig || typeof recipeLoadConfig !== 'object' || Array.isArray(recipeLoadConfig)) {
+            recipeLoadConfig = {};
         }
-        return false;
+        
+        // 清理无效数据，只保存有效的布尔值
+        var cleanConfig = {};
+        for (var key in recipeLoadConfig) {
+            if (recipeLoadConfig.hasOwnProperty(key) && 
+                typeof recipeLoadConfig[key] === 'boolean') {
+                cleanConfig[key] = recipeLoadConfig[key];
+            }
+        }
+        
+        // 方法1：使用 JsonIO 保存到文件（最可靠）
+        var fileSaved = false;
+        var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+        
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+            try {
+                // 尝试确保目录存在
+                try {
+                    var fs = require('fs');
+                    var configDir = 'kubejs/data';
+                    if (!fs.existsSync(configDir)) {
+                        fs.mkdirSync(configDir, { recursive: true });
+                    }
+                } catch (fsErr) {
+                    // 忽略目录创建错误
+                }
+                
+                JsonIO.write(CONFIG_PATH, cleanConfig);
+                fileSaved = true;
+                debug('配置已通过 JsonIO 保存到文件: ' + CONFIG_PATH);
+            } catch (fileErr) {
+                warn('保存配置到文件失败: ' + fileErr.message);
+            }
+        } else {
+            debug('JsonIO API不可用，跳过文件保存');
+        }
+        
+        // 方法2：同时保存到 global（向后兼容）
+        if (typeof global !== 'undefined') {
+            global.shanhaiRecipeLoadConfig = cleanConfig;
+            debug('配置已保存到 global.shanhaiRecipeLoadConfig，共 ' + Object.keys(cleanConfig).length + ' 个条目');
+        }
+        
+        // 只要至少有一种方式成功就返回 true
+        var success = fileSaved || (typeof global !== 'undefined');
+        
+        if (success && Object.keys(cleanConfig).length > 0) {
+            debug('已保存的配方: ' + Object.keys(cleanConfig).slice(0, 5).join(', '));
+        }
+        
+        return success;
     } catch (err) {
         error('保存配方加载配置失败: ' + err.message);
+        error('错误堆栈: ' + err.stack);
         return false;
     }
 }
