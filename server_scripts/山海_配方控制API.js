@@ -1,4 +1,4 @@
-// priority: 10
+// priority: 60
 // ========== 山海私货 · 配方控制API (独立文件) ==========
 // 版本: v2.7.0
 // 描述: 允许玩家通过聊天命令控制配方修改和配方加载状态的独立API
@@ -296,24 +296,18 @@ function findRecipeConfigKey(recipeId) {
     // 如果ID以dishanhai:开头，也检查去掉前缀的版本
     if (recipeId.startsWith('dishanhai:')) {
         var shortId = recipeId.substring(10); // 去掉'dishanhai:'前缀
-        // 添加详细日志
         debug('尝试去掉dishanhai:前缀匹配: ' + recipeId + ' -> ' + shortId);
-        debug('配置中是否存在 ' + shortId + ': ' + recipeLoadConfig.hasOwnProperty(shortId));
         if (recipeLoadConfig.hasOwnProperty(shortId)) {
-            debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
-            debug('找到的配置值: ' + shortId + ' = ' + recipeLoadConfig[shortId]);
+            debug('配方配置键匹配成功: ' + recipeId + ' -> ' + shortId + ' = ' + recipeLoadConfig[shortId]);
             return shortId;
         }
     } 
     // 如果ID以dishanahi:开头，也检查去掉前缀的版本
     else if (recipeId.startsWith('dishanahi:')) {
         var shortId = recipeId.substring(9); // 去掉'dishanahi:'前缀
-        // 添加详细日志
         debug('尝试去掉dishanahi:前缀匹配: ' + recipeId + ' -> ' + shortId);
-        debug('配置中是否存在 ' + shortId + ': ' + recipeLoadConfig.hasOwnProperty(shortId));
         if (recipeLoadConfig.hasOwnProperty(shortId)) {
-            debug('配方配置键查找（去掉前缀匹配）: ' + recipeId + ' -> ' + shortId);
-            debug('找到的配置值: ' + shortId + ' = ' + recipeLoadConfig[shortId]);
+            debug('配方配置键匹配成功: ' + recipeId + ' -> ' + shortId + ' = ' + recipeLoadConfig[shortId]);
             return shortId;
         }
     }
@@ -625,9 +619,43 @@ function initRecipeLoadConfig(forceReload) {
             if (recipeLoadConfig.hasOwnProperty(key)) {
                 var value = recipeLoadConfig[key];
                 var valueType = typeof value;
+                
+                // 更宽松的布尔值检查，处理JsonIO可能返回的对象包装的布尔值
+                var isBoolean = false;
+                var booleanValue = null;
+                
                 if (valueType === 'boolean') {
-                    cleanConfig[key] = value;
-                    keptKeys.push(key + '=' + value + '(' + valueType + ')');
+                    // 原生布尔值
+                    isBoolean = true;
+                    booleanValue = value;
+                } else if (valueType === 'object' && value !== null) {
+                    // 可能是Java包装的布尔值，尝试获取原始值
+                    try {
+                        // 尝试转换为字符串，检查是否是"true"或"false"
+                        var strValue = String(value).toLowerCase().trim();
+                        if (strValue === 'true' || strValue === 'false') {
+                            isBoolean = true;
+                            booleanValue = strValue === 'true';
+                        }
+                    } catch (e) {
+                        // 转换失败，不是布尔值
+                    }
+                } else if (valueType === 'string') {
+                    // 字符串形式的布尔值
+                    var strValue = value.toLowerCase().trim();
+                    if (strValue === 'true' || strValue === 'false') {
+                        isBoolean = true;
+                        booleanValue = strValue === 'true';
+                    }
+                } else if (valueType === 'number') {
+                    // 数字形式的布尔值 (0=false, 其他=true)
+                    isBoolean = true;
+                    booleanValue = value !== 0;
+                }
+                
+                if (isBoolean) {
+                    cleanConfig[key] = booleanValue;
+                    keptKeys.push(key + '=' + booleanValue + '(' + valueType + ')');
                 } else {
                     filteredKeys.push(key + '=' + value + '(' + valueType + ')');
                 }
@@ -657,6 +685,13 @@ function initRecipeLoadConfig(forceReload) {
     
     var finalKeyCount = recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 0;
     debug('配方加载配置初始化完成，共 ' + finalKeyCount + ' 个配方配置');
+    
+    // 同步到全局变量，确保主文件和其他脚本可以访问
+    if (typeof global !== 'undefined') {
+        global.shanhaiRecipeLoadConfig = recipeLoadConfig;
+        debug('配方加载配置已同步到全局变量，共 ' + finalKeyCount + ' 个条目');
+    }
+    
     isConfigInitialized = true;
     if (finalKeyCount === 0) {
         warn('警告：配方加载配置为空！所有配方将默认启用。');

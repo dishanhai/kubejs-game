@@ -1,5 +1,5 @@
 {
-	"test_recipe_1": true,
+	"test_recipe_1": false,
 	"test_recipe_2": true,
 	"test_universal_1": true,
 	"test_super_1": true,
@@ -23,5 +23,6 @@
 	"tank": true,
 	"mekzq": true,
 	"soc": true,
-	"air_sour": true
+	"air_sour": true,
+	"wzcz1": false
 }

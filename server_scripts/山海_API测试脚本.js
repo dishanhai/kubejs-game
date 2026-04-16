@@ -421,6 +421,97 @@ function testComprehensive() {
 }
 
 // =====================================================
+// =============== 测试套件6: 配方控制API功能 ==========
+// =====================================================
+
+function testRecipeControlAPI() {
+    console.log('§6[测试套件6]§r 配方控制API功能测试');
+    
+    // 测试1: 验证配方控制API对象存在
+    safeTest('配方控制API对象存在', function() {
+        assert(global.shanhaiRecipeControlAPI !== undefined, '配方控制API对象不存在');
+        assert(global.shanhaiRecipeControlAPI !== null, '配方控制API对象为null');
+        console.log('§7API对象类型: §f' + (typeof global.shanhaiRecipeControlAPI));
+        return true;
+    });
+    
+    // 测试2: 验证核心方法存在
+    safeTest('配方控制核心方法存在性检查', function() {
+        var requiredMethods = [
+            'isRecipeEnabled', 'setRecipeEnabled', 'findRecipeById',
+            'getAllRecipeLoadConfig', 'getEnabledRecipes', 'getDisabledRecipes',
+            'resetRecipeLoadConfig', 'getVersion', 'getStats'
+        ];
+        
+        for (var i = 0; i < requiredMethods.length; i++) {
+            var method = requiredMethods[i];
+            assert(
+                typeof global.shanhaiRecipeControlAPI[method] === 'function',
+                '方法 ' + method + ' 不存在或不是函数'
+            );
+        }
+        
+        console.log('§7已检查 ' + requiredMethods.length + ' 个核心方法');
+        return true;
+    });
+    
+    // 测试3: 测试配方查找功能
+    safeTest('配方查找功能测试', function() {
+        // 尝试查找一个可能存在的配方
+        var recipe = global.shanhaiRecipeControlAPI.findRecipeById('mk1_comsic');
+        // 查找可能返回null或undefined，只要不抛出错误即可
+        if (recipe) {
+            console.log('§7找到配方: §f' + recipe.id);
+            assert(recipe.id !== undefined, '配方ID未定义');
+            assert(recipe.recipe !== undefined, '配方对象未定义');
+        } else {
+            console.log('§7未找到指定配方（正常情况）');
+        }
+        return recipe;
+    });
+    
+    // 测试4: 测试配方启用状态检查
+    safeTest('配方启用状态检查', function() {
+        // 检查一个配方的启用状态（可能默认启用）
+        var enabled = global.shanhaiRecipeControlAPI.isRecipeEnabled('mk1_comsic');
+        assert(typeof enabled === 'boolean', '启用状态应为布尔值');
+        console.log('§7配方启用状态: §f' + (enabled ? '已启用' : '已禁用'));
+        return enabled;
+    });
+    
+    // 测试5: 测试配置管理功能
+    safeTest('配置管理功能测试', function() {
+        var config = global.shanhaiRecipeControlAPI.getAllRecipeLoadConfig();
+        assert(config !== undefined, '配置对象未定义');
+        assert(typeof config === 'object', '配置应为对象');
+        console.log('§7配置条目数: §f' + Object.keys(config).length);
+        return config;
+    });
+    
+    // 测试6: 测试版本信息
+    safeTest('版本信息测试', function() {
+        var version = global.shanhaiRecipeControlAPI.getVersion();
+        assert(version !== undefined, '版本信息未定义');
+        assert(typeof version === 'string', '版本应为字符串');
+        console.log('§7API版本: §f' + version);
+        return version;
+    });
+    
+    // 测试7: 测试统计信息
+    safeTest('统计信息测试', function() {
+        var stats = global.shanhaiRecipeControlAPI.getStats();
+        assert(stats !== undefined, '统计信息未定义');
+        assert(typeof stats === 'object', '统计应为对象');
+        console.log('§7配置统计: 总计 ' + stats.totalConfigEntries + 
+                   ', 启用 ' + stats.enabledRecipes + 
+                   ', 禁用 ' + stats.disabledRecipes);
+        return stats;
+    });
+    
+    console.log('§a[完成]§r 配方控制API功能测试完成');
+}
+
+// =====================================================
 // =============== 主测试函数 ====================
 // =====================================================
 
@@ -439,6 +530,7 @@ function runAllTests() {
         testStaticColorSystem();
         testErrorHandling();
         testComprehensive();
+        testRecipeControlAPI();
     } catch (error) {
         console.log('§c[严重错误]§r 测试过程中发生未捕获的错误: ' + error.message);
         console.log('§7错误堆栈: §f' + error.stack);
