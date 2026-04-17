@@ -1,4 +1,36 @@
 // priority: 100
+// priority: 100
+/* ========== 颜色API ==========
+// 随机单色
+global.shanhaiRecipeAPI.getRandomColor()
+// 返回: "§a" (随机)
+
+// 随机彩虹（每个字符随机颜色）
+global.shanhaiRecipeAPI.getRandomRainbowText("文本")
+// 返回: "§c文§a本§b!"
+
+// 随机渐变（随机双色）
+global.shanhaiRecipeAPI.getRandomGradientText("文本")
+// 返回: 随机起始色和结束色的渐变
+
+// 固定颜色
+global.shanhaiRecipeAPI.getFixedColorText("文本", "§c")
+
+// 交替颜色
+global.shanhaiRecipeAPI.getAlternatingColorText("文本", "§c", "§9")
+
+// 动态循环颜色
+global.shanhaiRecipeAPI.getDynamicColor(time, speed)
+
+// 平滑彩虹（HSL渐变）
+global.shanhaiRecipeAPI.getRainbowText(text, time, speed, offset)
+
+// 双色平滑渐变
+global.shanhaiRecipeAPI.getGradientText(text, startColor, endColor)
+
+// 创建Component对象
+global.shanhaiRecipeAPI.createDynamicText(text, options)
+*/
 (function() {
     // 辅助函数：安全获取颜色API
     function getColorAPI() {
@@ -7,8 +39,12 @@
         }
         // 备用方案：如果API不可用，提供简单的颜色函数
         return {
-            getRainbowText: function(text) {
-                // 简单的备用彩虹效果（使用传统颜色代码）
+            getRandomColor: function() {
+                let colors = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            },
+            
+            getRandomRainbowText: function(text) {
                 let colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
                 let result = '';
                 for (let i = 0; i < text.length; i++) {
@@ -16,12 +52,50 @@
                 }
                 return result + '§r';
             },
+            
+            getRandomGradientText: function(text) {
+                // 随机选择两种颜色
+                let colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                let startColor = colors[Math.floor(Math.random() * colors.length)];
+                let endColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                let result = "";
+                let length = text.length;
+                let midPoint = Math.floor(length / 2);
+                
+                for (let i = 0; i < length; i++) {
+                    let color = i < midPoint ? startColor : endColor;
+                    result += color + text[i];
+                }
+                return result + "§r";
+            },
+            
+            getFixedColorText: function(text, colorCode) {
+                return colorCode + text + "§r";
+            },
+            
+            getAlternatingColorText: function(text, color1, color2) {
+                let result = "";
+                for (let i = 0; i < text.length; i++) {
+                    result += (i % 2 === 0 ? color1 : color2) + text[i];
+                }
+                return result + "§r";
+            },
+            
+            getRainbowText: function(text) {
+                return this.getRandomRainbowText(text);
+            },
+            
             getGradientText: function(text, startColor, endColor) {
-                // 简单的备用渐变
                 return '§e' + text + '§r';
             },
+            
             getDynamicColor: function() {
-                return '§b'; // 默认青色
+                return '§b';
+            },
+            
+            createDynamicText: function(text, options) {
+                return '§b' + text + '§r';
             }
         };
     }
@@ -56,7 +130,7 @@ StartupEvents.registry('item', e =>{
     .texture('dishanhai_item:item/trar')
 
 e.create('dishanhai:time_reversal_protocol')
-    .displayName(colorAPI.getRainbowText('世线信标'))
+    .displayName(colorAPI.getRandomRainbowText('世线信标'))
     .texture('dishanhai_item:item/time')    
     .fireResistant(true)
     .tooltip('§b§o"逆转因果，改写命运"')
@@ -81,10 +155,10 @@ e.create('dishanhai:time_reversal_protocol')
     .tooltip('任务会送给你!,超级食物')
 
     e.create('dishanhai:piggy')
-    .displayName(colorAPI.getRainbowText('传奇·猪咪'))
+    .displayName(colorAPI.getRandomRainbowText('传奇·猪咪'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
-    .tooltip(colorAPI.getRainbowText('传奇的猪咪大帝!'))
+    .tooltip(colorAPI.getRandomRainbowText('传奇的猪咪大帝!'))
 
     e.create('dishanhai:fishbig_shards')
     .displayName('鱼大碎片')

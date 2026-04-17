@@ -5,8 +5,8 @@
 //iife就绪
 // 版本: 2.6 - 添加API控制系统
 
-var Version = '2.3(日志系统版本2.6.3)'//主版本与日志系统版本
-var API_Version = '2.7.0'//api版本
+var Version = '2.3(日志系统版本2.7)'//主版本与日志系统版本
+var API_Version = '2.7.2'//api版本
 
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
@@ -375,6 +375,119 @@ function rgbToHex(r, g, b) {
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
 }
 
+// =====================================================
+// =============== 颜色池系统 =================
+// =====================================================
+
+// 允许的颜色代码池（排除§0黑色）
+var colorPool = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
+
+// 颜色名称映射，用于显示
+var colorNames = {
+    '§1': '深蓝', '§2': '深绿', '§3': '青色', '§4': '深红', '§5': '紫色',
+    '§6': '金色', '§7': '灰色', '§8': '深灰', '§9': '蓝色', '§a': '浅绿',
+    '§b': '浅蓝', '§c': '红色', '§d': '粉红', '§e': '黄色', '§f': '白色'
+};
+
+/**
+ * 获取随机颜色代码
+ * 从颜色池中随机选择一个颜色（排除§0黑色）
+ * @returns {string} Minecraft颜色代码
+ */
+function getRandomColor() {
+    var randomIndex = Math.floor(Math.random() * colorPool.length);
+    return colorPool[randomIndex];
+}
+
+/**
+ * 获取随机彩虹文本
+ * 为文本中的每个字符随机分配不同的颜色
+ * @param {string} text - 要着色的文本
+ * @returns {string} 彩色文本
+ */
+function getRandomRainbowText(text) {
+    var result = "";
+    for (var i = 0; i < text.length; i++) {
+        var char = text[i];
+        var color = getRandomColor();
+        result += color + char;
+    }
+    return result + "§r"; // 重置颜色
+}
+
+/**
+ * 获取随机渐变文本
+ * 随机选择起始和结束颜色，创建渐变效果
+ * @param {string} text - 要着色的文本
+ * @returns {string} 渐变文本
+ */
+function getRandomGradientText(text) {
+    // 随机选择两种不同的颜色
+    var startIndex = Math.floor(Math.random() * colorPool.length);
+    var endIndex;
+    do {
+        endIndex = Math.floor(Math.random() * colorPool.length);
+    } while (endIndex === startIndex);
+    
+    var startColor = colorPool[startIndex];
+    var endColor = colorPool[endIndex];
+    
+    // 创建渐变
+    var result = "";
+    var length = text.length;
+    
+    for (var i = 0; i < length; i++) {
+        var progress = i / (length - 1 || 1); // 0到1
+        
+        // 在起始和结束颜色之间插值
+        // 简单实现：每3个字符切换一次颜色
+        var segment = Math.floor(i / 3);
+        var segmentProgress = (i % 3) / 3;
+        var useStartColor = segment % 2 === 0;
+        
+        var color;
+        if (useStartColor) {
+            // 使用起始颜色向中间过渡
+            color = startColor;
+        } else {
+            // 使用结束颜色向中间过渡
+            color = endColor;
+        }
+        
+        result += color + text[i];
+    }
+    
+    return result + "§r";
+}
+
+/**
+ * 获取固定颜色文本
+ * 使用指定的固定颜色为文本着色
+ * @param {string} text - 文本
+ * @param {string} colorCode - 颜色代码
+ * @returns {string} 彩色文本
+ */
+function getFixedColorText(text, colorCode) {
+    return colorCode + text + "§r";
+}
+
+/**
+ * 获取交替颜色文本
+ * 在两种颜色之间交替着色
+ * @param {string} text - 文本
+ * @param {string} color1 - 第一种颜色
+ * @param {string} color2 - 第二种颜色
+ * @returns {string} 彩色文本
+ */
+function getAlternatingColorText(text, color1, color2) {
+    var result = "";
+    for (var i = 0; i < text.length; i++) {
+        var color = (i % 2 === 0) ? color1 : color2;
+        result += color + text[i];
+    }
+    return result + "§r";
+}
+
 /**
  * 获取动态颜色
  * 
@@ -683,6 +796,8 @@ global.shanhaiRecipeAPI = {
         return false;
     },
     
+
+    
     /**
      * 记录配方结果
      * 
@@ -714,6 +829,88 @@ global.shanhaiRecipeAPI = {
      */
     sync: function() {
         return syncStatsToGlobal();
+    },
+    
+    /**
+     * 获取随机颜色代码
+     * 从颜色池中随机选择一个颜色（排除§0黑色）
+     * 
+     * @function getRandomColor
+     * @memberof shanhaiRecipeAPI
+     * @returns {string} Minecraft颜色代码
+     * @example
+     * let color = global.shanhaiRecipeAPI.getRandomColor();
+     * console.log(color); // 输出: §a (随机颜色代码)
+     */
+    getRandomColor: function() {
+        return getRandomColor();
+    },
+    
+    /**
+     * 获取随机彩虹文本
+     * 为文本中的每个字符随机分配不同的颜色
+     * 
+     * @function getRandomRainbowText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @returns {string} 彩色文本
+     * @example
+     * let rainbow = global.shanhaiRecipeAPI.getRandomRainbowText("山海私货");
+     * console.log(rainbow); // 输出: 每个字符随机颜色的文本
+     */
+    getRandomRainbowText: function(text) {
+        return getRandomRainbowText(text);
+    },
+    
+    /**
+     * 获取随机渐变文本
+     * 随机选择起始和结束颜色，创建渐变效果
+     * 
+     * @function getRandomGradientText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @returns {string} 渐变文本
+     * @example
+     * let gradient = global.shanhaiRecipeAPI.getRandomGradientText("山海私货");
+     * console.log(gradient); // 输出: 随机双色渐变的文本
+     */
+    getRandomGradientText: function(text) {
+        return getRandomGradientText(text);
+    },
+    
+    /**
+     * 获取固定颜色文本
+     * 使用指定的固定颜色为文本着色
+     * 
+     * @function getFixedColorText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 文本
+     * @param {string} colorCode - 颜色代码
+     * @returns {string} 彩色文本
+     * @example
+     * let fixed = global.shanhaiRecipeAPI.getFixedColorText("山海私货", "§c");
+     * console.log(fixed); // 输出: 红色文本
+     */
+    getFixedColorText: function(text, colorCode) {
+        return getFixedColorText(text, colorCode);
+    },
+    
+    /**
+     * 获取交替颜色文本
+     * 在两种颜色之间交替着色
+     * 
+     * @function getAlternatingColorText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 文本
+     * @param {string} color1 - 第一种颜色
+     * @param {string} color2 - 第二种颜色
+     * @returns {string} 彩色文本
+     * @example
+     * let alternating = global.shanhaiRecipeAPI.getAlternatingColorText("山海私货", "§c", "§9");
+     * console.log(alternating); // 输出: 红蓝交替的文本
+     */
+    getAlternatingColorText: function(text, color1, color2) {
+        return getAlternatingColorText(text, color1, color2);
     },
     
     /**
@@ -3687,6 +3884,93 @@ ServerEvents.tags('item', event => {
     timer.end();
 });
 
+// ========== 物品NBT配置库 ==========
+var ItemNBTConfig = {
+    
+    // 无限单元格模板
+    infinityCell: function(innerId, type) {
+        var itemType = type || 'i';
+        return ',tag:{record:{"#c":"ae2:' + itemType + '",id:"' + innerId + '"}}';
+    },
+    
+    // 无尽之杖
+    infinityWand: ',tag:{wand_options:{cores:["constructionwand:core_angel"],cores_sel:1b,lock:"nolock"}}',
+    
+    // 回响金刚杵
+    echoiteVajra: ',tag:{DisallowContainerItem:0b,GT.Behaviours:{DisableShields:1b,Mode:2b,RelocateMinedBlocks:1b,TreeFelling:1b},GT.Tool:{AttackDamage:110.0f,AttackSpeed:2.0f,Damage:0,Enchantability:10,HarvestLevel:6,MaxDamage:63,ToolSpeed:10.0f},HideFlags:2,Unbreakable:1b}',
+    
+    // 量子纠缠奇点
+    quantumSingularity: ',tag:{freq:177365839983100L}',
+    
+    // 无线通用终端
+    wirelessUniversalTerminal: ',tag:{accessPoint:{dimension:"minecraft:overworld",pos:[I;6,68,6]},blankPattern:[{Count:64b,Slot:0,id:"ae2:blank_pattern"}],craft_if_missing:1b,crafting:1b,craftingGrid:[{Count:1b,Slot:4,id:"ae2:fluix_axe",tag:{Damage:0}}],currentTerminal:"crafting",encodedInputs:[{"#":4L,"#c":"ae2:i",id:"minecraft:beef"},{"#":4L,"#c":"ae2:i",id:"minecraft:bone"},{"#":4L,"#c":"ae2:i",id:"minecraft:leather"},{"#":1000L,"#c":"ae2:f",id:"gtceu:milk"}],encodedOutputs:[{"#":1L,"#c":"ae2:i",id:"minecraft:cow_spawn_egg"}],ex_pattern_access:1b,filter_type:"ALL",internalCurrentPower:4800000.0d,internalMaxPower:4800000.0d,magnet_settings:1b,mode:"PROCESSING",pattern_encoding:1b,pick_block:1b,restock:0b,show_pattern_providers:"NOT_FULL",singularity:[{Count:1b,Slot:0,id:"ae2:quantum_entangled_singularity",tag:{freq:177365839983100L}}],sort_by:"AMOUNT",sort_direction:"DESCENDING",stonecuttingRecipeId:"minecraft:kjs/mae2_pattern_p2p_tunnel",substitute:1b,substituteFluids:1b,upgrades:[{Count:1b,Slot:0,id:"ae2wtlib:quantum_bridge_card"},{Count:1b,Slot:1,id:"ae2wtlib:magnet_card"},{Count:1b,Slot:2,id:"ae2insertexportcard:insert_card",tag:{}},{Count:1b,Slot:3,id:"ae2insertexportcard:export_card",tag:{SelectedInventorySlots:[I;0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],filterConfig:[{"#":0L,"#c":"ae2:i",id:"gtladditions:astral_array"}],upgrades:[{Count:1b,Slot:0,id:"ae2:speed_card"}]}}],view_mode:"ALL"}',
+    
+    // 便携物品单元1k
+    portableItemCell1k: ',tag:{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],display:{Name:\'{"text":"无尽工具包"}\'},ic:31L,internalCurrentPower:20000.0d,keys:[{"#c":"ae2:i",id:"avaritia:infinity_boots"},{"#c":"ae2:i",id:"avaritia:crystal_pickaxe"},{"#c":"ae2:i",id:"avaritia:infinity_helmet"},{"#c":"ae2:i",id:"avaritia:infinity_bucket"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_hammer"}}},{"#c":"ae2:i",id:"avaritia:infinity_bow"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_wire_cutter"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_crowbar"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_knife"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_wrench"}}},{"#c":"ae2:i",id:"avaritia:infinity_hoe"},{"#c":"ae2:i",id:"sophisticatedbackpacks:everlasting_upgrade"},{"#c":"ae2:i",id:"sophisticatedbackpacks:xp_pump_upgrade",tag:{direction:"keep",enabled:1b,level:30}},{"#c":"ae2:i",id:"avaritia:infinity_pants"},{"#c":"ae2:i",id:"avaritia:skull_fire_sword",tag:{Damage:0}},{"#c":"ae2:i",id:"avaritia:infinity_axe"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_mortar"}}},{"#c":"ae2:i",id:"sophisticatedbackpacks:tank_upgrade",tag:{contents:{Amount:0,FluidName:"minecraft:empty"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_file"}}},{"#c":"ae2:i",id:"sophisticatedbackpacks:advanced_void_upgrade"},{"#c":"ae2:i",id:"avaritia:infinity_pickaxe"},{"#c":"ae2:i",id:"avaritia:infinity_totem",tag:{Damage:0}},{"#c":"ae2:i",id:"sophisticatedbackpacks:advanced_refill_upgrade",tag:{filters:{Items:[],Size:12},targetSlots:{}}},{"#c":"ae2:i",id:"sophisticatedbackpacks:stack_upgrade_omega_tier"},{"#c":"ae2:i",id:"sophisticatedbackpacks:inception_upgrade"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_screwdriver"}}},{"#c":"ae2:i",id:"avaritia:infinity_shovel"},{"#c":"ae2:i",id:"avaritia:infinity_sword"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_saw"}}},{"#c":"ae2:i",id:"avaritia:infinity_chestplate"},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"fragile_tool:fragile_mallet"}}}]}',
+    
+    // ========== Mekanism 套装配置 ==========
+    mekanism: {
+        helmet: ',tag:{mekData:{EnergyContainers:[{Container:0b,stored:"4096000000"}],FluidTanks:[{Tank:0b,stored:{Amount:128000,FluidName:"mekanism:nutritional_paste"}}],ProtectionPoints:153600.00610351562d,ShieldEntropy:0.0d,modules:{"mekanism:electrolytic_breathing_unit":{amount:4,enabled:1b,fill_held:1b},"mekanism:energy_unit":{amount:8,enabled:1b},"mekanism:inhalation_purification_unit":{amount:1,beneficial_effects:0b,enabled:1b,harmful_effects:1b,neutral_effects:1b},"mekanism:nutritional_injection_unit":{},"mekanismgenerators:solar_recharging_unit":{amount:8,enabled:1b},"moremekasuitmodules:advanced_interception_system_unit":{},"moremekasuitmodules:automatic_attack_unit":{amount:4,attack_hostile:1b,attack_neutral:0b,attack_other:0b,attack_player:0b,enabled:1b,range:4},"moremekasuitmodules:energy_shield_unit":{amount:10,enable_shield:1b,enabled:1b},"moremekasuitmodules:hp_boots_unit":{amount:64,enabled:1b},"moremekasuitmodules:infinite_energy_supply_unit":{},"moremekasuitmodules:infinite_interception_and_rescue_system_unit":{amount:1,chunkRemove:1b,damagesource:0b,damagesourceIndirect:0b,enabled:1b},"moremekasuitmodules:insulated_unit":{},"moremekasuitmodules:power_enhancement_unit":{amount:64,enabled:1b}}}}',
+        
+        bodyarmor: ',tag:{mekData:{EnergyContainers:[{Container:0b,stored:"4096000000"}],ProtectionPoints:409600.0061035156d,ShieldEntropy:0.0d,modules:{"mekanism:charge_distribution_unit":{},"mekanism:dosimeter_unit":{},"mekanism:energy_unit":{amount:8,enabled:1b},"mekanism:geiger_unit":{},"mekanism:gravitational_modulating_unit":{amount:1,enabled:1b,handleModeChange:1b,renderHUD:1b,speed_boost:1},"mekanism:laser_dissipation_unit":{},"moremekasuitmodules:energy_shield_unit":{amount:10,enabled:1b},"moremekasuitmodules:health_regeneration_unit":{amount:10,enabled:1b},"moremekasuitmodules:high_speed_cooling_unit":{amount:10,enabled:1b},"moremekasuitmodules:hp_boots_unit":{amount:64,enabled:1b},"moremekasuitmodules:infinite_chemical_and_fluid_supply_unit":{},"moremekasuitmodules:infinite_energy_supply_unit":{},"moremekasuitmodules:insulated_unit":{}}}}',
+        
+        pants: ',tag:{mekData:{Enchantments:[{id:"minecraft:depth_strider",lvl:4s},{id:"minecraft:swift_sneak",lvl:5s}],EnergyContainers:[{Container:0b,stored:"4096000000"}],ProtectionPoints:307200.01220703125d,ShieldEntropy:0.0d,modules:{"mekanism:energy_unit":{amount:8,enabled:1b},"mekanism:gyroscopic_stabilization_unit":{},"mekanism:hydrostatic_repulsor_unit":{amount:4,enabled:1b,swim_boost:1b},"mekanism:laser_dissipation_unit":{},"mekanism:locomotive_boosting_unit":{amount:4,enabled:1b,handleModeChange:1b,sprint_boost:3},"mekanism:motorized_servo_unit":{amount:5,enabled:1b},"mekanismgenerators:geothermal_generator_unit":{amount:8,enabled:1b},"moremekasuitmodules:energy_shield_unit":{amount:10,enabled:1b},"moremekasuitmodules:hp_boots_unit":{amount:64,enabled:1b},"moremekasuitmodules:infinite_energy_supply_unit":{},"moremekasuitmodules:insulated_unit":{}}}}',
+        
+        boots: ',tag:{mekData:{EnergyContainers:[{Container:0b,stored:"4096000000"}],ProtectionPoints:153600.00610351562d,ShieldEntropy:0.0d,modules:{"mekanism:energy_unit":{amount:8,enabled:1b},"mekanism:hydraulic_propulsion_unit":{amount:4,enabled:1b,jump_boost:2,step_assist:4},"mekanism:laser_dissipation_unit":{},"moremekasuitmodules:energy_shield_unit":{amount:10,enabled:1b},"moremekasuitmodules:hp_boots_unit":{amount:64,enabled:1b},"moremekasuitmodules:infinite_energy_supply_unit":{},"moremekasuitmodules:insulated_unit":{},"moremekasuitmodules:power_enhancement_unit":{amount:64,enabled:1b}}}}'
+    },
+    
+    // ========== 获取NBT标签的统一接口 ==========
+    getTag: function(itemId, innerId) {
+        if (!itemId) return '';
+        
+        // 无限单元格
+        if (itemId === 'expatternprovider:infinity_cell' && innerId) {
+            return this.infinityCell(innerId);
+        }
+        
+        // 无尽之杖
+        if (itemId === 'constructionwand:infinity_wand') {
+            return this.infinityWand;
+        }
+        
+        // 回响金刚杵
+        if (itemId === 'gtceu:echoite_vajra') {
+            return this.echoiteVajra;
+        }
+        
+        // 量子纠缠奇点
+        if (itemId === 'ae2:quantum_entangled_singularity') {
+            return this.quantumSingularity;
+        }
+        
+        // 无线通用终端
+        if (itemId === 'ae2wtlib:wireless_universal_terminal') {
+            return this.wirelessUniversalTerminal;
+        }
+        
+        // 便携物品单元1k
+        if (itemId === 'ae2:portable_item_cell_1k') {
+            return this.portableItemCell1k;
+        }
+        
+        // Mekanism套装
+        if (Platform.isLoaded('mekanism')) {
+            if (itemId === 'mekanism:mekasuit_helmet') return this.mekanism.helmet;
+            if (itemId === 'mekanism:mekasuit_bodyarmor') return this.mekanism.bodyarmor;
+            if (itemId === 'mekanism:mekasuit_pants') return this.mekanism.pants;
+            if (itemId === 'mekanism:mekasuit_boots') return this.mekanism.boots;
+        }
+        
+        return '';
+    }
+};
+
+// 导出到全局（可选）
+if (typeof global !== 'undefined') {
+    global.ItemNBTConfig = ItemNBTConfig;
+    info('§a[物品NBT库] 已加载，共注册 ' + Object.keys(ItemNBTConfig).length + ' 个配置项');
+}
+
 // ========== 无限盘配方生成 ==========
 let packed_cell_nbt2 = (list, displayName, lore) => {
     if (displayName === undefined) displayName = null;
@@ -3699,7 +3983,7 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
 
     let keysNBT = parsed.map((item) => {
         let [amt, id, innerId] = item;
-        let tagPart = '';
+        let tagPart = ItemNBTConfig.getTag(id, innerId);
         
         // 无限单元格特殊处理：如果指定了内部物品ID，则添加record标签
         if (id === 'expatternprovider:infinity_cell' && innerId) {
