@@ -1,6 +1,32 @@
 // priority: 100
 (function() {
+    // 辅助函数：安全获取颜色API
+    function getColorAPI() {
+        if (typeof global.shanhaiRecipeAPI !== 'undefined') {
+            return global.shanhaiRecipeAPI;
+        }
+        // 备用方案：如果API不可用，提供简单的颜色函数
+        return {
+            getRainbowText: function(text) {
+                // 简单的备用彩虹效果（使用传统颜色代码）
+                let colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    result += colors[i % colors.length] + text[i];
+                }
+                return result + '§r';
+            },
+            getGradientText: function(text, startColor, endColor) {
+                // 简单的备用渐变
+                return '§e' + text + '§r';
+            },
+            getDynamicColor: function() {
+                return '§b'; // 默认青色
+            }
+        };
+    }
 StartupEvents.registry('item', e =>{
+    let colorAPI = getColorAPI();s
     e.create('dishanhai:cosmic_probe_mk')
     .displayName('MK1—宇宙探测器')
      .texture('dishanhai_item:item/cosmic_probe_mk')
@@ -55,7 +81,7 @@ e.create('dishanhai:time_reversal_protocol')
     .tooltip('任务会送给你!,超级食物')
 
     e.create('dishanhai:piggy')
-    .displayName('§6传奇·§b猪咪')
+    .displayName(colorAPI.getRainbowText('传奇·猪咪'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
     .tooltip('§6传奇的§b猪咪大帝!')
