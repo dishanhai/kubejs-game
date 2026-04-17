@@ -84,7 +84,7 @@ e.create('dishanhai:time_reversal_protocol')
     .displayName(colorAPI.getRainbowText('传奇·猪咪'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
-    .tooltip(colorAPI.getDynamicColor('传奇的猪咪大帝!'))
+    .tooltip(colorAPI.getRainbowText('传奇的猪咪大帝!'))
 
     e.create('dishanhai:fishbig_shards')
     .displayName('鱼大碎片')
