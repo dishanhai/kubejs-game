@@ -26,7 +26,7 @@
         };
     }
 StartupEvents.registry('item', e =>{
-    let colorAPI = getColorAPI();s
+    let colorAPI = getColorAPI();
     e.create('dishanhai:cosmic_probe_mk')
     .displayName('MK1—宇宙探测器')
      .texture('dishanhai_item:item/cosmic_probe_mk')
