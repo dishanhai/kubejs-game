@@ -252,25 +252,52 @@ function protectGlobalVariable(varName, defaultValue, options) {
 }
 
 // ---------------- 初始化保护 ----------------
-function initializeProtection() {
+function initializeProtection(event) {
     info('初始化API保护系统...');
     
-    // 保护关键全局变量
-    protectGlobalVariable('shanhaiRecipeStats', {}, { preventModification: true });
-    protectGlobalVariable('shanhaiAPI', {}, { preventModification: false });
-    protectGlobalVariable('shanhaiRecipeAPI', {}, { preventModification: false });
+    var maxWaitAttempts = 25; // 最多等待5秒 (25 * 20 ticks = 500 ticks = 25秒? 等等，20 ticks = 1秒，所以25*20=500 ticks=25秒。太多了。改为5次，每次20 ticks，总共100 ticks=5秒)
+    // 修正：20 ticks = 1秒，所以5次尝试 * 20 ticks = 100 ticks = 5秒
+    maxWaitAttempts = 5;
+    var waitAttempts = 0;
     
-    // 保护内部统计变量
-    protectGlobalVariable('recipeStatsInternal', recipeStats, { preventModification: true });
-    protectGlobalVariable('typeFailedInternal', typeFailed, { preventModification: true });
+    function tryProtect() {
+        waitAttempts++;
+        
+        // 检查数据是否就绪（配方统计是否已开始）
+        var dataReady = recipeStats.total > 0 || recipeStats.errors.length > 0;
+        
+        if (!dataReady && waitAttempts < maxWaitAttempts) {
+            // 数据未就绪，继续等待
+            if (event && event.server && typeof event.server.scheduleInTicks === 'function') {
+                info(`等待配方数据就绪... (${waitAttempts}/${maxWaitAttempts})`);
+                event.server.scheduleInTicks(20, tryProtect);
+                return;
+            } else {
+                // 没有event对象，无法调度重试
+                info('§e⚠ 无法调度重试，event对象不可用');
+            }
+        }
+        
+        // 保护关键全局变量（无论数据是否就绪都执行）
+        protectGlobalVariable('shanhaiRecipeStats', {}, { preventModification: true });
+        protectGlobalVariable('shanhaiAPI', {}, { preventModification: false });
+        protectGlobalVariable('shanhaiRecipeAPI', {}, { preventModification: false });
+        
+        // 保护内部统计变量（只有在数据就绪时）
+        if (dataReady) {
+            protectGlobalVariable('recipeStatsInternal', recipeStats, { preventModification: true });
+            protectGlobalVariable('typeFailedInternal', typeFailed, { preventModification: true });
+            info('API保护系统初始化完成（数据已就绪）');
+        } else {
+            info('§e⚠ 配方统计数据未就绪，跳过内部变量保护');
+            info('API保护系统初始化完成（数据未就绪）');
+        }
+    }
     
-    info('API保护系统初始化完成');
+    tryProtect();
 }
 
-// 在脚本加载后初始化保护
-ServerEvents.loaded(function(event) {
-    event.server.scheduleInTicks(20, initializeProtection); // 延迟1秒（20 ticks）确保其他脚本已加载
-});
+
 
 // ---------------- 配方统计模块 ----------------
 let recipeStats = {
@@ -1129,8 +1156,7 @@ global.shanhaiRecipeAPI = {
         if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
             return global.shanhaiRecipeControlAPI.isRecipeEnabled(recipeId);
         }
-        console.log('§e[山海配方API] shanhaiRecipeControlAPI.isRecipeEnabled 不可用');
-        return true; // 默认启用
+        return true; // 默认启用（静默模式）
     },
 
     /**
@@ -1147,8 +1173,7 @@ global.shanhaiRecipeAPI = {
         if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && typeof global.shanhaiRecipeControlAPI.setRecipeEnabled === 'function') {
             return global.shanhaiRecipeControlAPI.setRecipeEnabled(recipeId, enabled);
         }
-        console.log('§e[山海配方API] shanhaiRecipeControlAPI.setRecipeEnabled 不可用');
-        return false; // 默认失败
+        return false; // 默认失败（静默模式）
     },
 
     /**
@@ -1250,6 +1275,109 @@ global.shanhaiRecipeAPI = {
         return resetRecipeLoadConfigToDefaults();
     },
 
+    /**
+     * 在所有来源中查找配方（配方收集器和配方数组）
+     * @memberof shanhaiRecipeAPI
+     * @param {string} recipeId - 配方ID（可包含或不包含 dishanhai: 前缀）
+     * @returns {Object|null} 包含配方和来源信息的对象，或null
+     * @property {Object} recipe - 配方对象
+     * @property {string} source - 来源描述（配方收集器或配方数组）
+     * @example
+     * let result = global.shanhaiRecipeAPI.findRecipeInAllSources('mk1_comsic');
+     * if (result) console.log(`找到配方: ${result.recipe.id} (来源: ${result.source})`);
+     */
+    findRecipeInAllSources: function(recipeId) {
+        // 标准化ID（去掉 dishanhai: 前缀）
+        let searchId = recipeId;
+        if (searchId.startsWith('dishanhai:')) {
+            searchId = searchId.substring(10);
+        }
+        
+        // 1. 先从配方收集器查找（safeAddRecipe 添加的配方）
+        if (global.shanhaiRecipeInfoCollector) {
+            let collected = global.shanhaiRecipeInfoCollector[searchId];
+            if (collected) {
+                return { recipe: collected, source: '配方收集器(safeAddRecipe)' };
+            }
+        }
+        
+        // 2. 从配方数组查找
+        const recipeArrays = [
+            { name: 'assrecipes', data: global.assrecipes },
+            { name: 'universalRecipes', data: global.universalRecipes },
+            { name: 'suprecipes_1', data: global.suprecipes_1 },
+            { name: 'dishanhairecipes', data: global.dishanhairecipes },
+            { name: 'recipes', data: global.recipes },
+            { name: 'recipes_electrolyzers', data: global.recipes_electrolyzers }
+        ];
+        
+        for (let arr of recipeArrays) {
+            if (arr.data && Array.isArray(arr.data)) {
+                let found = arr.data.find(r => {
+                    let rId = r.id;
+                    if (rId && rId.startsWith('dishanhai:')) {
+                        rId = rId.substring(10);
+                    }
+                    return rId === searchId || r.id === recipeId;
+                });
+                if (found) {
+                    return { recipe: found, source: `配方数组: ${arr.name}` };
+                }
+            }
+        }
+        
+        return null;
+    },
+    
+    /**
+     * 格式化配方信息显示
+     * @memberof shanhaiRecipeAPI
+     * @param {Object} sender - 命令发送者对象
+     * @param {Object} result - findRecipeInAllSources 返回的结果
+     * @param {string} recipeId - 原始配方ID
+     * @example
+     * let result = global.shanhaiRecipeAPI.findRecipeInAllSources('mk1_comsic');
+     * if (result) global.shanhaiRecipeAPI.formatRecipeInfo(sender, result, 'mk1_comsic');
+     */
+    formatRecipeInfo: function(sender, result, recipeId) {
+        let recipe = result.recipe;
+        
+        sender.tell('§6═══════ 配方信息 ═══════');
+        sender.tell(`§7ID: §e${recipe.id || recipeId}`);
+        sender.tell(`§7类型: §e${recipe.type}`);
+        sender.tell(`§7来源: §a${result.source}`);
+        
+        if (recipe.itemInputs && recipe.itemInputs.length > 0) {
+            sender.tell(`§7物品输入: §f${recipe.itemInputs.join('§7, §f')}`);
+        }
+        if (recipe.inputFluids && recipe.inputFluids.length > 0) {
+            sender.tell(`§7流体输入: §b${recipe.inputFluids.join('§7, §b')}`);
+        }
+        if (recipe.itemOutputs && recipe.itemOutputs.length > 0) {
+            sender.tell(`§7物品输出: §a${recipe.itemOutputs.join('§7, §a')}`);
+        }
+        if (recipe.outputFluids && recipe.outputFluids.length > 0) {
+            sender.tell(`§7流体输出: §d${recipe.outputFluids.join('§7, §d')}`);
+        }
+        if (recipe.EUt !== undefined && recipe.EUt !== null) {
+            sender.tell(`§7能耗: §e${recipe.EUt} EU/t`);
+        }
+        if (recipe.duration !== undefined && recipe.duration !== null) {
+            sender.tell(`§7耗时: §e${recipe.duration} ticks`);
+        }
+        if (recipe.circuit !== undefined && recipe.circuit !== null) {
+            sender.tell(`§7电路配置: §e${recipe.circuit}`);
+        }
+        if (recipe.notConsumable !== undefined && recipe.notConsumable !== null) {
+            let nc = Array.isArray(recipe.notConsumable) ? recipe.notConsumable.join('§7, §e') : recipe.notConsumable;
+            sender.tell(`§7非消耗品: §e${nc}`);
+        }
+        if (recipe.defaultEnabled !== undefined) {
+            sender.tell(`§7默认启用: ${recipe.defaultEnabled ? '§a是' : '§c否'}`);
+        }
+        sender.tell('§6═══════════════════════');
+    },
+    
     /**
      * @memberof shanhaiRecipeAPI
      * @param {number} r - 红色 (0-255)
@@ -2419,7 +2547,7 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
     // ========== 蒸馏塔配方 ==========
     safeAddRecipe('distillery', 'dishanhai:yixi', () => {
         gtr.distillery('dishanhai:yixi')
-            .circuit(19)
+            .circuit(23)
             .inputFluids('minecraft:lava 2000')
             .outputFluids('gtceu:ethylene 1000')
             .duration(20)
@@ -2428,7 +2556,7 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
     
     safeAddRecipe('distillery', 'dishanhai:yicun', () => {
         gtr.distillery('dishanhai:yicun')
-            .circuit(3)
+            .circuit(24)
             .inputFluids('minecraft:lava 2000')
             .outputFluids('gtceu:ethanol 1000')
             .duration(20)
@@ -2469,6 +2597,7 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
         { id: 'qiyiqid', name: '奇异物质组装', circuit:2,notConsumable:'16x gtladditions:forge_of_the_antichrist',itemInputs: ['15x gtceu:degenerate_rhenium_dust','kubejs:leptonic_charge','kubejs:contained_high_density_protonic_matter'], itemOutputs: ['30x kubejs:contained_exotic_matter'], EUt: GTValues.VA[GTValues.UXV] },
         { id: 'gaomiduqidian', name: '高密度物质组装',circuit:3,notConsumable:'16x gtladditions:forge_of_the_antichrist', itemInputs: ['kubejs:leptonic_charge','kubejs:time_dilation_containment_unit','kubejs:charged_triplet_neutronium_sphere'], itemOutputs: ['30x kubejs:contained_high_density_protonic_matter'], EUt: GTValues.VA[GTValues.UXV] },
         { id: 'niumanheidonqidian', name: '克尔纽曼奇点组装',circuit:4,notConsumable:'16x gtladditions:forge_of_the_antichrist' ,itemInputs: ['kubejs:time_dilation_containment_unit','64x kubejs:charged_triplet_neutronium_sphere'], inputFluids: ['gtceu:uu_matter 10000'], itemOutputs: ['30x kubejs:contained_kerr_newmann_singularity'], EUt: GTValues.VA[GTValues.UXV] }
+        
     ];
     
     assemblerRecipes.forEach(recipe => {
@@ -2779,8 +2908,9 @@ const dishanhairecipes = [
         id:'greythings_eoh_plus_cosmos_simulation_plus',type:'cosmos_simulation',inputFluids:['minecraft:water 102400'],itemInputs:['disksavior:quantum_chromodynamic_charge_super'],itemOutputs:["131072x gtceu:white_dwarf_mtter_dust",'131072x gtceu:infused_gold_dust',"131072x gtceu:black_dwarf_mtter_dust","131072x ae2:sky_dust","131072x gtceu:trinium_dust","131072x gtceu:plutonium_241_dust","131072x gtceu:titanium_50_dust","131072x gtceu:copper76_dust","131072x gtceu:uranium_235_dust","131072x gtceu:perditio_crystal_dust","131072x gtceu:earth_crystal_dust","131072x gtceu:ignis_crystal_dust","131072x gtceu:tartarite_dust","131072x gtceu:uruium_dust","131072x gtceu:force_dust","131072x gtceu:alien_algae_dust","131072x gtceu:bloodstone_dust","131072x minecraft:netherite_scrap","131072x gtceu:purified_tengam_dust","131072x gtceu:quantanium_dust","131072x gtceu:bedrock_dust","131072x gtceu:damascus_steel_dust","131072x avaritia:neutron_pile","131072x gtceu:certus_quartz_dust","131072x ae2:fluix_dust",'131072x gtceu:shirabon_dust',"131072x gtceu:rare_earth_metal_dust",'131072x gtceu:enderium_dust','131072x gtceu:uraninite_dust','131072x gtceu:diatomite_dust','131072x gtceu:bentonite_dust','131072x gtceu:endstone_dust','131072x gtceu:cassiterite_dust','131072x gtceu:bauxite_dust','131072x gtceu:sapphire_dust','131072x gtceu:spacetime_dust','10240x kubejs:dust_cryotheum','102400x gtceu:celestial_secret_dust','102400x gtceu:tear_dust','1024000x gtceu:rare_earth_dust','1024000x gtceu:stem_cells','1024000x kubejs:biological_cells'],duration:1200
     },
     {
-        id:'miracle_cosmos',type:'cosmos_simulation',itemInputs:['gtlcore:miracle_crystal'],itemOutputs:['2147483647x gtlcore:world_fragments_overworld','2147483647x gtlcore:world_fragments_nether','2147483647x gtlcore:world_fragments_end','2147483647x gtlcore:world_fragments_reactor','2147483647x gtlcore:world_fragments_enceladus','2147483647x gtlcore:world_fragments_titan','2147483647x gtlcore:world_fragments_glacio','2147483647x gtlcore:world_fragments_barnarda','2147483647x gtlcore:world_fragments_moon','2147483647x gtlcore:world_fragments_mars','2147483647x gtlcore:world_fragments_venus','2147483647x gtlcore:world_fragments_mercury','2147483647x gtlcore:world_fragments_ceres','2147483647x gtlcore:world_fragments_ganymede','2147483647x gtlcore:world_fragments_pluto','2147483647x gtlcore:mining_crystal','2147483647x gtlcore:treasures_crystal','16x gtceu:nan_certificate','16x kubejs:overworld_data','16x kubejs:nether_data','16x kubejs:end_data'],inputFluids:['minecraft:water 102400'],duration:1200
+        id:'miracle_cosmos',defaultEnabled:false,type:'cosmos_simulation',itemInputs:['gtlcore:miracle_crystal'],itemOutputs:['2147483647x gtlcore:world_fragments_overworld','2147483647x gtlcore:world_fragments_nether','2147483647x gtlcore:world_fragments_end','2147483647x gtlcore:world_fragments_reactor','2147483647x gtlcore:world_fragments_enceladus','2147483647x gtlcore:world_fragments_titan','2147483647x gtlcore:world_fragments_glacio','2147483647x gtlcore:world_fragments_barnarda','2147483647x gtlcore:world_fragments_moon','2147483647x gtlcore:world_fragments_mars','2147483647x gtlcore:world_fragments_venus','2147483647x gtlcore:world_fragments_mercury','2147483647x gtlcore:world_fragments_ceres','2147483647x gtlcore:world_fragments_ganymede','2147483647x gtlcore:world_fragments_pluto','2147483647x gtlcore:mining_crystal','2147483647x gtlcore:treasures_crystal','16x gtceu:nan_certificate','16x kubejs:overworld_data','16x kubejs:nether_data','16x kubejs:end_data'],inputFluids:['minecraft:water 102400'],duration:1200
     },
+    //奇迹鸿蒙
     {
         id:'assembler_chaos_containment_unit',type:'assembler',itemInputs:['kubejs:chaos_shard',],notConsumable:['gtceu:cosmicneutronium_nanoswarm'],itemOutputs:['15x kubejs:chaos_containment_unit','kubejs:time_dilation_containment_unit'],inputFluids:['gtceu:raw_star_matter_plasma'],notConsumable:'16x gtladditions:forge_of_the_antichrist',duration:20,EUt:opv
     },
@@ -4306,23 +4436,39 @@ ServerEvents.commandRegistry(function(event) {
 // 我们将让它也支持通过API注册的命令
 
 // ========== 脚本加载完成事件 ==========
+// ========== 配置持久化修复（外部作用域） ==========
+var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+
+function saveConfigToFile(config) {
+    try {
+        if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+            JsonIO.write(CONFIG_PATH, config);
+            console.log('§a[配置修复] 配置已保存: ' + Object.keys(config).length + ' 个条目');
+            return true;
+        }
+    } catch (err) {
+        console.log('§c[配置修复] 保存配置失败: ' + err.message);
+    }
+    return false;
+}
+
+// ========== 配置持久化周期保存 ==========
+ServerEvents.tick(function(ev) {
+    if (ev.server.tick % 6000 === 0 && ev.server.tick > 0) {
+        if (typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig && 
+            Object.keys(global.shanhaiRecipeLoadConfig).length > 0) {
+            saveConfigToFile(global.shanhaiRecipeLoadConfig);
+        }
+    }
+});
+
 ServerEvents.loaded(event => {
+    // 1. 初始化保护（延迟执行，确保其他脚本已加载）
+    event.server.scheduleInTicks(20, function() { initializeProtection(event); });
+    
     // ========== 配置持久化修复 ==========
     (function() {
-        var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
-        
-        function saveConfigToFile(config) {
-            try {
-                if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
-                    JsonIO.write(CONFIG_PATH, config);
-                    console.log('§a[配置修复] 配置已保存: ' + Object.keys(config).length + ' 个条目');
-                    return true;
-                }
-            } catch (err) {
-                console.log('§c[配置修复] 保存配置失败: ' + err.message);
-            }
-            return false;
-        }
+
         
         function collectRecipeDefaultsFromCollector() {
             var recipeDefaults = {};
@@ -4353,7 +4499,10 @@ ServerEvents.loaded(event => {
             return recipeDefaults;
         }
         
-        function syncAllRecipesToConfig() {
+        function syncAllRecipesToConfig(forceOverwrite) {
+            // 添加 forceOverwrite 参数，默认 false
+            if (forceOverwrite === undefined) forceOverwrite = false;
+            
             console.log('§6[配置修复] 开始同步所有配方到配置文件...');
             
             if (typeof global !== 'undefined' && global.shanhaiRecipeConfigJustReset === true) {
@@ -4375,28 +4524,44 @@ ServerEvents.loaded(event => {
             } catch (e) { }
             
             var finalConfig = {};
+            var changedCount = 0;
+            var addedCount = 0;
+            
+            // 先复制现有配置
             for (var key in existingConfig) {
                 if (existingConfig.hasOwnProperty(key) && typeof existingConfig[key] === 'boolean') {
                     finalConfig[key] = existingConfig[key];
                 }
             }
             
-            var addedCount = 0;
+            // 同步收集器中的默认值
             for (var key in allDefaults) {
-                if (allDefaults.hasOwnProperty(key) && !finalConfig.hasOwnProperty(key)) {
-                    finalConfig[key] = allDefaults[key];
-                    addedCount++;
-                    if (allDefaults[key] === false) {
-                        console.log('§7[配置修复] 添加默认禁用配方: ' + key);
+                if (allDefaults.hasOwnProperty(key)) {
+                    var defaultValue = allDefaults[key];
+                    var currentValue = finalConfig[key];
+                    
+                    // 条件1: 配置不存在 -> 添加
+                    if (currentValue === undefined) {
+                        finalConfig[key] = defaultValue;
+                        addedCount++;
+                        if (defaultValue === false) {
+                            console.log('§7[配置修复] 添加默认禁用配方: ' + key);
+                        }
+                    }
+                    // 条件2: 强制覆盖模式 且 当前值与默认值不同 -> 更新
+                    else if (forceOverwrite === true && currentValue !== defaultValue) {
+                        finalConfig[key] = defaultValue;
+                        changedCount++;
+                        console.log('§7[配置修复] 更新配方默认值: ' + key + ' (' + (currentValue ? '启用' : '禁用') + ' → ' + (defaultValue ? '启用' : '禁用') + ')');
                     }
                 }
             }
             
-            if (addedCount > 0) {
-                console.log('§a[配置修复] 新增了 ' + addedCount + ' 个配方配置');
+            if (addedCount > 0 || changedCount > 0) {
+                console.log('§a[配置修复] 新增了 ' + addedCount + ' 个配方，更新了 ' + changedCount + ' 个配方');
                 saveConfigToFile(finalConfig);
             } else {
-                console.log('§a[配置修复] 配置已完整，共 ' + Object.keys(finalConfig).length + ' 个配方');
+                console.log('§a[配置修复] 配置已是最新，共 ' + Object.keys(finalConfig).length + ' 个配方');
             }
             
             if (typeof global !== 'undefined') {
@@ -4406,10 +4571,17 @@ ServerEvents.loaded(event => {
             return true;
         }
         
+        // 暴露给全局，方便命令调用
+        if (typeof global !== 'undefined') {
+            global.syncRecipeDefaultsToConfig = function(force) {
+                return syncAllRecipesToConfig(force === true);
+            };
+        }
+        
         var attempts = 0;
         var maxAttempts = 30;
         
-        function trySync() {
+        function trySync(e) {
             attempts++;
             console.log('§7[配置修复] 尝试同步配方 (第 ' + attempts + '/' + maxAttempts + ' 次)');
             
@@ -4427,23 +4599,16 @@ ServerEvents.loaded(event => {
                 
                 syncAllRecipesToConfig();
             } else if (attempts < maxAttempts) {
-                event.server.scheduleInTicks(60, trySync);
+                e.server.scheduleInTicks(60, function() { trySync(e); });
             } else {
                 console.log('§e[配置修复] 达到最大尝试次数，收集器仍为空');
             }
         }
         
         console.log('§6[配置修复] 配置持久化修复已加载');
-        event.server.scheduleInTicks(200, trySync);
+        event.server.scheduleInTicks(200, function() { trySync(event); });
         
-        ServerEvents.tick(function(ev) {
-            if (ev.server.tick % 6000 === 0 && ev.server.tick > 0) {
-                if (typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig && 
-                    Object.keys(global.shanhaiRecipeLoadConfig).length > 0) {
-                    saveConfigToFile(global.shanhaiRecipeLoadConfig);
-                }
-            }
-        });
+
     })();
     // ========== 配置持久化修复结束 ==========
     
@@ -4472,6 +4637,7 @@ ServerEvents.loaded(event => {
                 sender.tell('§e/shanhai api enable <API名称>§7 - 启用API');
                 sender.tell('§e/shanhai api disable <API名称>§7 - 禁用API');
                 sender.tell('§e/shanhai api errors§7 - 查看API错误历史');
+                sender.tell('§e/shanhai sync-defaults§7 - 强制同步配方默认值到配置文件');
                 sender.tell('§e/shanhai help§7 - 显示此帮助');
 
                 return true;
@@ -4504,6 +4670,7 @@ ServerEvents.loaded(event => {
                 sender.tell('§e/shanhai api enable <API名称>§7 - 启用API');
                 sender.tell('§e/shanhai api disable <API名称>§7 - 禁用API');
                 sender.tell('§e/shanhai api errors§7 - 查看API错误历史');
+                sender.tell('§e/shanhai sync-defaults§7 - 强制同步配方默认值到配置文件');
                 sender.tell('§e/shanhai help§7 - 显示此帮助');
                 return true;
             } else if (subcommand === 'api' || subcommand === '接口') {
@@ -4677,9 +4844,28 @@ ServerEvents.loaded(event => {
                     sender.tell('§7可用操作: list, status, enable, disable, errors');
                     return false;
                 }
+            } else if (subcommand === 'sync-defaults' || subcommand === '同步默认值') {
+                // 需要 OP 权限
+                if (!sender.op) {
+                    sender.tell('§c此命令需要 OP 权限');
+                    return true;
+                }
+                
+                try {
+                    let result = global.syncRecipeDefaultsToConfig(true);
+                    if (result) {
+                        sender.tell('§a✅ 已强制同步配方默认值到配置文件');
+                        sender.tell('§7请使用 §e/配方重载§7 或重启服务器使配置生效');
+                    } else {
+                        sender.tell('§c❌ 同步失败，请检查控制台日志');
+                    }
+                } catch(e) {
+                    sender.tell('§c❌ 同步出错: ' + e.message);
+                }
+                return true;
             } else {
                 sender.tell(`§c未知子命令: ${args[0]}`);
-                sender.tell('§7可用子命令: §estats§7, §eversion§7, §eapi§7, §ehelp');
+                sender.tell('§7可用子命令: §estats§7, §eversion§7, §eapi§7, §ehelp§7, §esync-defaults');
                 return false;
             }
         }, {
@@ -4689,6 +4875,124 @@ ServerEvents.loaded(event => {
         });
         
         info('默认山海私货命令已注册到命令控制API');
+        
+        // 注册配方信息查询命令
+        global.shanhaiCommandAPI.register('配方信息', function(sender, args) {
+            if (args.length === 0) {
+                sender.tell('§6=== 配方信息查询系统 ===');
+                sender.tell('§7用法: /配方信息 <子命令> [参数]');
+                sender.tell('§7可用子命令:');
+                sender.tell('  §einfo <配方ID>§7 - 查询配方详细信息');
+                sender.tell('  §elist§7 - 列出所有可用配方');
+                sender.tell('§7示例:');
+                sender.tell('  §e/配方信息 info mk1_comsic§7 - 查询 mk1_comsic 配方');
+                sender.tell('  §e/配方信息 info dishanhai:mk1_comsic§7 - 查询带前缀的配方');
+                sender.tell('  §e/配方信息 list§7 - 列出所有配方');
+                return false;
+            }
+            
+            var subcommand = args[0].toLowerCase();
+            
+            // 配方信息查询
+            if (subcommand === 'info' || subcommand === '信息') {
+                if (args.length < 2) {
+                    sender.tell('§c用法: /配方信息 <配方ID>');
+                    sender.tell('§7示例: /配方信息 mk1_comsic');
+                    sender.tell('§7示例: /配方信息 dishanhai:mk1_comsic');
+                    return false;
+                }
+                
+                let recipeId = args[1];
+                let result = global.shanhaiRecipeAPI.findRecipeInAllSources(recipeId);
+                
+                if (!result) {
+                    sender.tell(`§c❌ 未找到配方: ${recipeId}`);
+                    sender.tell('§7💡 提示: 使用 /配方信息 list 查看所有可查询的配方');
+                    return false;
+                }
+                
+                global.shanhaiRecipeAPI.formatRecipeInfo(sender, result, recipeId);
+                return true;
+            }
+            
+            // 配方列表查询
+            if (subcommand === 'list' || subcommand === '列表') {
+                let allRecipes = [];
+                
+                // 从收集器收集
+                if (global.shanhaiRecipeInfoCollector) {
+                    for (let key in global.shanhaiRecipeInfoCollector) {
+                        if (key !== '_statistics') {
+                            allRecipes.push({
+                                id: key,
+                                type: global.shanhaiRecipeInfoCollector[key].type,
+                                source: '收集器'
+                            });
+                        }
+                    }
+                }
+                
+                // 从配方数组收集
+                const arrayNames = ['assrecipes', 'universalRecipes', 'suprecipes_1', 'dishanhairecipes', 'recipes', 'recipes_electrolyzers'];
+                for (let arrName of arrayNames) {
+                    let arr = global[arrName];
+                    if (arr && Array.isArray(arr)) {
+                        for (let recipe of arr) {
+                            if (recipe && recipe.id) {
+                                let id = recipe.id.startsWith('dishanhai:') ? recipe.id.substring(10) : recipe.id;
+                                if (!allRecipes.some(r => r.id === id)) {
+                                    allRecipes.push({ id: id, type: recipe.type, source: arrName });
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (allRecipes.length === 0) {
+                    sender.tell('§c没有找到任何配方');
+                    return false;
+                }
+                
+                sender.tell(`§6=== 可用配方列表 (共 ${allRecipes.length} 个) ===`);
+                
+                // 按类型分组显示
+                let byType = {};
+                for (let recipe of allRecipes) {
+                    if (!byType[recipe.type]) byType[recipe.type] = [];
+                    byType[recipe.type].push(recipe.id);
+                }
+                
+                for (let type in byType) {
+                    let ids = byType[type];
+                    let displayIds = ids.slice(0, 5);
+                    let more = ids.length > 5 ? ` §7... 共 ${ids.length} 个` : '';
+                    sender.tell(`§7[§e${type}§7] §f${displayIds.join('§7, §f')}${more}`);
+                }
+                
+                sender.tell('§7💡 使用 §e/配方信息 info <配方ID>§7 查看详情');
+                return true;
+            }
+            
+            // 如果没有子命令，假定参数是配方ID（简化用法）
+            let recipeId = args[0];
+            let result = global.shanhaiRecipeAPI.findRecipeInAllSources(recipeId);
+            if (!result) {
+                sender.tell(`§c未知子命令或未找到配方: ${recipeId}`);
+                sender.tell('§7用法: /配方信息 <配方ID> 或 /配方信息 <子命令> [参数]');
+                sender.tell('§7示例: /配方信息 mk1_comsic');
+                sender.tell('§7示例: /配方信息 list');
+                return false;
+            }
+            
+            global.shanhaiRecipeAPI.formatRecipeInfo(sender, result, recipeId);
+            return true;
+        }, {
+            description: '配方信息查询命令，可查询通过 safeAddRecipe 和数组添加的配方',
+            requiresOp: false,
+            supportedPrefixes: ['slash']
+        });
+        
+        info('配方信息查询命令已注册');
     }
     
     // 检查配方控制API状态

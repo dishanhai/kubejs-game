@@ -110,5 +110,11 @@
 	"capacity_card": true,
 	"super_energy_card": true,
 	"super_speed_card": true,
-	"overclock_card": true
+	"overclock_card": true,
+	"minimal_test": false,
+	"test_recipe_1": false,
+	"test_recipe_2": true,
+	"test_universal_1": true,
+	"test_super_1": true,
+	"est_super_1": true
 }
