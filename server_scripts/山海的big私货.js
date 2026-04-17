@@ -1850,6 +1850,9 @@ global.shanhaiCommandAPI = {
 // =============== 配方加载系统主控 =================
 // =====================================================
 
+// 全局配方信息收集器 (v2.39修复：移到ServerEvents.recipes外部)
+var recipeInfoCollector = {};
+
 ServerEvents.recipes(e => {
 
     // =====================================================
@@ -1859,6 +1862,8 @@ ServerEvents.recipes(e => {
     // 本地配方默认值存储
     var localRecipeDefaults = {};
     
+    // 配方信息收集器 (v2.38新增，v2.39修复：已移到外部定义)
+
     /**
      * 设置配方的本地默认值
      * @param {string} recipeId - 配方ID
@@ -1990,6 +1995,49 @@ ServerEvents.recipes(e => {
             return false;
         }
 
+        // ========== 新增：自动收集配方信息 (v2.38新增) ==========
+        var finalId = id;
+        if(finalId && finalId.indexOf(":") === -1){
+            finalId = "dishanhai:" + finalId;
+        }
+        
+        // 提取 defaultEnabled 值
+        var defaultEnabledValue = null;
+        if (recipeObj && typeof recipeObj.defaultEnabled === 'boolean') {
+            defaultEnabledValue = recipeObj.defaultEnabled;
+        } else if (typeof arg4 === 'object' && arg4 && typeof arg4.defaultEnabled === 'boolean') {
+            defaultEnabledValue = arg4.defaultEnabled;
+        }
+        
+        // 收集配方信息
+        if (finalId) {
+            var normalizedId = finalId;
+            if (normalizedId.startsWith('dishanhai:')) {
+                normalizedId = normalizedId.substring(10);
+            } else if (normalizedId.startsWith('dishanahi:')) {
+                normalizedId = normalizedId.substring(9);
+            }
+            
+            recipeInfoCollector[normalizedId] = {
+                id: normalizedId,
+                fullId: finalId,
+                type: type,
+                defaultEnabled: defaultEnabledValue !== false, // 默认 true
+                timestamp: Date.now()
+            };
+            
+            // 同时保存到全局，供配置修复脚本读取
+            if (typeof global !== 'undefined') {
+                if (!global.shanhaiRecipeInfoCollector) {
+                    global.shanhaiRecipeInfoCollector = {};
+                }
+                global.shanhaiRecipeInfoCollector[normalizedId] = recipeInfoCollector[normalizedId];
+            }
+            
+            debug('📝 收集配方信息: ' + normalizedId + ' (defaultEnabled=' + (defaultEnabledValue !== false) + ')');
+        }
+        // ===========================================
+
         // ---- 默认值系统处理 (v2.33新增) ----
         // 如果recipeObj中包含defaultEnabled属性，则设置该配方的本地默认值
         if (recipeObj && typeof recipeObj.defaultEnabled === 'boolean') {
@@ -1999,7 +2047,7 @@ ServerEvents.recipes(e => {
 
         // ---- 配方加载控制检查 (v2.4新增) ----
         // 检查配方是否应该加载，支持多种API接口
-        info('🔍 检查配方加载状态: ' + id + ' (' + type + ')');
+        debug('🔍 检查配方加载状态: ' + id + ' (' + type + ')');
         var recipeEnabled = true; // 默认启用
         
         // ---- 本地默认值系统检查 (v2.33新增) ----
@@ -2400,8 +2448,8 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
     
     // ========== 提取机配方 ==========
     //牛肉提取牛奶 做逆天的一集
-    safeAddRecipe('extractor', 'dishanhai:miku', () => {
-        gtr.extractor("dishanhai:miku")
+    safeAddRecipe('extractor', 'dishanhai:milk', () => {
+        gtr.extractor("dishanhai:milk")
             .itemInputs('1x minecraft:beef')
             .outputFluids('gtceu:milk 1000')
             .EUt(120)
@@ -2830,6 +2878,56 @@ info(`✔️ 山海的♾️物品配方添加完毕 成功:${dishanhaiSucc} | �
 const time_di = dishanhai_timer.end()
 console.log(`🗓️ [山海的bug私货] ♾️级物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${time_di}ms`)
 
+    //神鸿蒙(作弊配方,默认禁用)
+    safeAddRecipe('cosmos_simulation', 'dishanhai:creator_God_home', () => {
+    gtr.cosmos_simulation("dishanhai:creator_God_home")
+    .itemInputs("thetornproductionline:celestial_secret_deducing_creative_module")
+    .itemOutputs(
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"kubejs:quantumchromodynamic_protective_plating"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:raw_star_matter_plasma"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:biomass"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:rocket_fuel"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:stellar_energy_rocket_fuel"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"disksavior:quantum_chromodynamic_charge_super"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:milk"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"kubejs:glacio_spirit"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:sterilized_growth_medium"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:biohmediumsterilized"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:raw_growth_medium"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"kubejs:leptonic_charge"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:steam"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:uu_amplifier"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"gtceu:fertilizer"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"minecraft:dirt"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"ae2:singularity"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"ae2:matter_ball"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"kubejs:scrap"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:ice"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:lubricant"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:fish_oil"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:i",id:"gtceu:meat_dust"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:salt_water"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:rocket_fuel_h8n4c2o4"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:distilled_water"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:cosmicneutronium"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:dense_neutron_plasma"}}'),
+    Item.of('expatternprovider:infinity_cell', '{record:{"#c":"ae2:f",id:"gtceu:neutronium"}}'),
+    '64x thetornproductionline:celestial_secret_deducing_creative_module',
+    '64x kubejs:suprachronal_mainframe_complex',
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],display:{Name:'{\"text\":\"通用电路板元件包\"}'},ic:15L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:ulv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:lv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:mv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:hv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:ev_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:iv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:luv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:zpm_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:uv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:uhv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:uev_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:uiv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:uxv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:opv_universal_circuit\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"kubejs:max_universal_circuit\"}}}]}"),
+    Item.of('ae2:portable_item_cell_256k', '{amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],ic:13L,internalCurrentPower:20000.0d,keys:[{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"kubejs:hypercube"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:chaos"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:magmatter"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"gtladditions:astral_array"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:eternity"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"disksavior:quantum_chromodynamic_charge_super"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:white_dwarf_mtter"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"gtladditions:black_hole_seed"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:magnetohydrodynamicallyconstrainedstarmatter"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"avaritia:infinity_ingot"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"kubejs:infinity_antimatter_fuel_rod"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:i",id:"kubejs:annihilation_constrainer"}}},{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:f",id:"gtceu:black_dwarf_mtter"}}}]}'),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;64L,64L,64L,64L,64L,64L,64L,128L,64L,64L,64L,64L,64L,64L,64L],display:{Name:'{\"text\":\"模块元件包\"}'},ic:1024L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"thetornproductionline:hyper_excitation_module_3\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p3\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p6\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p1\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p8\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p4\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_base\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p2\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fission_reactor_module\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:neutron_activator_module\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fusion_process_module\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:circult_process_module_4\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:fishbig_process_module_p7\"},{\"#c\":\"ae2:i\",id:\"thetornproductionline:black_hole_engine_module\"}]}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],display:{Name:'{\"text\":\"木化石化元件包\"}'},ic:23L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:ethanol\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:naphthalene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:octane\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:ethane\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:propane\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:butane\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:toluene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:benzene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:butadiene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:butene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:propene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:ethylene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:methanol\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:absolute_ethanol\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:methane\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:methyl_acetate\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:acetic_acid\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:carbon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:creosote\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:carbon_monoxide\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:dimethylbenzene\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:acetone\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:phenol\"}}}]}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L],display:{Name:'{\"text\":\"宇宙探测元件包\"}'},ic:3L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:cosmic_element\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:starlight\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_lepton_mixture\"}}}]}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],display:{Name:'{\"text\":\"鸿蒙元件包\"}'},ic:144L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:carbon_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:phosphorus_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:sulfur_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:selenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iodine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:boron_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:silicon_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:germanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:arsenic_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:antimony_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tellurium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:astatine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:aluminium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gallium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:indium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tin_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thallium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lead_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:bismuth_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:polonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:titanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:vanadium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:chromium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:manganese_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iron_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cobalt_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nickel_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:copper_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:zinc_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:zirconium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:niobium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:molybdenum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:technetium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:ruthenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rhodium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:palladium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:silver_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cadmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:hafnium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tantalum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tungsten_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rhenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:osmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iridium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:platinum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gold_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:beryllium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:magnesium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:calcium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:strontium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:barium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:radium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:yttrium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lithium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:sodium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:potassium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rubidium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:caesium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:francium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:scandium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:actinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thorium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:protactinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:uranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:neptunium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:plutonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:americium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:curium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:berkelium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:californium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:einsteinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:fermium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:mendelevium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nobelium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lawrencium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lanthanum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cerium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:praseodymium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:neodymium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:promethium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:samarium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:europium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gadolinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:terbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:dysprosium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:holmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:erbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thulium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:ytterbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lutetium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rutherfordium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:dubnium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:seaborgium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:bohrium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:hassium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:meitnerium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:darmstadtium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:roentgenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:copernicium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nihonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:flerovium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:moscovium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:livermorium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tennessine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:oganesson_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:jasper_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:naquadah_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:enriched_naquadah_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:naquadria_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:duranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tritanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:mithril_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:orichalcum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:enderium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:adamantine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:vibranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:infuscolium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:taranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:draconium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:starmetal_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:spacetime\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:raw_star_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:quark_gluon_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_quark_degenerate_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:neutronium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_lepton_mixture\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:hydrogen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:nitrogen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:oxygen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:fluorine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:chlorine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:bromine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:helium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:neon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:argon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:krypton\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:xenon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:radon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:mercury\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:deuterium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:tritium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:helium_3\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:unknowwater\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:uu_matter\"}}}]}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L],display:{Name:'{\"text\":\"集气元件包\"}'},ic:6L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:air\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:liquid_air\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:nether_air\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:liquid_nether_air\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:ender_air\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:liquid_ender_air\"}}}]}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;5L,10L,5L,128L,64L,64L,1L,1L,1L,5L,64L,64L,5L,5L,5L,1L,128L,1L,1145L,1L,64L,1L,1L,1L,64L,1024L,1L,128L,5L,1L,64L,10L,128L,1L,14L,64L,128L,64L,1L,64L,128L,128L,1L,9L,512L,64L,64L,1L,256L,64L,10L,5L,5L,256L,128L,64L],display:{Name:'{\"text\":\"创造物品元件包\"}'},ic:5226L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"avaritia:endless_cake\"},{\"#c\":\"ae2:i\",id:\"mekanism:creative_chemical_tank\"},{\"#c\":\"ae2:i\",id:\"sgjourney:universe_stargate\"},{\"#c\":\"ae2:i\",id:\"gtceu:creative_energy\"},{\"#c\":\"ae2:i\",id:\"gtceu:research_station\"},{\"#c\":\"ae2:i\",id:\"gtceu:ancient_gold_coin\"},{\"#c\":\"ae2:i\",id:\"sgjourney:pegasus_dhd\",tag:{BlockEntityTag:{Energy:0L,Inventory:{Items:[{Count:1b,Slot:0,id:\"sgjourney:large_control_crystal\"},{Count:1b,Slot:1,id:\"sgjourney:advanced_energy_crystal\",tag:{Energy:0}},{Count:1b,Slot:2,id:\"sgjourney:advanced_communication_crystal\",tag:{Frequency:0}},{Count:1b,Slot:3,id:\"sgjourney:advanced_energy_crystal\",tag:{Energy:0}},{Count:1b,Slot:6,id:\"sgjourney:advanced_communication_crystal\",tag:{Frequency:0}},{Count:1b,Slot:7,id:\"sgjourney:advanced_transfer_crystal\",tag:{TransferLimit:5000L}}],Size:9},energy_inventory:{Items:[{Count:1b,Slot:0,id:\"sgjourney:fusion_core\"}],Size:2},id:\"sgjourney:pegasus_dhd\"}}},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_sword\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_axe\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_umbrella\"},{\"#c\":\"ae2:i\",id:\"gtlcore:super_glue\"},{\"#c\":\"ae2:i\",id:\"gtceu:creative_data_access_hatch\"},{\"#c\":\"ae2:i\",id:\"appmek:creative_chemical_cell\"},{\"#c\":\"ae2:i\",id:\"mekanism:creative_bin\"},{\"#c\":\"ae2:i\",id:\"ae2:creative_item_cell\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_totem\",tag:{Damage:0}},{\"#c\":\"ae2:i\",id:\"gtmthings:creative_laser_hatch\"},{\"#c\":\"ae2:i\",id:\"ae2:fluix_axe\",tag:{Damage:0}},{\"#c\":\"ae2:i\",id:\"kubejs:giga_chad\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_pickaxe\",tag:{}},{\"#c\":\"ae2:i\",id:\"kubejs:create_ultimate_battery\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_bucket\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_helmet\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_pants\"},{\"#c\":\"ae2:i\",id:\"gtceu:neutronium_credit\"},{\"#c\":\"ae2:i\",id:\"avaritia:ultimate_stew\"},{\"#c\":\"ae2:i\",id:\"projecte:tome\"},{\"#c\":\"ae2:i\",id:\"gtceu:creative_chest\"},{\"#c\":\"ae2:i\",id:\"ae2:creative_fluid_cell\"},{\"#c\":\"ae2:i\",id:\"sgjourney:pegasus_stargate\"},{\"#c\":\"ae2:i\",id:\"gtceu:door_of_create\"},{\"#c\":\"ae2:i\",id:\"mekanism:creative_fluid_tank\"},{\"#c\":\"ae2:i\",id:\"gtmthings:creative_item_input_bus\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_chestplate\"},{\"#c\":\"ae2:i\",id:\"sgjourney:classic_stargate_ring_block\"},{\"#c\":\"ae2:i\",id:\"gtceu:doge_coin\"},{\"#c\":\"ae2:i\",id:\"gtmthings:creative_energy_hatch\"},{\"#c\":\"ae2:i\",id:\"gtladditions:arcanic_astrograph\"},{\"#c\":\"ae2:i\",id:\"sgjourney:classic_stargate_base_block\"},{\"#c\":\"ae2:i\",id:\"gtladditions:heart_of_the_universe\"},{\"#c\":\"ae2:i\",id:\"gtmthings:creative_fluid_input_hatch\"},{\"#c\":\"ae2:i\",id:\"gtceu:creative_tank\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_boots\"},{\"#c\":\"ae2:i\",id:\"sgjourney:classic_stargate_chevron_block\"},{\"#c\":\"ae2:i\",id:\"kubejs:heartofthesmogus\"},{\"#c\":\"ae2:i\",id:\"minecraft:command_block\"},{\"#c\":\"ae2:i\",id:\"gtceu:eye_of_harmony\"},{\"#c\":\"ae2:i\",id:\"gtceu:lava_furnace\"},{\"#c\":\"ae2:i\",id:\"expatternprovider:fishbig\"},{\"#c\":\"ae2:i\",id:\"gtceu:chocolate_coin\"},{\"#c\":\"ae2:i\",id:\"mekanism:creative_energy_cube\",tag:{mekData:{EnergyContainers:[{Container:0b,stored:\"18446744073709551615.9999\"}],componentConfig:{config0:{side0:4,side1:4,side2:4,side3:4,side4:4,side5:4}}}}},{\"#c\":\"ae2:i\",caps:{Parent:{Items:[],Size:81}},id:\"avaritia:neutron_ring\"},{\"#c\":\"ae2:i\",id:\"avaritia:infinity_ring\"},{\"#c\":\"ae2:i\",id:\"gtlcore:ultimate_tea\"},{\"#c\":\"ae2:i\",id:\"gtceu:creative_computation_provider\"},{\"#c\":\"ae2:i\",id:\"gtceu:create_aggregation\"}],sort_by:\"MOD\",sort_direction:\"ASCENDING\",view_mode:\"ALL\"}"),
+    Item.of('ae2:portable_item_cell_16k', "{RepairCost:0,amts:[L;1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L,1L],display:{Name:'{\"text\":\"黑洞元件包\"}'},ic:179L,internalCurrentPower:20000.0d,keys:[{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:carbon_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:phosphorus_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:sulfur_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:selenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iodine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:boron_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:silicon_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:germanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:arsenic_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:antimony_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tellurium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:astatine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:aluminium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gallium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:indium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tin_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thallium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lead_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:bismuth_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:polonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:titanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:vanadium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:chromium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:manganese_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iron_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cobalt_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nickel_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:copper_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:zinc_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:zirconium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:niobium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:molybdenum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:technetium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:ruthenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rhodium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:palladium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:silver_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cadmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:hafnium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tantalum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tungsten_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rhenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:osmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:iridium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:platinum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gold_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:beryllium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:magnesium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:calcium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:strontium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:barium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:radium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:yttrium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lithium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:sodium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:potassium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rubidium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:caesium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:francium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:scandium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:actinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thorium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:protactinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:uranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:neptunium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:plutonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:americium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:curium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:berkelium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:californium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:einsteinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:fermium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:mendelevium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nobelium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lawrencium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lanthanum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:cerium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:praseodymium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:neodymium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:promethium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:samarium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:europium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:gadolinium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:terbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:dysprosium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:holmium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:erbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:thulium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:ytterbium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:lutetium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:rutherfordium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:dubnium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:seaborgium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:bohrium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:hassium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:meitnerium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:darmstadtium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:roentgenium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:copernicium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:nihonium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:flerovium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:moscovium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:livermorium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tennessine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:oganesson_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:jasper_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:naquadah_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:enriched_naquadah_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:naquadria_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:duranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:tritanium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:mithril_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:orichalcum_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:enderium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:adamantine_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:vibranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:infuscolium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:taranium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:draconium_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:i\",id:\"gtceu:starmetal_dust\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:spacetime\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:raw_star_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:quark_gluon_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_quark_degenerate_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:neutronium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_lepton_mixture\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:hydrogen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:nitrogen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:oxygen\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:fluorine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:chlorine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:bromine\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:helium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:neon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:argon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:krypton\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:xenon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:radon\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:mercury\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:deuterium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:tritium\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:helium_3\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:unknowwater\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:uu_matter\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:taranium_rich_liquid_helium_4_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:quark_gluon_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:dense_neutron_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:high_energy_quark_gluon_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:eternity\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:cosmic_mesh_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:actinium_superhydride_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:dimensionallytranscendentcrudecatalyst\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:vibranium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:adamantium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:silver_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:oxygen_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:nitrogen_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:iron_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:helium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:argon_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:nickel_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:infuscolium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:orichalcum_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:starmetal_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:draconiumawakened_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:legendarium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:echoite_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:crystalmatrix_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:mithril_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:chaos_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:flyb_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:quasifissioning_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:celestialtungsten_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:astraltitanium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:quantumchromodynamically_confined_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:metastable_hassium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:degenerate_rhenium_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:heavy_quark_degenerate_matter_plasma\"}}},{\"#c\":\"ae2:i\",id:\"expatternprovider:infinity_cell\",tag:{record:{\"#c\":\"ae2:f\",id:\"gtceu:enderium_plasma\"}}}]}")
+)
+    .duration(1200)
+    .inputFluids("minecraft:water 102400")
+    },{defaultEnabled:false})
+
     // ========== 创造模块 ==========
     safeAddRecipe('suprachronal_assembly_line', 'dishanhai:czmk', () => {
         gtr.suprachronal_assembly_line('dishanhai:czmk')
@@ -2930,7 +3028,7 @@ console.log(`🗓️ [山海的bug私货] ♾️级物品配方添加完毕 成�
             .stationResearch(b => b.researchStack(Registries.getItemStack("kubejs:suprachronal_max")).dataStack(Registries.getItemStack("gtceu:data_module")).EUt(GTValues.VA[GTValues.MAX]).CWUt(8192));
     });
     
-    // ========== 无尽装备配方 ==========
+    // ========== 星门四件套 ==========
     const avaritiaRecipes = [
         { id: 'cswhzs', output: 'avaritia:infinity_umbrella', casing: 'god_forge_trim_casing' },
         { id: 'qydxzj', output: 'avaritia:infinity_ring', casing: 'god_forge_energy_casing' },
@@ -3231,6 +3329,69 @@ if (Platform.isLoaded('ae2_overclocked')){
 }    
 
     info(`✅ 主模块配方注册完成`);
+    
+    // 自动配方统计功能 (v2.40新增)
+    function generateRecipeStatistics() {
+        var totalRecipes = Object.keys(recipeInfoCollector).length;
+        if (totalRecipes === 0) {
+            info('📊 配方统计: 未收集到任何配方信息');
+            return;
+        }
+        
+        // 按类型统计
+        var typeStats = {};
+        var defaultEnabledStats = { true: 0, false: 0 };
+        
+        for (var id in recipeInfoCollector) {
+            if (recipeInfoCollector.hasOwnProperty(id)) {
+                var recipe = recipeInfoCollector[id];
+                var type = recipe.type || 'unknown';
+                typeStats[type] = (typeStats[type] || 0) + 1;
+                
+                // 统计默认启用状态
+                if (recipe.defaultEnabled === true) {
+                    defaultEnabledStats.true++;
+                } else {
+                    defaultEnabledStats.false++;
+                }
+            }
+        }
+        
+        // 生成统计报告
+        info(`📊 配方统计: 共 ${totalRecipes} 个配方`);
+        info(`📊 默认启用: ${defaultEnabledStats.true} 个启用, ${defaultEnabledStats.false} 个禁用`);
+        
+        // 按类型输出统计（只显示数量大于0的类型）
+        var typeReport = [];
+        for (var type in typeStats) {
+            if (typeStats.hasOwnProperty(type) && typeStats[type] > 0) {
+                typeReport.push(`${type}: ${typeStats[type]}`);
+            }
+        }
+        if (typeReport.length > 0) {
+            info(`📊 按类型统计: ${typeReport.join(', ')}`);
+        }
+        
+        // 将统计信息也保存到全局收集器中
+        recipeInfoCollector._statistics = {
+            total: totalRecipes,
+            defaultEnabled: defaultEnabledStats,
+            byType: typeStats,
+            generatedAt: Date.now()
+        };
+    }
+    
+    // 生成配方统计
+    generateRecipeStatistics();
+    
+    // 导出配方收集器到全局 (v2.39修复：确保正确导出)
+    if (typeof global !== 'undefined') {
+        // 导出到 shanhaiRecipeCollector（供测试脚本使用）
+        global.shanhaiRecipeCollector = recipeInfoCollector;
+        // 同时保留 shanhaiRecipeInfoCollector 以保持兼容性
+        global.shanhaiRecipeInfoCollector = recipeInfoCollector;
+        info(`📦 配方收集器已导出到全局，共 ${Object.keys(recipeInfoCollector).length} 个配方`);
+    }
     
     // 导出配方数组到全局对象，供API访问（必须在ServerEvents.recipes回调内部）
     if (typeof assrecipes !== 'undefined') global.assrecipes = assrecipes;
@@ -4146,6 +4307,146 @@ ServerEvents.commandRegistry(function(event) {
 
 // ========== 脚本加载完成事件 ==========
 ServerEvents.loaded(event => {
+    // ========== 配置持久化修复 ==========
+    (function() {
+        var CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
+        
+        function saveConfigToFile(config) {
+            try {
+                if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
+                    JsonIO.write(CONFIG_PATH, config);
+                    console.log('§a[配置修复] 配置已保存: ' + Object.keys(config).length + ' 个条目');
+                    return true;
+                }
+            } catch (err) {
+                console.log('§c[配置修复] 保存配置失败: ' + err.message);
+            }
+            return false;
+        }
+        
+        function collectRecipeDefaultsFromCollector() {
+            var recipeDefaults = {};
+            var collector = global.shanhaiRecipeCollector || global.shanhaiRecipeInfoCollector;
+            
+            if (!collector || typeof collector !== 'object') {
+                console.log('§e[配置修复] 配方收集器不存在');
+                return null;
+            }
+            
+            var totalKeys = Object.keys(collector).length;
+            console.log('§7[配置修复] 收集器总键数: ' + totalKeys);
+            
+            var count = 0;
+            for (var key in collector) {
+                if (collector.hasOwnProperty(key) && key !== '_statistics') {
+                    var info = collector[key];
+                    var defaultValue = true;
+                    if (info && typeof info.defaultEnabled !== 'undefined') {
+                        defaultValue = info.defaultEnabled === true;
+                    }
+                    recipeDefaults[key] = defaultValue;
+                    count++;
+                }
+            }
+            
+            console.log('§a[配置修复] 从收集器获取到 ' + count + ' 个配方默认值');
+            return recipeDefaults;
+        }
+        
+        function syncAllRecipesToConfig() {
+            console.log('§6[配置修复] 开始同步所有配方到配置文件...');
+            
+            if (typeof global !== 'undefined' && global.shanhaiRecipeConfigJustReset === true) {
+                console.log('§e[配置修复] 检测到重置标志，跳过同步');
+                return false;
+            }
+            
+            var allDefaults = collectRecipeDefaultsFromCollector();
+            if (!allDefaults || Object.keys(allDefaults).length === 0) {
+                console.log('§e[配置修复] 收集器为空，无法同步');
+                return false;
+            }
+            
+            var existingConfig = {};
+            try {
+                if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
+                    existingConfig = JsonIO.read(CONFIG_PATH) || {};
+                }
+            } catch (e) { }
+            
+            var finalConfig = {};
+            for (var key in existingConfig) {
+                if (existingConfig.hasOwnProperty(key) && typeof existingConfig[key] === 'boolean') {
+                    finalConfig[key] = existingConfig[key];
+                }
+            }
+            
+            var addedCount = 0;
+            for (var key in allDefaults) {
+                if (allDefaults.hasOwnProperty(key) && !finalConfig.hasOwnProperty(key)) {
+                    finalConfig[key] = allDefaults[key];
+                    addedCount++;
+                    if (allDefaults[key] === false) {
+                        console.log('§7[配置修复] 添加默认禁用配方: ' + key);
+                    }
+                }
+            }
+            
+            if (addedCount > 0) {
+                console.log('§a[配置修复] 新增了 ' + addedCount + ' 个配方配置');
+                saveConfigToFile(finalConfig);
+            } else {
+                console.log('§a[配置修复] 配置已完整，共 ' + Object.keys(finalConfig).length + ' 个配方');
+            }
+            
+            if (typeof global !== 'undefined') {
+                global.shanhaiRecipeLoadConfig = finalConfig;
+            }
+            
+            return true;
+        }
+        
+        var attempts = 0;
+        var maxAttempts = 30;
+        
+        function trySync() {
+            attempts++;
+            console.log('§7[配置修复] 尝试同步配方 (第 ' + attempts + '/' + maxAttempts + ' 次)');
+            
+            var collector = global.shanhaiRecipeCollector || global.shanhaiRecipeInfoCollector;
+            var collectorSize = collector ? Object.keys(collector).filter(function(k) { return k !== '_statistics'; }).length : 0;
+            
+            if (collectorSize > 0) {
+                console.log('§a[配置修复] 收集器已有 ' + collectorSize + ' 个配方');
+                
+                if (global.shanhaiRecipeConfigJustReset === true) {
+                    console.log('§e[配置修复] 检测到重置标志，跳过同步');
+                    delete global.shanhaiRecipeConfigJustReset;
+                    return;
+                }
+                
+                syncAllRecipesToConfig();
+            } else if (attempts < maxAttempts) {
+                event.server.scheduleInTicks(60, trySync);
+            } else {
+                console.log('§e[配置修复] 达到最大尝试次数，收集器仍为空');
+            }
+        }
+        
+        console.log('§6[配置修复] 配置持久化修复已加载');
+        event.server.scheduleInTicks(200, trySync);
+        
+        ServerEvents.tick(function(ev) {
+            if (ev.server.tick % 6000 === 0 && ev.server.tick > 0) {
+                if (typeof global !== 'undefined' && global.shanhaiRecipeLoadConfig && 
+                    Object.keys(global.shanhaiRecipeLoadConfig).length > 0) {
+                    saveConfigToFile(global.shanhaiRecipeLoadConfig);
+                }
+            }
+        });
+    })();
+    // ========== 配置持久化修复结束 ==========
+    
     syncStatsToGlobal();
     
     // 导出配方数组到全局对象，供API访问

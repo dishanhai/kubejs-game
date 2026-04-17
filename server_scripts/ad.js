@@ -52,7 +52,7 @@ ServerEvents.recipes(event => {
         "ad_astra:cable_duct",
         "ad_astra:steel_ingot",
         "ad_astra:nasa_workbench"]
-    id.forEach(i => {
+    id.forEach(function(i) {
         event.remove({ id: i })
     })
     event.remove({ type: "ad_astra:compressing" })

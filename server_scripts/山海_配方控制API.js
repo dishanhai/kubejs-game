@@ -1263,11 +1263,11 @@ function isRecipeEnabled(recipeId) {
     }
     
     // 默认启用所有配方
-    warn('⚠️ 配方加载状态检查（默认启用）: ' + recipeId);
+    debug('⚠️ 配方加载状态检查（默认启用）: ' + recipeId);
     if (configKey === null) {
-        warn('警告：配方 "' + recipeId + '" 未找到配置，将默认启用。请检查配方ID是否正确或使用/配方开关命令添加配置。');
+        debug('警告：配方 "' + recipeId + '" 未找到配置，将默认启用。请检查配方ID是否正确或使用/配方开关命令添加配置。');
     } else {
-        warn('警告：配方 "' + recipeId + '" 配置键 "' + configKey + '" 不在配置中，将默认启用。');
+        debug('警告：配方 "' + recipeId + '" 配置键 "' + configKey + '" 不在配置中，将默认启用。');
     }
     return true;
 }
@@ -2926,6 +2926,24 @@ ServerEvents.commandRegistry(function(event) {
                 }
                 return source.hasPermission(2);
             })
+            // 无参数分支（必须放在有参数分支之前）
+            .executes(function(ctx) {
+                var source = ctx.source;
+                var player = source.getEntity ? source.getEntity() : null;
+                
+                if (player) {
+                    handleListCommand(player, []);  // 无参数时传空数组
+                } else {
+                    console.log('配方数组列表:');
+                    var recipeArrays = ['assrecipes', 'universalRecipes', 'suprecipes_1', 'recipes_voidfluxs', 'dishanhairecipes', 'recipes', 'recipes_electrolyzers'];
+                    for (var i = 0; i < recipeArrays.length; i++) {
+                        var arr = global[recipeArrays[i]];
+                        if (arr) console.log(recipeArrays[i] + ': ' + arr.length + ' 个配方');
+                    }
+                }
+                return 1;
+            })
+            // 有参数分支
             .then(Commands.argument('array', Arguments.GREEDY_STRING.create(event))
                 .executes(function(ctx) {
                     var source = ctx.source;
