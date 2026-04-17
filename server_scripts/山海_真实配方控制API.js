@@ -21,7 +21,7 @@
 
 var LOG_PREFIX = '§b[真实配方API]§r';
 var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-var currentLogLevel = LOG_LEVEL.DEBUG;
+var currentLogLevel = LOG_LEVEL.INFO;
 
 function getTimestamp() {
     var now = new Date();

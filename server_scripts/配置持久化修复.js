@@ -25,7 +25,7 @@
     const CONFIG_PATH = 'kubejs/data/shanhai_recipe_load_config.json';
     const DEFAULTS_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
     
-    // 完整的默认配置（从你的 shanhai_recipe_load_config.json 复制）
+    // 完整的默认配置
     const DEFAULT_CONFIG = {
         "minimal_test": false,
         "test_recipe_1": false,
@@ -72,7 +72,8 @@
         "soc": true,
         "air_sour": true,
         "test_universal_1": true,
-        "test_super_1": true
+        "test_super_1": true,
+        "cztj": false
     };
     
     // 确保目录存在
@@ -278,6 +279,12 @@
     // 在服务器加载完成后再次确保配置正确
     ServerEvents.loaded(function(event) {
         console.log('§6[配置修复] 服务器加载完成，再次检查配置...');
+        
+        // 🔧 检查是否有重置标志，如果有则跳过所有操作
+        if (typeof global !== 'undefined' && global.shanhaiRecipeConfigJustReset === true) {
+            console.log('§e[配置修复] 检测到配置重置标志，跳过所有修复操作');
+            return;
+        }
         
         // 检查当前全局配置状态
         if (typeof global !== 'undefined') {

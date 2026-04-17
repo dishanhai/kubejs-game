@@ -44,5 +44,6 @@
 	"soc": true,
 	"air_sour": true,
 	"test_universal_1": true,
-	"test_super_1": true
+	"test_super_1": true,
+	"cztj": false
 }

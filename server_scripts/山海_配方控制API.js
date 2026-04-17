@@ -40,6 +40,11 @@
     } else {
         console.log('§e[配方控制API] Java API不可用，将使用JsonIO');
     }
+    // 自动配方注册开关
+    var AUTO_REGISTER_RECIPES = false;  // 禁用自动注册（防止覆盖重置操作）
+    if (typeof global !== 'undefined') {
+        global.AUTO_REGISTER_RECIPES = false; // 全局开关，便于测试脚本访问
+    }
 
 // =====================================================
 // =============== 日志模块 ==================
@@ -47,7 +52,7 @@
 
 var LOG_PREFIX = '§b[配方控制API]§r';
 var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-var currentLogLevel = LOG_LEVEL.DEBUG;
+var currentLogLevel = LOG_LEVEL.INFO;
 var isConfigInitialized = false;
 var DEFAULT_CONFIG_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
 var defaultConfig;
@@ -809,17 +814,27 @@ function initRecipeLoadConfig(forceReload) {
                 var defaultKeyCount = Object.keys(defaultConfig).length;
                 debug('默认值文件包含 ' + defaultKeyCount + ' 个条目');
                 
+                // 检查重置标志，如果刚重置过则跳过默认值合并
+                var skipDefaultMerge = false;
+                if (typeof global !== 'undefined' && global.shanhaiRecipeConfigJustReset) {
+                    debug('检测到重置标志，跳过从默认值文件合并配置');
+                    skipDefaultMerge = true;
+                    delete global.shanhaiRecipeConfigJustReset; // 清除标志
+                }
+                
                 // 合并默认值到现有配置（不覆盖现有值）
                 var mergedCount = 0;
-                for (var key in defaultConfig) {
-                    if (defaultConfig.hasOwnProperty(key)) {
-                        var value = defaultConfig[key];
-                        // 确保值是布尔值
-                        if (value === true || value === false) {
-                            // 如果当前配置中没有这个键，则添加
-                            if (!recipeLoadConfig.hasOwnProperty(key)) {
-                                recipeLoadConfig[key] = value;
-                                mergedCount++;
+                if (!skipDefaultMerge) {
+                    for (var key in defaultConfig) {
+                        if (defaultConfig.hasOwnProperty(key)) {
+                            var value = defaultConfig[key];
+                            // 确保值是布尔值
+                            if (value === true || value === false) {
+                                // 如果当前配置中没有这个键，则添加
+                                if (!recipeLoadConfig.hasOwnProperty(key)) {
+                                    recipeLoadConfig[key] = value;
+                                    mergedCount++;
+                                }
                             }
                         }
                     }
@@ -1363,6 +1378,16 @@ function setRecipeEnabled(recipeId, enabled) {
     
     if (saved) {
         info('配方加载状态已更新: ' + normalizedId + ' = ' + newValue + ' (之前: ' + (oldValue !== undefined ? oldValue : '未设置') + ') [原始ID: ' + recipeId + ']');
+        
+        // 🔧 新增：清除本地默认值，让配置文件优先
+        if (typeof global !== 'undefined' && 
+            global.shanhaiAPI && 
+            typeof global.shanhaiAPI.clearLocalDefault === 'function') {
+            var cleared = global.shanhaiAPI.clearLocalDefault(recipeId);
+            if (cleared) {
+                debug('  已清除配方的本地默认值，配置文件设置现在将生效');
+            }
+        }
     } else {
         error('❌ 配方加载状态设置失败！');
         error('   可能原因: 配方ID无效或保存配置时出错。');
@@ -1476,125 +1501,34 @@ function getDisabledRecipes() {
 }
 
 /**
- * 重置配方加载配置到默认值（不再清除所有设置）
+ * 重置配方加载配置（清空所有设置）
  * 
  * @returns {boolean} 是否成功重置
  */
 function resetRecipeLoadConfig() {
-    info('开始重置配方加载配置到默认值...');
-    
-    // 首先尝试调用主API的 resetRecipeLoadConfigToDefaults 函数
-    if (typeof global !== 'undefined' && 
-        global.shanhaiRecipeAPI && 
-        typeof global.shanhaiRecipeAPI.resetRecipeLoadConfigToDefaults === 'function') {
-        info('检测到主API，使用 resetRecipeLoadConfigToDefaults 函数');
-        try {
-            var result = global.shanhaiRecipeAPI.resetRecipeLoadConfigToDefaults();
-            if (result && result.success) {
-                info('✅ 通过主API重置成功: ' + (result.message || ''));
-                // 重新加载配置以同步
-                initRecipeLoadConfig(true);
-                return true;
-            } else {
-                warn('主API重置失败: ' + (result ? result.message : '未知错误'));
-                // 继续尝试其他方法
-            }
-        } catch (err) {
-            warn('调用主API重置函数失败: ' + err.message);
-            // 继续尝试其他方法
-        }
+    info('开始清空所有配方加载配置...');
+    // 设置重置标志，防止配置完整性检查从默认值文件恢复
+    // 同时禁用自动注册，防止自动注册覆盖重置操作
+    if (typeof global !== 'undefined') {
+        global.shanhaiRecipeConfigJustReset = true;
+        global.AUTO_REGISTER_RECIPES = false;
     }
     
-    // 方法2：尝试从默认值文件加载
-    info('尝试从默认值文件加载配置...');
-    try {
-        // DEFAULT_CONFIG_PATH 已在外部定义
-        defaultConfig = null;
-        
-        // 尝试读取默认值文件
-        if (typeof JsonIO !== 'undefined' && typeof JsonIO.read === 'function') {
-            defaultConfig = JsonIO.read(DEFAULT_CONFIG_PATH);
-        } else {
-            try {
-                if (!File || !FileReader || !BufferedReader) {
-                    debug('Java类未加载，无法读取默认值文件');
-                } else {
-                    var file = new File(DEFAULT_CONFIG_PATH);
-                    if (file.exists()) {
-                        var reader = new FileReader(file);
-                        var buffer = new BufferedReader(reader);
-                        var content = '';
-                        var line;
-                        while ((line = buffer.readLine()) !== null) {
-                            content += line + '\n';
-                        }
-                        buffer.close();
-                        reader.close();
-                        defaultConfig = JSON.parse(content);
-                    }
-                }
-            } catch (fsErr) {
-                debug('使用Java文件操作读取默认值文件失败: ' + fsErr.message);
-            }
-        }
-        
-        if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
-            // 使用默认值重置配置（合并模式，不清空现有配置）
-            var oldCount = Object.keys(recipeLoadConfig).length;
-            var defaultKeyCount = Object.keys(defaultConfig).length;
-            
-            // 创建新配置对象
-            var newConfig = {};
-            
-            // 步骤1：复制所有默认值
-            var importedDefaults = 0;
-            for (var key in defaultConfig) {
-                if (defaultConfig.hasOwnProperty(key)) {
-                    var value = defaultConfig[key];
-                    // 确保值是布尔值
-                    if (value === true || value === false) {
-                        newConfig[key] = value;
-                        importedDefaults++;
-                    }
-                }
-            }
-            
-            // 步骤2：保留没有默认值的现有配置
-            var keptExisting = 0;
-            for (var key in recipeLoadConfig) {
-                if (recipeLoadConfig.hasOwnProperty(key) && !defaultConfig.hasOwnProperty(key)) {
-                    var value = recipeLoadConfig[key];
-                    // 确保值是布尔值
-                    if (value === true || value === false) {
-                        newConfig[key] = value;
-                        keptExisting++;
-                    }
-                }
-            }
-            
-            // 更新配置
-            recipeLoadConfig = newConfig;
-            
-            var saved = saveRecipeLoadConfig();
-            if (saved) {
-                info('✅ 从默认值文件重置成功: 导入 ' + importedDefaults + ' 个默认值，保留 ' + keptExisting + ' 个现有配置（原配置有 ' + oldCount + ' 个条目，默认值有 ' + defaultKeyCount + ' 个）');
-                return true;
-            } else {
-                warn('从默认值文件重置但保存失败');
-                return false;
-            }
-        } else {
-            info('默认值文件不存在或为空，跳过重置');
-            // 方法3：不重置，只重新加载当前配置（安全回退）
-            info('安全回退：重新加载当前配置，不清空数据');
-            initRecipeLoadConfig(true);
-            return true;
-        }
-    } catch (err) {
-        error('重置配方加载配置失败: ' + err.message);
-        // 方法3：安全回退，不清空配置
-        info('错误处理：重新加载当前配置，防止数据丢失');
-        initRecipeLoadConfig(true);
+    // 记录原始配置数量
+    var originalCount = Object.keys(recipeLoadConfig).length;
+    
+    // 完全清空配置
+    recipeLoadConfig = {};
+    
+    // 保存空配置
+    var saved = saveRecipeLoadConfig();
+    
+    if (saved) {
+        info('✅ 所有配方配置已清空，所有配方将恢复为默认启用状态');
+        info('已清除 ' + originalCount + ' 个配方的加载设置');
+        return true;
+    } else {
+        warn('❌ 配方配置清空失败');
         return false;
     }
 }
@@ -2734,22 +2668,34 @@ function handleRecipeConfirmResetCommand(player) {
     
     sendMessageToPlayer(player, '§a正在重置配方加载配置...');
     
-    var result = resetRecipeLoadConfig();
+    // 方案四：完全清空配置，不保留任何默认值
+    // 同时设置重置标志，防止配置完整性检查从默认值文件恢复
+    // 并禁用自动注册，防止自动注册覆盖重置操作
+    if (typeof global !== 'undefined') {
+        global.shanhaiRecipeConfigJustReset = true;
+        global.AUTO_REGISTER_RECIPES = false;
+    }
+    
+    // 完全清空配置
+    recipeLoadConfig = {};
+    
+    // 保存空配置
+    var saved = saveRecipeLoadConfig();
     
     // 清除确认标记
     global.shanhaiRecipeConfigResetPending = false;
     global.shanhaiRecipeConfigResetPlayer = null;
     
-    if (result) {
-        sendMessageToPlayer(player, '§a✅ 配方加载配置重置成功！');
+    if (saved) {
+        sendMessageToPlayer(player, '§a✅ 所有配方配置已清空！');
         sendMessageToPlayer(player, '§7已清除 ' + configCount + ' 个配方的加载设置');
-        sendMessageToPlayer(player, '§7所有配方已恢复为默认启用状态');
+        sendMessageToPlayer(player, '§7所有配方将恢复默认行为');
     } else {
-        sendMessageToPlayer(player, '§c❌ 配方加载配置重置失败！');
+        sendMessageToPlayer(player, '§c❌ 配方加载配置清空失败！');
         sendMessageToPlayer(player, '§7可能原因: 保存配置时出错');
     }
     
-    return result;
+    return saved;
 }
 
 /**
@@ -3377,6 +3323,35 @@ var rawAPI = {
 info('正在为全局API添加错误保护...');
 global.shanhaiRecipeControlAPI = protectAllAPIFunctions(rawAPI);
 info('全局API错误保护已启用，共保护 ' + Object.keys(rawAPI).length + ' 个函数');
+
+// =====================================================
+// =============== 延迟自动配方注册 ==================
+// =====================================================
+// 在ServerEvents.loaded事件中检查配置状态，仅在配置为空时自动注册
+// 防止覆盖手动重置的配置
+ServerEvents.loaded(function(event) {
+    // 检查是否启用自动注册（局部开关和全局开关）
+    // 如果任一开关为false，则禁用自动注册
+    var autoRegisterEnabled = AUTO_REGISTER_RECIPES !== false && 
+        (typeof global !== 'undefined' && global.AUTO_REGISTER_RECIPES !== false);
+    if (!autoRegisterEnabled) {
+        debug('自动配方注册已被禁用（局部开关: ' + AUTO_REGISTER_RECIPES + ', 全局开关: ' + 
+            (typeof global !== 'undefined' ? global.AUTO_REGISTER_RECIPES : 'undefined') + '）');
+        return;
+    }
+    
+    // 检查配置是否为空
+    var config = getAllRecipeLoadConfig();
+    var configKeys = Object.keys(config);
+    
+    if (configKeys.length === 0) {
+        debug('配方配置为空，执行自动配方注册...');
+        autoRegisterRecipesFromArrays();
+    } else {
+        debug('配方配置已存在 (' + configKeys.length + ' 个条目)，跳过自动注册');
+        debug('如需重新注册所有配方，请使用命令 "/配方扫描注册"');
+    }
+});
 
 // =====================================================
 // =============== 初始化日志 ==================
