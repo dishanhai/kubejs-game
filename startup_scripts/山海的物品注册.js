@@ -56,7 +56,7 @@ StartupEvents.registry('item', e =>{
     .texture('dishanhai_item:item/trar')
 
 e.create('dishanhai:time_reversal_protocol')
-    .displayName('§4世§2线§8信§c标')
+    .displayName(colorAPI.getRainbowText('世线信标'))
     .texture('dishanhai_item:item/time')    
     .fireResistant(true)
     .tooltip('§b§o"逆转因果，改写命运"')
@@ -84,7 +84,7 @@ e.create('dishanhai:time_reversal_protocol')
     .displayName(colorAPI.getRainbowText('传奇·猪咪'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
-    .tooltip('§6传奇的§b猪咪大帝!')
+    .tooltip(colorAPI.getDynamicColor('传奇的猪咪大帝!'))
 
     e.create('dishanhai:fishbig_shards')
     .displayName('鱼大碎片')
