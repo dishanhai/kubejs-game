@@ -46,7 +46,7 @@
 	"time_reversal_protocol_stellar_forge_steam": true,
 	"cosmos_simulation_hxsp": true,
 	"greythings_eoh_plus_cosmos_simulation_plus": true,
-	"miracle_cosmos": true,
+	"miracle_cosmos": false,
 	"assembler_chaos_containment_unit": true,
 	"assembler_cosmic_mesh_containment_unit": true,
 	"assembler_actinium_superhydride_plasma_containment_cell": true,

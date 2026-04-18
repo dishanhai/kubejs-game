@@ -2308,6 +2308,15 @@ ServerEvents.recipes(e => {
         if(typeof arg1==="string" && typeof arg2==="string"){
             type=arg1; id=arg2; recipeFunc=arg3; recipeObj=arg4||{};
         }
+        // ========== 新增：处理 arg2 是配方对象的情况 ==========
+        else if(typeof arg1==="string" && typeof arg2==="object" && arg2 !== null){
+            type=arg1;
+            recipeObj=arg2;
+            id=recipeObj.id;
+            recipeFunc=arg3;
+            // 如果 recipeObj 中没有 type，使用 arg1
+            if(!recipeObj.type) recipeObj.type = type;
+        }
         else if(typeof arg1==="object" && arg1!==null){
             recipeObj=arg1; type=recipeObj.type; id=recipeObj.id; recipeFunc=arg2;
         }
@@ -2373,32 +2382,42 @@ ServerEvents.recipes(e => {
         // ---- 配方加载控制检查 (v2.4新增) ----
         // 检查配方是否应该加载，支持多种API接口
         debug('🔍 检查配方加载状态: ' + id + ' (' + type + ')');
+        debug('  recipeObj.defaultEnabled = ' + (recipeObj && recipeObj.defaultEnabled));
+        debug('  localDefault = ' + getLocalRecipeDefault(id));
+        debug('  recipeLoadConfig 中该配方的值 = ' + (global.shanhaiRecipeLoadConfig ? global.shanhaiRecipeLoadConfig[id] : 'N/A'));
         var recipeEnabled = true; // 默认启用
         
-        // ---- 本地默认值系统检查 (v2.33新增) ----
-        // 首先检查本地默认值，如果设置则使用设置值
-        var localDefault = getLocalRecipeDefault(id);
-        if (localDefault !== null) {
-            recipeEnabled = localDefault;
-            debug('  本地默认值系统: 使用设置值 ' + recipeEnabled + ' (true=启用, false=禁用)');
+        // ---- 优先检查 recipeObj.defaultEnabled (最高优先级) ----
+        if (recipeObj && typeof recipeObj.defaultEnabled === 'boolean') {
+            recipeEnabled = recipeObj.defaultEnabled;
+            debug('  配方默认值: 使用 defaultEnabled = ' + recipeEnabled + ' (true=启用, false=禁用)');
         }
-        // 如果没有本地默认值，则尝试从配方控制API检查
-        else if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && 
-                typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
-            debug('  配方控制API可用，正在检查...');
-            recipeEnabled = global.shanhaiRecipeControlAPI.isRecipeEnabled(id);
-            debug('  配方控制API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
-        }
-        // 尝试从山海私货API检查（向后兼容）
-        else if (typeof global.shanhaiRecipeAPI !== 'undefined' && 
-                 typeof global.shanhaiRecipeAPI.isRecipeEnabled === 'function') {
-            debug('  山海私货API可用，正在检查...');
-            recipeEnabled = global.shanhaiRecipeAPI.isRecipeEnabled(id);
-            debug('  山海私货API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
-        }
-        // 如果都没有，使用默认值（启用所有配方）
+        // ---- 如果没有 defaultEnabled，检查本地默认值系统 (v2.33新增) ----
         else {
-            debug('  警告: 未找到可用的配方控制API，将默认启用所有配方');
+            // 首先检查本地默认值，如果设置则使用设置值
+            var localDefault = getLocalRecipeDefault(id);
+            if (localDefault !== null) {
+                recipeEnabled = localDefault;
+                debug('  本地默认值系统: 使用设置值 ' + recipeEnabled + ' (true=启用, false=禁用)');
+            }
+            // 如果没有本地默认值，则尝试从配方控制API检查
+            else if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && 
+                    typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
+                debug('  配方控制API可用，正在检查...');
+                recipeEnabled = global.shanhaiRecipeControlAPI.isRecipeEnabled(id);
+                debug('  配方控制API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
+            }
+            // 尝试从山海私货API检查（向后兼容）
+            else if (typeof global.shanhaiRecipeAPI !== 'undefined' && 
+                     typeof global.shanhaiRecipeAPI.isRecipeEnabled === 'function') {
+                debug('  山海私货API可用，正在检查...');
+                recipeEnabled = global.shanhaiRecipeAPI.isRecipeEnabled(id);
+                debug('  山海私货API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
+            }
+            // 如果都没有，使用默认值（启用所有配方）
+            else {
+                debug('  警告: 未找到可用的配方控制API，将默认启用所有配方');
+            }
         }
         
         if (!recipeEnabled) {
@@ -3191,6 +3210,7 @@ dishanhairecipes.forEach(recipe => {
     }
 }
             },
+            recipe
         );
         dishanhaiSucc++;
     } catch(err) {
@@ -3890,6 +3910,10 @@ var ItemNBTConfig = {
     // 无限单元格模板
     infinityCell: function(innerId, type) {
         var itemType = type || 'i';
+        // 特殊处理：gtceu:stellar_energy_rocket_fuel 是流体
+        if (innerId === 'gtceu:stellar_energy_rocket_fuel') {
+            itemType = 'f';
+        }
         return ',tag:{record:{"#c":"ae2:' + itemType + '",id:"' + innerId + '"}}';
     },
     
@@ -3965,7 +3989,7 @@ var ItemNBTConfig = {
     }
 };
 
-// 导出到全局（可选）
+// 导出到全局
 if (typeof global !== 'undefined') {
     global.ItemNBTConfig = ItemNBTConfig;
     info('§a[物品NBT库] 已加载，共注册 ' + Object.keys(ItemNBTConfig).length + ' 个配置项');
@@ -3985,10 +4009,7 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
         let [amt, id, innerId] = item;
         let tagPart = ItemNBTConfig.getTag(id, innerId);
         
-        // 无限单元格特殊处理：如果指定了内部物品ID，则添加record标签
-        if (id === 'expatternprovider:infinity_cell' && innerId) {
-            tagPart = ',tag:{record:{"#c":"ae2:i",id:"' + innerId + '"}}';
-        }
+
 
         if (id === 'constructionwand:infinity_wand') {
             tagPart = ',tag:{wand_options:{cores:["constructionwand:core_angel"],cores_sel:1b,lock:"nolock"}}';
@@ -4047,6 +4068,7 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
            '        keys:[' + keysNBT + ']\n' +
            '    }';
 };
+if (typeof global !== 'undefined') global.packed_cell_nbt2 = packed_cell_nbt2;
 
 // 简化的无限单元格打包函数（按照DiskSavior模式）
 const shanhai_packed_infinity_cell = (cellname, type, list, lore) => {
@@ -4077,6 +4099,7 @@ const shanhai_packed_infinity_cell = (cellname, type, list, lore) => {
 
 // ========== 输出物品盘配方 ==========
 ServerEvents.recipes(event => {
+    const packed_cell_nbt2 = global.packed_cell_nbt2 || packed_cell_nbt2;
     const timer = new Timer('超级AE包配方');
     info('📀 开始生成超级AE包配方...');
     
@@ -4150,6 +4173,51 @@ ServerEvents.recipes(event => {
         // 记录失败的配方
         recordRecipe(dyeRecipeType, false, dyeRecipeId, err.message);
     }
+
+    const piggtimer = new Timer('猪咪大礼包配方');
+    info('🔧 开始生成猪咪大礼包配方...');
+    
+    const VA = GTValues.VA;
+    const [ULV, LV, MV, HV, EV, IV, LuV, ZPM, UV, UHV, UEV, UIV, UXV, OpV, MAX] = VA;
+    const [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = VA;
+    
+    const piggrecipeId = 'dishanhai:assembler_template';
+    
+    try {
+        var gtr = event.recipes.gtceu;
+        
+        var templateItemList = [
+'1x gtladditions:space_infinity_integrated_ore_processor','426x gtlcore:power_module_7','6364x gtlcore:space_elevator_support','354x gtlcore:iridium_casing','2020x gtlcore:space_elevator_mechanical_casing','2x gtceu:infinity_frame','788x kubejs:space_elevator_internal_support','7347x kubejs:high_strength_concrete','1x kubejs:dimensional_bridge_casing','1x expatternprovider:infinity_cell@gtceu:stellar_energy_rocket_fuel'
+        ];
+        
+        // 物品计数
+      let  templateItemCount = templateItemList.length;
+        
+        // 描述文本
+      let  templateLore = [
+            '§7这是一个猪咪大礼包',
+            '§7物品种类: §e' + templateItemCount + '§7 种',
+            '§7包含机器物品,承认吧你就是个猪咪',
+            '§8山海私货 v2.3'
+        ];
+        
+        // 生成猪咪大礼包配方
+        gtr.assembler(piggrecipeId)
+            .circuit(1)
+         
+            .itemInputs( 'dishanhai:piggy','gtladditions:space_infinity_integrated_ore_processor'
+            )
+            .itemOutputs(
+            Item.of('ae2:portable_item_cell_256k', packed_cell_nbt2(templateItemList, '猪咪大礼包', templateLore))
+            )
+            .duration(200)                 // 配方持续时间（ticks）
+            .EUt(LV);                      // 配方电压等级（LV, MV, HV等）
+        
+        info('✅ 猪咪大礼包配方已生成');
+    } catch(err) {
+        error('❌ 猪咪大礼包配方生成失败: ' + err.message);
+    }
+
     
     try {
         event.remove({ id: 'ae2:tools/fluix_axe' });
@@ -4158,6 +4226,7 @@ ServerEvents.recipes(event => {
     } catch(err) {
         warn(`移除原版配方失败: ${err.message}`);
     }
+
     
     const bandisassemblyitem = ['me_super_pattern_buffer_proxy', 'me_super_pattern_buffer', 'infinity_input_dual_hatch'];
     const bandisassemblyitem2 = ['me_extended_export_buffer', 'me_extended_async_export_buffer', 'uv_dual_output_hatch', 'uv_dual_input_hatch', 'me_dual_hatch_stock_part_machine', 'me_input_hatch', 'me_input_bus'];
@@ -4513,6 +4582,17 @@ ServerEvents.recipes(e => {
     info(`无限盘配方加载完成 - 成功: ${loadedCount}, 失败: ${errorCount}`);
     timer.end();
 });
+
+
+
+
+
+
+
+
+
+
+//此外不允许再添加配方
 // ========== 玩家登录通知 ==========
 PlayerEvents.loggedIn(event => {
     let player = event.player;
