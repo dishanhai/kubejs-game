@@ -2,6 +2,7 @@
 alwaysApply: true
 ---
 检测token用量是否超过模型限制 自主进行压缩上下文
+创建新文件必须要iife包裹 老文件已有iife 需要在iife中写入代码
 kubejs-forge-2001.6.5-build.14 forge 1.20.1
 主要文件列表(按重要顺序):
 "D:\minecraft\gtl\.minecraft\versions\六周目2\.minecraft\versions\GTL六周目\kubejs"路径下
@@ -25,7 +26,6 @@ C:\Users\dishanhai\Desktop\山海的神人私货2.2fix1路径下
 允许修改代码: 是
 重要:
 不允许修改除dishanhai/山海署名以外的任何文件
-创建新文件必须要iife包裹
 允许在文件新内容或修复的内容等添加完成后向日志.md文件添加内容
 输出对应的修改提示，包括修改的文件、修改的位置、修改的内容
 注意变量，避免重复定义或修改已有的变量，否则会导致脚本运行错误

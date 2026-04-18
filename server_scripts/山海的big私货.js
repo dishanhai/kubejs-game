@@ -3995,6 +3995,321 @@ if (typeof global !== 'undefined') {
     info('§a[物品NBT库] 已加载，共注册 ' + Object.keys(ItemNBTConfig).length + ' 个配置项');
 }
 
+// ========== 256k物品包API ==========
+// 为整合包中的256k物品包（基于AE2的ae2:portable_item_cell_256k或自定义存储物品）
+// 提供一套统一的API，使开发者能够：
+// · 快速生成带有预设物品列表和描述的存储单元
+// · 自动注册GTCEu组装机配方
+// · 支持NBT数据动态构建
+// · 提供查询、合并、扩容等辅助操作（可选）
+
+// ========== 内部工具函数 ==========
+
+// 解析物品字符串 "1x minecraft:diamond" → { id: "minecraft:diamond", count: 1, innerId: null }
+// 支持扩展格式 "1x expatternprovider:infinity_cell@gtceu:stellar_energy_rocket_fuel"
+function parseItemStringCellAPI(str) {
+    if (!str || typeof str !== 'string') {
+        throw new Error('无效的物品字符串: ' + str);
+    }
+    
+    let match = str.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
+    if (!match) {
+        throw new Error("无效的物品格式，应使用 '数量x 物品ID' 或 '数量x 物品ID@内部ID': " + str);
+    }
+    
+    return {
+        count: parseInt(match[1], 10),
+        id: match[2].trim(),
+        innerId: match[3] ? match[3].trim() : null
+    };
+}
+
+// 格式化流体字符串 "1000 mb water" → { amount: 1000, fluid: "water" }
+function parseFluidStringCellAPI(str) {
+    if (!str || typeof str !== 'string') {
+        throw new Error('无效的流体字符串: ' + str);
+    }
+    
+    let match = str.match(/^(\d+)\s*(mb|mB|b|B)?\s*(.+)$/i);
+    if (!match) {
+        throw new Error("无效的流体格式，应使用 '数量 流体名' 或 '数量mb 流体名': " + str);
+    }
+    
+    let amount = parseInt(match[1], 10);
+    let unit = (match[2] || 'mb').toLowerCase();
+    let fluidName = match[3].trim();
+    
+    // 标准化单位到mb（GTCEu使用的单位）
+    if (unit === 'b' || unit === 'B') {
+        amount = amount * 1000; // 1桶 = 1000mb
+    }
+    
+    return { amount: amount, fluid: fluidName };
+}
+
+// 根据物品种类数量估算所需电压等级
+function estimateTierCellAPI(count) {
+    if (count < 10) return 32;      // LV
+    if (count < 30) return 128;     // MV
+    if (count < 50) return 512;     // HV
+    if (count < 80) return 2048;    // EV
+    if (count < 120) return 8192;   // IV
+    if (count < 200) return 32768;  // LuV
+    return 131072;                  // ZPM
+}
+
+// 根据物品数量估算配方耗时
+function estimateDurationCellAPI(totalItems) {
+    if (totalItems < 100) return 100;
+    if (totalItems < 500) return 200;
+    if (totalItems < 1000) return 300;
+    if (totalItems < 5000) return 400;
+    if (totalItems < 10000) return 600;
+    return 800;
+}
+
+// ========== 核心NBT构造器 ==========
+
+// 负责将物品列表、名称、Lore转换成AE2便携元件所需的NBT格式
+function buildCellNBTCellAPI(items, cellName, lore) {
+    // 输入校验
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('物品列表不能为空');
+    }
+    
+    if (!cellName || typeof cellName !== 'string') {
+        throw new Error('物品包名称不能为空且必须是字符串');
+    }
+    
+    if (cellName.length > 32) {
+        info(`[256k Cell API] 物品包名称过长（${cellName.length} > 32），建议缩短`);
+    }
+    
+    // 解析所有物品
+    let parsed = items.map(parseItemStringCellAPI);
+    
+    // 生成keysNBT
+    let keysNBT = parsed.map((item) => {
+        let tagPart = '';
+        
+        // 使用全局ItemNBTConfig如果可用
+        if (global.ItemNBTConfig && global.ItemNBTConfig.getTag) {
+            tagPart = global.ItemNBTConfig.getTag(item.id, item.innerId);
+        }
+        
+        // 如果没有获取到tagPart，使用默认格式
+        if (!tagPart) {
+            tagPart = '';
+        }
+        
+        return '{ "#c":"ae2:i",id:"' + item.id + '"' + tagPart + ' }';
+    }).join(',');
+    
+    // 生成amtsNBT
+    let amtsNBT = parsed.map((item) => {
+        return item.count + 'L';
+    }).join(',');
+    
+    // 生成显示标签
+    let displayTag = '';
+    if (cellName) {
+        let lorePart = '';
+        if (lore && Array.isArray(lore) && lore.length > 0) {
+            let loreLines = lore;
+            let loreJson = loreLines.map(line => '\'{"text":"' + line + '"}\'').join(',');
+            lorePart = ',Lore:[' + loreJson + ']';
+        }
+        displayTag = 'display:{Name:\'{"text":"' + cellName + '"}\'' + lorePart + '},';
+    }
+    
+    // 计算内部能量（256k物品包标准能量）
+    let internalPower = 2000000.0;
+    
+    // 构建完整NBT
+    return '{\n' +
+           '        RepairCost:0,\n' +
+           (displayTag ? '        ' + displayTag + '\n' : '') +
+           '        amts:[L;' + amtsNBT + '],\n' +
+           '        ic:' + items.length + 'L,\n' +
+           '        internalCurrentPower:' + internalPower + 'd,\n' +
+           '        keys:[' + keysNBT + ']\n' +
+           '    }';
+}
+
+// ========== 配方生成器 ==========
+
+// 自动生成组装机配方，支持流体输入、电路配置、耗时/功率自定义
+function addCellAssemblerRecipeCellAPI(event, recipeId, cellName, itemList, lore, inputItems, inputFluids, circuit, duration, eut) {
+    try {
+        // 参数默认值
+        circuit = circuit || 1;
+        duration = duration || estimateDurationCellAPI(itemList.reduce((sum, item) => {
+            let parsed = parseItemStringCellAPI(item);
+            return sum + parsed.count;
+        }, 0));
+        eut = eut || estimateTierCellAPI(itemList.length);
+        
+        // 验证事件对象
+        if (!event || typeof event.recipeBuilder !== 'function') {
+            throw new Error('无效的配方事件对象');
+        }
+        
+        // 验证配方ID格式
+        if (!recipeId || !recipeId.includes(':')) {
+            throw new Error('配方ID格式不正确，应使用 命名空间:路径 格式');
+        }
+        
+        // 生成物品包NBT
+        let cellNBT = buildCellNBTCellAPI(itemList, cellName, lore);
+        
+        // 解析输入物品
+        let parsedInputItems = inputItems.map(parseItemStringCellAPI);
+        
+        // 解析输入流体
+        let parsedInputFluids = [];
+        if (inputFluids && Array.isArray(inputFluids)) {
+            parsedInputFluids = inputFluids.map(parseFluidStringCellAPI);
+        }
+        
+        // 创建组装机配方
+        let builder = event.recipeBuilder(recipeId)
+            .itemOutputs(Item.of('ae2:portable_item_cell_256k', cellNBT));
+        
+        // 添加物品输入
+        parsedInputItems.forEach(item => {
+            builder.itemInputs(Item.of(item.id, item.count));
+        });
+        
+        // 添加流体输入
+        parsedInputFluids.forEach(fluid => {
+            builder.fluidInputs(Fluid.of(fluid.fluid, fluid.amount));
+        });
+        
+        // 添加电路配置
+        builder.circuit(circuit);
+        
+        // 设置时间和功率
+        builder.duration(duration);
+        builder.EUt(eut);
+        
+        // 记录日志
+        info(`[256k Cell API] 配方已生成: ${recipeId}`);
+        info(`  物品包: ${cellName} (${itemList.length}种物品)`);
+        info(`  电压: ${eut} EU/t, 耗时: ${duration} ticks`);
+        info(`  电路: ${circuit}, 输入物品: ${inputItems.length}种`);
+        
+        return true;
+        
+    } catch (error) {
+        error(`[256k Cell API] 配方生成失败 (${recipeId}): ${error.message}`);
+        return false;
+    }
+}
+
+// ========== 辅助工具函数 ==========
+
+// 解析已生成的物品包内容
+function getCellContentCellAPI(cellItem) {
+    try {
+        if (!cellItem || !cellItem.nbt) {
+            return [];
+        }
+        
+        let nbt = cellItem.nbt;
+        let result = [];
+        
+        // 尝试从NBT中提取keys和amts
+        if (nbt.keys && nbt.amts && Array.isArray(nbt.keys) && Array.isArray(nbt.amts)) {
+            for (let i = 0; i < Math.min(nbt.keys.length, nbt.amts.length); i++) {
+                let key = nbt.keys[i];
+                let amt = nbt.amts[i];
+                
+                if (key && key.id) {
+                    let count = amt || 1;
+                    result.push(`${count}x ${key.id}`);
+                }
+            }
+        }
+        
+        return result;
+        
+    } catch (error) {
+        error('[256k Cell API] 解析物品包内容失败: ' + error.message);
+        return [];
+    }
+}
+
+// 根据容量类型获取对应的物品ID
+function getCellIdByTierCellAPI(tier) {
+    let tierMap = {
+        '1k': 'ae2:portable_item_cell_1k',
+        '4k': 'ae2:portable_item_cell_4k',
+        '16k': 'ae2:portable_item_cell_16k',
+        '64k': 'ae2:portable_item_cell_64k',
+        '256k': 'ae2:portable_item_cell_256k',
+        '1M': 'ae2:portable_item_cell_1m',
+        '4M': 'ae2:portable_item_cell_4m'
+    };
+    
+    return tierMap[tier] || 'ae2:portable_item_cell_256k';
+}
+
+// 检查AE2和GTCEu是否加载
+function checkDependenciesCellAPI() {
+    return {
+        ae2: Platform.isLoaded('ae2'),
+        gtceu: Platform.isLoaded('gtceu'),
+        allLoaded: Platform.isLoaded('ae2') && Platform.isLoaded('gtceu')
+    };
+}
+
+// ========== API对象定义 ==========
+
+var CellAPI = {
+    // 核心方法
+    buildNBT: buildCellNBTCellAPI,
+    addAssemblerRecipe: addCellAssemblerRecipeCellAPI,
+    
+    // 辅助方法
+    getContent: getCellContentCellAPI,
+    estimateTier: estimateTierCellAPI,
+    estimateDuration: estimateDurationCellAPI,
+    parseItemString: parseItemStringCellAPI,
+    parseFluidString: parseFluidStringCellAPI,
+    getCellIdByTier: getCellIdByTierCellAPI,
+    checkDependencies: checkDependenciesCellAPI,
+    
+    // 版本信息
+    version: '1.0.0',
+    author: '山海恒长在/dishanhai'
+};
+
+// 导出到全局
+if (typeof global !== 'undefined') {
+    global.CellAPI = CellAPI;
+    info('[256k Cell API] 已加载，版本 ' + CellAPI.version);
+    
+    // 检查依赖
+    let deps = checkDependenciesCellAPI();
+    if (!deps.allLoaded) {
+        info('[256k Cell API] 缺少依赖:');
+        if (!deps.ae2) info('  - AE2未加载');
+        if (!deps.gtceu) info('  - GTCEu未加载');
+    } else {
+        info('[256k Cell API] 所有依赖已满足');
+    }
+}
+
+// ========== 热重载支持 ==========
+
+// 支持/kubejs reload startup_scripts后重新注册API
+if (global.__kubejs_cell_api_reload_count === undefined) {
+    global.__kubejs_cell_api_reload_count = 0;
+}
+global.__kubejs_cell_api_reload_count++;
+
+info(`[256k Cell API] 热重载次数: ${global.__kubejs_cell_api_reload_count}`);
+
 // ========== 无限盘配方生成 ==========
 let packed_cell_nbt2 = (list, displayName, lore) => {
     if (displayName === undefined) displayName = null;
