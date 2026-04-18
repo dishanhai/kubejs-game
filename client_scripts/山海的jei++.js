@@ -6,7 +6,7 @@ ItemEvents.tooltip(tooltip => {
     tooltip.add('dishanhai:cosmic_probe_mk', '获取液体无需算力');
     tooltip.add('gtceu:nan_certificate','大猪咪的证明!')
     tooltip.add('kubejs:suprachronal_mainframe_complex','§2物质创造模块让主机更便宜')
-})
+});
 
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
@@ -37,7 +37,7 @@ e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
         text.add('§1按§2住§3§lSHIFT§r§5查看§k§l§n终末协议');
     }
 });
-})
+});
     
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
@@ -471,6 +471,218 @@ JEIEvents.addItems(event => {
 // 启用NBT识别，确保256k便携物品元件根据NBT独立显示
 JEIEvents.subtypes(event => {
     event.useNBT('ae2:portable_item_cell_256k');
-    
+})
 
-})})()
+// ========== 256k物品包内容预览功能 ==========
+
+/**
+ * 解析256k物品包的NBT内容，返回物品列表
+ * @param {ItemStack} item - 256k物品包物品
+ * @returns {Array} 物品列表，格式为 ["1x minecraft:diamond", ...]
+ */
+function parseCellContent(item) {
+    if (!item || !item.nbt) {
+        return [];
+    }
+    
+    const nbt = item.nbt;
+    const result = [];
+    
+    // 尝试从NBT中提取keys和amts
+    if (nbt.keys && nbt.amts && Array.isArray(nbt.keys) && Array.isArray(nbt.amts)) {
+        const minLength = Math.min(nbt.keys.length, nbt.amts.length);
+        for (let i = 0; i < minLength; i++) {
+            const key = nbt.keys[i];
+            const amt = nbt.amts[i];
+            
+            if (key && key.id) {
+                const count = amt || 1;
+                let itemName = key.id;
+                
+                // 尝试获取物品显示名称
+                try {
+                    const itemStack = Item.of(key.id);
+                    if (itemStack && itemStack.getName) {
+                        const name = itemStack.getName().getString();
+                        if (name && name !== key.id) {
+                            itemName = name;
+                        }
+                    }
+                } catch (e) {
+                    // 忽略名称获取错误，使用ID
+                }
+                
+                result.push(`${count}x ${itemName}`);
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * 格式化物品列表为工具提示文本
+ * @param {Array} items - 物品列表
+ * @param {number} maxDisplay - 最大显示数量
+ * @returns {Array} 格式化后的文本行数组
+ */
+function formatItemListForTooltip(items, maxDisplay = 5) {
+    if (!items || items.length === 0) {
+        return ['§7物品包为空'];
+    }
+    
+    const result = [];
+    
+    if (items.length <= maxDisplay) {
+        // 全部显示
+        result.push('§7包含物品:');
+        items.forEach(item => {
+            result.push(` §8• §7${item}`);
+        });
+    } else {
+        // 显示前maxDisplay项，然后显示剩余数量
+        result.push('§7包含物品 (前' + maxDisplay + '项):');
+        for (let i = 0; i < maxDisplay; i++) {
+            result.push(` §8• §7${items[i]}`);
+        }
+        result.push(` §7... 还有 ${items.length - maxDisplay} 项`);
+    }
+    
+    // 添加总计
+    const totalCount = items.reduce((sum, item) => {
+        const match = item.match(/^(\d+)x/);
+        return sum + (match ? parseInt(match[1]) : 1);
+    }, 0);
+    result.push(`§7总计: §e${totalCount}§7 个物品，§e${items.length}§7 种类型`);
+    
+    return result;
+}
+
+// ========== 256k物品包工具提示处理器 ==========
+
+ItemEvents.tooltip(event => {
+    event.addAdvanced(['ae2:portable_item_cell_256k'], (item, advanced, text) => {
+        // 跳过已注册的特殊物品包（如无限染料元件包pro、超级AE包）
+        // 这些已经有自己的工具提示
+        const nbt = item.nbt;
+        if (nbt && nbt.display && nbt.display.Name) {
+            const nameJson = nbt.display.Name;
+            if (typeof nameJson === 'string') {
+                if (nameJson.includes('无限染料元件包pro') || 
+                    nameJson.includes('超级AE包') ||
+                    nameJson.includes('天基大礼包')) {
+                    return;
+                }
+            }
+        }
+        
+        // 解析物品包内容
+        const items = parseCellContent(item);
+        
+        if (items.length === 0) {
+            // 空物品包或无效物品包
+            text.add('§8空256k物品包');
+            text.add('§7通过组装机合成，可存储多种物品');
+            return;
+        }
+        
+        // 根据Shift键状态决定显示详细程度
+        if (event.shift) {
+            // 按住Shift显示完整列表
+            text.add('§6=== 256k物品包内容 ===');
+            const formattedItems = formatItemListForTooltip(items, 20); // Shift时显示更多
+            formattedItems.forEach(line => text.add(line));
+            text.add('§7§o松开Shift显示简洁视图');
+        } else {
+            // 默认显示简洁视图
+            text.add('§6256k物品包');
+            const formattedItems = formatItemListForTooltip(items, 5); // 默认显示5项
+            formattedItems.forEach(line => text.add(line));
+            text.add('§7§o按住§e Shift §7§o查看完整列表');
+        }
+        
+        // 添加通用说明
+        text.add('§8合成方式: 组装机');
+        text.add('§8容量: 256k (262,144种物品类型)');
+    });
+});
+
+// ========== 256k物品包自定义JEI描述 ==========
+
+// 注册通用256k物品包描述
+JEIEvents.addDescription(event => {
+    event.addItem('ae2:portable_item_cell_256k', [
+        '§6256k便携物品元件',
+        '§7AE2的便携式存储设备，可存储大量物品',
+        '§7特点:',
+        ' §8• §7支持256k种不同物品类型',
+        ' §8• §7可通过组装机自定义内容',
+        ' §8• §7内置能源，无需外部供电',
+        '§7使用方法:',
+        ' §8• §7在组装机中合成自定义物品包',
+        ' §8• §7将物品包放入物品栏即可使用',
+        ' §8• §7右键打开物品包界面',
+        '§7提示:',
+        ' §8• §7查看物品包工具提示可预览内容',
+        ' §8• §7按住Shift查看完整物品列表',
+        '§8山海私货 - 256k物品包系统'
+    ]);
+});
+
+// ========== 隐藏无效物品包 ==========
+
+JEIEvents.hideItems(event => {
+    // 注意：我们不直接隐藏ae2:portable_item_cell_256k，因为合法的物品包需要显示
+    // 这个功能由工具提示处理器处理，显示"空物品包"提示
+});
+
+// ========== 256k物品包JEI集成API（客户端环境） ==========
+
+// 只有在客户端环境且global对象可用时注册API
+if (typeof global !== 'undefined') {
+    // 如果CellAPI不存在，创建基本结构
+    if (!global.CellAPI) {
+        global.CellAPI = {};
+    }
+    
+    // 添加JEI相关API
+    global.CellAPI.registerJEIPreview = function(cellItemId = 'ae2:portable_item_cell_256k', maxDisplay = 5) {
+        console.log('[256k Cell API - JEI] 注册物品包预览: ' + cellItemId + ', 最大显示: ' + maxDisplay);
+        
+        // 这里实际上已经通过上面的ItemEvents.tooltip全局处理了
+        // 这个API主要用于记录配置
+        if (!global._cellAPI_JEI_Config) {
+            global._cellAPI_JEI_Config = {};
+        }
+        global._cellAPI_JEI_Config[cellItemId] = { maxDisplay: maxDisplay };
+    };
+    
+    global.CellAPI.addCellDescription = function(cellItem, extraInfo) {
+        if (!cellItem) return;
+        
+        const itemId = typeof cellItem === 'string' ? cellItem : cellItem.getId();
+        console.log('[256k Cell API - JEI] 添加物品描述: ' + itemId);
+        
+        // 在实际环境中，我们需要在这里添加JEI描述
+        // 但由于KubeJS的JEIEvents.addDescription需要在事件处理器中调用
+        // 我们将信息存储起来，在合适的时机使用
+        if (!global._cellAPI_JEI_Descriptions) {
+            global._cellAPI_JEI_Descriptions = {};
+        }
+        
+        global._cellAPI_JEI_Descriptions[itemId] = Array.isArray(extraInfo) ? extraInfo : [extraInfo];
+    };
+    
+    // 自动注册默认预览
+    global.CellAPI.registerJEIPreview('ae2:portable_item_cell_256k', 8);
+    
+    // 添加默认描述
+    global.CellAPI.addCellDescription('ae2:portable_item_cell_256k', [
+        '§7内部物品: 查看工具提示',
+        '§e合成方式: 组装机'
+    ]);
+    
+    console.log('[256k Cell API - JEI] JEI集成功能已加载');
+}
+
+})()

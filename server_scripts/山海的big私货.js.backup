@@ -12,19 +12,6 @@ var API_Version = '2.7.2'//api版本
 var superAEPackItemCount = 0; // 将在配方初始化时设置
 var superAEPackLore = null; // 超级AE包的Lore描述
 
-// CellAPI 配方去重检测
-var _registeredCellRecipes = new Set();
-
-// ========== 全局配置初始化 ==========
-if (typeof global !== 'undefined') {
-    if (global.shanhaiRecipeLoadConfig === undefined) {
-        global.shanhaiRecipeLoadConfig = {};
-    }
-    if (global.shanhaiRecipeInfoCollector === undefined) {
-        global.shanhaiRecipeInfoCollector = {};
-    }
-}
-
 // =====================================================
 // =============== 山海私货 · 核心框架 ==================
 // =====================================================
@@ -35,19 +22,19 @@ var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 let currentLogLevel = LOG_LEVEL.INFO;
 
 function getTimestamp() {
-    var now = new Date();
-    return '§7[' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0') + ']§r';
+    const now = new Date();
+    return `§7[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}]§r`;
 }
 
 function log(level, message) {
     if (level < currentLogLevel) return;
-    var color = '§f', name = '[UNKNOWN]';
+    let color = '§f', name = '[UNKNOWN]';
     if (level === LOG_LEVEL.DEBUG) { color='§8'; name='[DEBUG]'; }
     if (level === LOG_LEVEL.INFO)  { color='§a'; name='[INFO]'; }
     if (level === LOG_LEVEL.WARN)  { color='§e'; name='[WARN]'; }
     if (level === LOG_LEVEL.ERROR) { color='§c'; name='[ERROR]'; }
 
-    console.log(getTimestamp() + ' ' + color + name + '§r ' + LOG_PREFIX + ' ' + message);
+    console.log(`${getTimestamp()} ${color}${name}§r ${LOG_PREFIX} ${message}`);
 }
 
 var debug = function(m) { return log(LOG_LEVEL.DEBUG, m); };
@@ -61,8 +48,8 @@ function Timer(name){
     this.start=Date.now();
 }
 Timer.prototype.end=function(){
-    var ms=(Date.now()-this.start).toFixed(2);
-    info('⏱️ ' + this.name + ' 耗时: ' + ms + 'ms');
+    const ms=(Date.now()-this.start).toFixed(2);
+    info(`⏱️ ${this.name} 耗时: ${ms}ms`);
     return ms;
 };
 
@@ -682,7 +669,7 @@ function createDynamicText(text, options) {
             
         case 'dynamic':
         default:
-            var color = getDynamicColor(undefined, speed);
+            const color = getDynamicColor(undefined, speed);
             coloredText = color + text + "§r";
             break;
     }
@@ -784,7 +771,24 @@ global.shanhaiAPI = {
  * @version 2.1
  */
 global.shanhaiRecipeAPI = {
-
+    
+    /**
+     * 记录配方结果
+     * 
+     * @function record
+     * @memberof shanhaiRecipeAPI
+     * @param {string} type - 机器类型（如 'assembler', 'centrifuge' 等）
+     * @param {boolean} ok - 配方是否成功添加 (true=成功, false=失败)
+     * @param {string} id - 配方ID（包括命名空间，如 'dishanhai:my_recipe'）
+     * @param {string} [msg] - 错误信息（失败时提供）
+     * @returns {void}
+     * @example
+     * // 记录成功配方
+     * global.shanhaiRecipeAPI.record('assembler', true, 'dishanhai:custom_recipe');
+     * 
+     * // 记录失败配方
+     * global.shanhaiRecipeAPI.record('centrifuge', false, 'dishanhai:failed_recipe', '缺少duration参数');
+     */
     clearLocalDefault: function(recipeId) {
         if (global.shanhaiAPI && typeof global.shanhaiAPI.clearLocalDefault === 'function') {
             return global.shanhaiAPI.clearLocalDefault(recipeId);
@@ -794,7 +798,22 @@ global.shanhaiRecipeAPI = {
     
 
     
-
+    /**
+     * 记录配方结果
+     * 
+     * @function record
+     * @memberof shanhaiRecipeAPI
+     * @param {string} type - 机器类型（如 'assembler', 'centrifuge' 等）
+     * @param {boolean} ok - 配方是否成功添加 (true=成功, false=失败)
+     * @param {string} id - 配方ID（包括命名空间，如 'dishanhai:my_recipe'）
+     * @param {string} [msg] - 错误信息（失败时提供）
+     * @returns {void}
+     * @example
+     * // 记录成功配方
+     * global.shanhaiRecipeAPI.record('assembler', true, 'dishanhai:custom_recipe');
+     * 
+     * // 记录失败配方
+     * global.shanhaiRecipeAPI.record('centrifuge', false, 'dishanhai:failed_recipe', '缺少duration参数');
     /**
      * 同步统计数据到全局
      * 
@@ -932,8 +951,8 @@ global.shanhaiRecipeAPI = {
      * @property {string} name - 配方ID
      * @property {string} error - 错误信息
      * @example
-     * var errors = global.shanhaiRecipeAPI.getErrors();
-     * errors.forEach(function(err) { return console.log(err.type + ': ' + err.name + ' - ' + err.error); });
+     * let errors = global.shanhaiRecipeAPI.getErrors();
+     * errors.forEach(err => console.log(`${err.type}: ${err.name} - ${err.error}`));
      */
     getErrors: function() {
         return recipeStats.errors.slice();
@@ -1478,14 +1497,14 @@ global.shanhaiRecipeAPI = {
         
         // 1. 先从配方收集器查找（safeAddRecipe 添加的配方）
         if (global.shanhaiRecipeInfoCollector) {
-            var collected = global.shanhaiRecipeInfoCollector[searchId];
+            let collected = global.shanhaiRecipeInfoCollector[searchId];
             if (collected) {
                 return { recipe: collected, source: '配方收集器(safeAddRecipe)' };
             }
         }
         
         // 2. 从配方数组查找
-        var recipeArrays = [
+        const recipeArrays = [
             { name: 'assrecipes', data: global.assrecipes },
             { name: 'universalRecipes', data: global.universalRecipes },
             { name: 'suprecipes_1', data: global.suprecipes_1 },
@@ -1494,18 +1513,17 @@ global.shanhaiRecipeAPI = {
             { name: 'recipes_electrolyzers', data: global.recipes_electrolyzers }
         ];
         
-        for (var i = 0; i < recipeArrays.length; i++) {
-            var arr = recipeArrays[i];
+        for (let arr of recipeArrays) {
             if (arr.data && Array.isArray(arr.data)) {
-                var found = arr.data.find(function(r) {
-                    var rId = r.id;
+                let found = arr.data.find(r => {
+                    let rId = r.id;
                     if (rId && rId.startsWith('dishanhai:')) {
                         rId = rId.substring(10);
                     }
                     return rId === searchId || r.id === recipeId;
                 });
                 if (found) {
-                    return { recipe: found, source: '配方数组: ' + arr.name };
+                    return { recipe: found, source: `配方数组: ${arr.name}` };
                 }
             }
         }
@@ -2165,7 +2183,7 @@ global.shanhaiCommandAPI = {
 // 全局配方信息收集器 (v2.39修复：移到ServerEvents.recipes外部)
 var recipeInfoCollector = {};
 
-ServerEvents.recipes(function(e) {
+ServerEvents.recipes(e => {
 
     // =====================================================
     // =============== 配方默认值系统 (v2.4新增) ==========
@@ -2571,21 +2589,21 @@ function validateRecipe(recipe) {
 
 let assSuccess = 0;
 let assFailed = 0;
-var asstimer = new Timer('组装机配方添加');
+let asstimer = new Timer('组装机配方添加');
 
-assrecipes.forEach(function(recipe) {
+assrecipes.forEach(recipe => {
     // 首先验证配方
-    var validation = validateRecipe(recipe);
+    const validation = validateRecipe(recipe);
     if (!validation.valid) {
-        console.error('❌ 配方验证失败: ' + recipe.id + ' (' + recipe.type + ') - ' + validation.error);
+        console.error(`❌ 配方验证失败: ${recipe.id} (${recipe.type}) - ${validation.error}`);
         broadcastRecipeError(recipe.type, `dishanhai:${recipe.id}`, validation.error);
         assFailed++;
         return;
     }
     
     try {
-        safeAddRecipe(recipe.type, 'dishanhai:' + recipe.id, function() {
-            var machine = gtr[recipe.type]('dishanhai:' + recipe.id);
+        safeAddRecipe(recipe.type, `dishanhai:${recipe.id}`, () => {
+            let machine = gtr[recipe.type](`dishanhai:${recipe.id}`);
             
             // 检查是否触发JavaScript执行错误（测试用）
             if (recipe.triggerJsError) {
@@ -2594,7 +2612,7 @@ assrecipes.forEach(function(recipe) {
             
             if (recipe.notConsumable) {
                 if (Array.isArray(recipe.notConsumable)) {
-                    recipe.notConsumable.forEach(function(item) { machine.notConsumable(item); });
+                    recipe.notConsumable.forEach(item => machine.notConsumable(item));
                 } else if (recipe.notConsumable !== null) {
                     machine.notConsumable(recipe.notConsumable);
                 }
@@ -2651,12 +2669,12 @@ const universalRecipes = [
     {id:'Dye_component_pack',type:'assembler',itemInputs: ['minecraft:dandelion'],dy_cell:true, EUt: ulv, duration: 20 },
 ];
 
-var sanitize = function(v) {
+const sanitize = v => {
     if (v == null) return null;
     if (typeof v === 'string') return ['', 'null', 'undefined', 'none'].includes(v.trim()) ? null : v;
     if (typeof v === 'number') return (isNaN(v) || v <= 0) ? null : v;
     if (Array.isArray(v)) {
-        var cleanedArr = v.map(sanitize).filter(function(x) { return x != null; });
+        let cleanedArr = v.map(sanitize).filter(x => x != null);
         return cleanedArr.length ? cleanedArr : null;
     }
     return v;
@@ -2664,49 +2682,49 @@ var sanitize = function(v) {
 
 info(`🔓 通用配方开始加载，共 ${universalRecipes.length} 个`);
 const timer = new Timer('通用配方添加');
-var success = 0, fail = 0;
+let success = 0, fail = 0;
 
-universalRecipes.forEach(function(recipe) {
+universalRecipes.forEach(recipe => {
     // 首先验证配方
-    var validation = validateRecipe(recipe);
+    const validation = validateRecipe(recipe);
     if (!validation.valid) {
-        console.error('❌ 配方验证失败: ' + recipe.id + ' (' + recipe.type + ') - ' + validation.error);
+        console.error(`❌ 配方验证失败: ${recipe.id} (${recipe.type}) - ${validation.error}`);
         broadcastRecipeError(recipe.type, recipe.id, validation.error);
         fail++;
         return;
     }
     
-    var ok = safeAddRecipe(recipe, function(r) {
-        var machine = gtr[r.type](r.id);
+    const ok = safeAddRecipe(recipe, r => {
+        const machine = gtr[r.type](r.id);
         machine.duration(r.duration);
         if (r.type !== 'cosmos_simulation' && r.EUt != null) machine.EUt(r.EUt);
 
         if (r.dynamicOutputs) {
-            var gemOutputIds = Ingredient.of('#forge:exquisite_gems').getItemIds();
-            var outputs = gemOutputIds.map(function(id) { return '16x ' + id; });
+            let gemOutputIds = Ingredient.of('#forge:exquisite_gems').getItemIds();
+            let outputs = gemOutputIds.map(id => `16x ${id}`);
             if (outputs.length) machine.itemOutputs.apply(machine, outputs);
         }
         if (r.dy_cell) {
-            var dyes = Ingredient.of('#forge:dyes').getItemIds();
-            var outputs = dyes.map(function(id) { return id; });
+            let dyes = Ingredient.of('#forge:dyes').getItemIds();
+            let outputs = dyes.map(id => `${id}`);
             if (outputs.length) machine.itemOutputs.apply(machine, outputs);
         }
 
         // 不可消耗物品
-        var val = sanitize(r.notConsumable);
-        if (val) (Array.isArray(val) ? val : [val]).forEach(function(i) { machine.notConsumable(i); });
+        let val = sanitize(r.notConsumable);
+        if (val) (Array.isArray(val) ? val : [val]).forEach(i => machine.notConsumable(i));
         
         // 不可消耗流体
         val = sanitize(r.notConsumableFluid);
-        if (val) (Array.isArray(val) ? val : [val]).forEach(function(i) { machine.notConsumableFluid(i); });
+        if (val) (Array.isArray(val) ? val : [val]).forEach(i => machine.notConsumableFluid(i));
 
         // 电路
-        var c = sanitize(r.circuit);
+        let c = sanitize(r.circuit);
         if (c != null) machine.circuit(c);
 
         // 输入/输出数组 - 全部改用 .apply
-        ['itemInputs', 'inputFluids', 'itemOutputs', 'outputFluids'].forEach(function(k) {
-            var arr = sanitize(r[k]);
+        ['itemInputs', 'inputFluids', 'itemOutputs', 'outputFluids'].forEach(k => {
+            let arr = sanitize(r[k]);
             if (arr?.length && !r.dynamicOutputs) {
                 machine[k].apply(machine, arr);
             }
@@ -2737,7 +2755,7 @@ universalRecipes.forEach(function(recipe) {
 info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | 耗时: ${timer.end()}ms`);
 
         // ========== 创造天机模块 ==========
-        safeAddRecipe('suprachronal_assembly_line', 'dishanhai:cztj',function() {
+        safeAddRecipe('suprachronal_assembly_line', 'dishanhai:cztj',() => {
             gtr.suprachronal_assembly_line('dishanhai:cztj')
                 .notConsumable('dishanhai:wzcz3')
                 .itemInputs('1024x thetornproductionline:celestial_secret_deducing_module_advanced_max','2048x thetornproductionline:celestial_secret_deducing_module_max','4096x thetornproductionline:celestial_secret_deducing_module_opv','8192x thetornproductionline:celestial_secret_deducing_module_uxv','16384x thetornproductionline:celestial_secret_deducing_module_uiv','32726x thetornproductionline:celestial_secret_deducing_module_uev','4096x kubejs:suprachronal_mainframe_complex','4096x kubejs:create_ultimate_battery','10x kubejs:hyperdimensional_drone')
@@ -2748,7 +2766,7 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
         },{defaultEnabled:false})
 
     // ========== 蒸馏塔配方 ==========
-    safeAddRecipe('distillery', 'dishanhai:yixi', function() {
+    safeAddRecipe('distillery', 'dishanhai:yixi', () => {
         gtr.distillery('dishanhai:yixi')
             .circuit(23)
             .inputFluids('minecraft:lava 2000')
@@ -3901,17 +3919,17 @@ var ItemNBTConfig = {
         if (innerId === 'gtceu:stellar_energy_rocket_fuel') {
             itemType = 'f';
         }
-        return ',"tag":{"record":{"#c":"ae2:' + itemType + '","id":"' + innerId + '"}}';
+        return ',tag:{record:{"#c":"ae2:' + itemType + '",id:"' + innerId + '"}}';
     },
     
     // 无尽之杖
-    infinityWand: ',"tag":{"wand_options":{"cores":["constructionwand:core_angel"],"cores_sel":1,"lock":"nolock"}}',
+    infinityWand: ',tag:{wand_options:{cores:["constructionwand:core_angel"],cores_sel:1b,lock:"nolock"}}',
     
     // 回响金刚杵
     echoiteVajra: ',tag:{DisallowContainerItem:0b,GT.Behaviours:{DisableShields:1b,Mode:2b,RelocateMinedBlocks:1b,TreeFelling:1b},GT.Tool:{AttackDamage:110.0f,AttackSpeed:2.0f,Damage:0,Enchantability:10,HarvestLevel:6,MaxDamage:63,ToolSpeed:10.0f},HideFlags:2,Unbreakable:1b}',
     
     // 量子纠缠奇点
-    quantumSingularity: ',"tag":{"freq":177365839983100}',
+    quantumSingularity: ',tag:{freq:177365839983100L}',
     
     // 无线通用终端
     wirelessUniversalTerminal: ',tag:{accessPoint:{dimension:"minecraft:overworld",pos:[I;6,68,6]},blankPattern:[{Count:64b,Slot:0,id:"ae2:blank_pattern"}],craft_if_missing:1b,crafting:1b,craftingGrid:[{Count:1b,Slot:4,id:"ae2:fluix_axe",tag:{Damage:0}}],currentTerminal:"crafting",encodedInputs:[{"#":4L,"#c":"ae2:i",id:"minecraft:beef"},{"#":4L,"#c":"ae2:i",id:"minecraft:bone"},{"#":4L,"#c":"ae2:i",id:"minecraft:leather"},{"#":1000L,"#c":"ae2:f",id:"gtceu:milk"}],encodedOutputs:[{"#":1L,"#c":"ae2:i",id:"minecraft:cow_spawn_egg"}],ex_pattern_access:1b,filter_type:"ALL",internalCurrentPower:4800000.0d,internalMaxPower:4800000.0d,magnet_settings:1b,mode:"PROCESSING",pattern_encoding:1b,pick_block:1b,restock:0b,show_pattern_providers:"NOT_FULL",singularity:[{Count:1b,Slot:0,id:"ae2:quantum_entangled_singularity",tag:{freq:177365839983100L}}],sort_by:"AMOUNT",sort_direction:"DESCENDING",stonecuttingRecipeId:"minecraft:kjs/mae2_pattern_p2p_tunnel",substitute:1b,substituteFluids:1b,upgrades:[{Count:1b,Slot:0,id:"ae2wtlib:quantum_bridge_card"},{Count:1b,Slot:1,id:"ae2wtlib:magnet_card"},{Count:1b,Slot:2,id:"ae2insertexportcard:insert_card",tag:{}},{Count:1b,Slot:3,id:"ae2insertexportcard:export_card",tag:{SelectedInventorySlots:[I;0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],filterConfig:[{"#":0L,"#c":"ae2:i",id:"gtladditions:astral_array"}],upgrades:[{Count:1b,Slot:0,id:"ae2:speed_card"}]}}],view_mode:"ALL"}',
@@ -3946,7 +3964,7 @@ var ItemNBTConfig = {
         
         // 回响金刚杵
         if (itemId === 'gtceu:echoite_vajra') {
-            return ',"tag":{"DisallowContainerItem":0,"GT.Behaviours":{"DisableShields":1,"Mode":2,"RelocateMinedBlocks":1,"TreeFelling":1},"GT.Tool":{"AttackDamage":110.0,"AttackSpeed":2.0,"Damage":0,"Enchantability":10,"HarvestLevel":6,"MaxDamage":63,"ToolSpeed":10.0},"HideFlags":2,"Unbreakable":1}';
+            return this.echoiteVajra;
         }
         
         // 量子纠缠奇点
@@ -3954,30 +3972,22 @@ var ItemNBTConfig = {
             return this.quantumSingularity;
         }
         
-        // 无线通用终端 - 简化版避免过长
+        // 无线通用终端
         if (itemId === 'ae2wtlib:wireless_universal_terminal') {
-            return ',"tag":{"internalCurrentPower":4800000.0,"mode":"PROCESSING"}';
+            return this.wirelessUniversalTerminal;
         }
         
-        // 便携物品单元1k - 简化版
+        // 便携物品单元1k
         if (itemId === 'ae2:portable_item_cell_1k') {
-            return ',"tag":{"RepairCost":0,"ic":31,"internalCurrentPower":20000.0}';
+            return this.portableItemCell1k;
         }
         
-        // Mekanism套装 - 简化版
+        // Mekanism套装
         if (Platform.isLoaded('mekanism')) {
-            if (itemId === 'mekanism:mekasuit_helmet') {
-                return ',"tag":{"mekData":{"EnergyContainers":[{"Container":0,"stored":"4096000000"}],"ProtectionPoints":153600.0}}';
-            }
-            if (itemId === 'mekanism:mekasuit_bodyarmor') {
-                return ',"tag":{"mekData":{"EnergyContainers":[{"Container":0,"stored":"4096000000"}],"ProtectionPoints":409600.0}}';
-            }
-            if (itemId === 'mekanism:mekasuit_pants') {
-                return ',"tag":{"mekData":{"EnergyContainers":[{"Container":0,"stored":"4096000000"}],"ProtectionPoints":307200.0}}';
-            }
-            if (itemId === 'mekanism:mekasuit_boots') {
-                return ',"tag":{"mekData":{"EnergyContainers":[{"Container":0,"stored":"4096000000"}],"ProtectionPoints":153600.0}}';
-            }
+            if (itemId === 'mekanism:mekasuit_helmet') return this.mekanism.helmet;
+            if (itemId === 'mekanism:mekasuit_bodyarmor') return this.mekanism.bodyarmor;
+            if (itemId === 'mekanism:mekasuit_pants') return this.mekanism.pants;
+            if (itemId === 'mekanism:mekasuit_boots') return this.mekanism.boots;
         }
         
         return '';
@@ -3990,8 +4000,13 @@ if (typeof global !== 'undefined') {
     info('§a[物品NBT库] 已加载，共注册 ' + Object.keys(ItemNBTConfig).length + ' 个配置项');
 }
 
-// ========== 256k物品包API - 完整修复版 ==========
-// 版本 2.0 - 修复所有已知问题
+// ========== 256k物品包API ==========
+// 为整合包中的256k物品包（基于AE2的ae2:portable_item_cell_256k或自定义存储物品）
+// 提供一套统一的API，使开发者能够：
+// · 快速生成带有预设物品列表和描述的存储单元
+// · 自动注册GTCEu组装机配方
+// · 支持NBT数据动态构建
+// · 提供查询、合并、扩容等辅助操作（可选）
 
 // ========== 内部工具函数 ==========
 
@@ -4002,16 +4017,9 @@ function parseItemStringCellAPI(str) {
         throw new Error('无效的物品字符串: ' + str);
     }
     
-    str = str.trim();
-    
-    // 支持不带数量的情况，如 "minecraft:stone" → 自动添加 "1x " 前缀
-    if (!str.includes('x ')) {
-        str = '1x ' + str;
-    }
-    
-    var match = str.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
+    let match = str.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
     if (!match) {
-        throw new Error("无效的物品格式，应使用 '数量x 物品ID' 或 '数量x 物品ID@内部ID' 或 '物品ID': " + str);
+        throw new Error("无效的物品格式，应使用 '数量x 物品ID' 或 '数量x 物品ID@内部ID': " + str);
     }
     
     return {
@@ -4036,173 +4044,23 @@ function parseFluidStringCellAPI(str) {
     let unit = (match[2] || 'mb').toLowerCase();
     let fluidName = match[3].trim();
     
-    // 单位标准化到mb（GTCEu使用的单位）
-    // mb 和 mB 保持原样（已经是以mb为单位）
-    // b 和 B 转换为mb（1桶 = 1000mb）
-    if (unit === 'b') {
+    // 标准化单位到mb（GTCEu使用的单位）
+    if (unit === 'b' || unit === 'B') {
         amount = amount * 1000; // 1桶 = 1000mb
     }
-    // 注意：unit可能为 'mb'、'mB'、'b' 或 undefined
-    // 当unit为undefined时，默认使用'mb'，不需要转换
     
     return { amount: amount, fluid: fluidName };
 }
 
-// 配方验证器 - 检查配方参数是否有效
-function validateCellRecipe(itemList, inputItems) {
-    let errors = [];
-    
-    // 检查物品列表是否为空
-    if (!itemList || !Array.isArray(itemList) || itemList.length === 0) {
-        errors.push('物品列表不能为空');
-    }
-    
-    // 检查输入物品是否有效
-    if (inputItems && Array.isArray(inputItems)) {
-        inputItems.forEach(item => {
-            try {
-                parseItemStringCellAPI(item);
-            } catch (e) {
-                errors.push(`无效输入物品: ${item} - ${e.message}`);
-            }
-        });
-    }
-    
-    // 检查输出数量是否超过 256k 容量 (约 1024 种物品)
-    if (itemList && itemList.length > 1024) {
-        errors.push(`物品数量 ${itemList.length} 超过 256k 容量限制 (1024)`);
-    }
-    
-    return errors;
-}
-
-// 配方预览/导出功能 - 导出配方为JSON格式
-function exportRecipeToJson(recipeId) {
-    // 尝试从全局配方API中查找配方
-    if (global.shanhaiRecipeAPI && typeof global.shanhaiRecipeAPI.findRecipeInAllSources === 'function') {
-        let result = global.shanhaiRecipeAPI.findRecipeInAllSources(recipeId);
-        if (result && result.recipe) {
-            try {
-                return JSON.stringify(result.recipe, null, 2);
-            } catch (e) {
-                warn(`[256k Cell API] 导出配方JSON失败 (${recipeId}): ${e.message}`);
-                return null;
-            }
-        }
-    }
-    
-    // 如果无法从全局API获取，尝试从已注册的CellAPI配方中查找
-    // 注意：这里需要额外的数据结构来存储CellAPI配方的详细信息
-    // 目前暂时返回null，未来可以扩展
-    warn(`[256k Cell API] 无法找到配方: ${recipeId} (导出功能需要配方详细信息)`);
-    return null;
-}
-
-// 版本兼容性检查
-function checkCompatibility(expectedVersion) {
-    if (!expectedVersion) {
-        throw new Error('expectedVersion 参数不能为空');
-    }
-    
-    const currentVersion = '1.0.0'; // CellAPI版本，与CellAPI.version一致
-    const currentParts = currentVersion.split('.').map(Number);
-    const expectedParts = expectedVersion.split('.').map(Number);
-    
-    // 简单的主版本号检查：主版本号必须相同
-    if (currentParts[0] !== expectedParts[0]) {
-        return {
-            compatible: false,
-            reason: `主版本不兼容: 当前 ${currentVersion}, 期望 ${expectedVersion}`,
-            current: currentVersion,
-            expected: expectedVersion
-        };
-    }
-    
-    // 次版本号检查：当前次版本号应大于等于期望次版本号
-    if (currentParts[1] < expectedParts[1]) {
-        return {
-            compatible: false,
-            reason: `次版本过低: 当前 ${currentVersion}, 期望至少 ${expectedVersion}`,
-            current: currentVersion,
-            expected: expectedVersion
-        };
-    }
-    
-    // 修订号检查：如果次版本相同，修订号应大于等于期望修订号
-    if (currentParts[1] === expectedParts[1] && currentParts[2] < expectedParts[2]) {
-        return {
-            compatible: false,
-            reason: `修订号过低: 当前 ${currentVersion}, 期望至少 ${expectedVersion}`,
-            current: currentVersion,
-            expected: expectedVersion
-        };
-    }
-    
-    return {
-        compatible: true,
-        reason: `版本兼容: 当前 ${currentVersion}, 期望 ${expectedVersion}`,
-        current: currentVersion,
-        expected: expectedVersion
-    };
-}
-
-// 性能监控 - 记录配方注册耗时
-function measurePerformance(fn, context) {
-    return function() {
-        var args = Array.prototype.slice.call(arguments);  // 手动转换参数
-        var start = Date.now();
-        try {
-            var result = fn.apply(context, args);
-            var duration = Date.now() - start;
-            if (duration > 1000) {
-                warn('[256k Cell API] 性能警告: ' + (fn.name || '匿名函数') + ' 执行耗时 ' + duration + 'ms');
-            }
-            return result;
-        } catch (err) {
-            var duration = Date.now() - start;
-            error('[256k Cell API] 性能错误: ' + (fn.name || '匿名函数') + ' 执行 ' + duration + 'ms 后失败: ' + err.message);
-            throw err;
-        }
-    };
-}
-
-// 根据物品种类数量估算所需电压等级（改进版）
-function estimateTierCellAPI(count, hasFluid, hasInfinityCell) {
-    // 参数默认值处理
-    if (hasFluid === undefined) hasFluid = false;
-    if (hasInfinityCell === undefined) hasInfinityCell = false;
-    
-    // 基础电压等级映射
-    let baseTier = {
-        1: 32,      // LV - 基础配方
-        10: 128,    // MV
-        30: 512,    // HV
-        50: 2048,   // EV
-        80: 8192,   // IV
-        120: 32768, // LuV
-        200: 131072 // ZPM
-    };
-    
-    // 根据物品数量确定基础电压
-    let tier = 32; // 默认LV
-    for (let threshold in baseTier) {
-        if (count >= parseInt(threshold, 10)) {
-            tier = baseTier[threshold];
-        }
-    }
-    
-    // 包含无限单元格时提高电压（4倍）
-    if (hasInfinityCell) {
-        tier *= 4;
-    }
-    
-    // 包含流体时确保最低电压为MV（128 EU/t）
-    if (hasFluid) {
-        tier = Math.max(tier, 128);
-    }
-    
-    // 限制最高电压为ZPM（131072 EU/t）
-    return Math.min(tier, 131072);
+// 根据物品种类数量估算所需电压等级
+function estimateTierCellAPI(count) {
+    if (count < 10) return 32;      // LV
+    if (count < 30) return 128;     // MV
+    if (count < 50) return 512;     // HV
+    if (count < 80) return 2048;    // EV
+    if (count < 120) return 8192;   // IV
+    if (count < 200) return 32768;  // LuV
+    return 131072;                  // ZPM
 }
 
 // 根据物品数量估算配方耗时
@@ -4233,11 +4091,11 @@ function buildCellNBTCellAPI(items, cellName, lore) {
     }
     
     // 解析所有物品
-    var parsed = items.map(parseItemStringCellAPI);
+    let parsed = items.map(parseItemStringCellAPI);
     
     // 生成keysNBT
-    var keysNBT = parsed.map(function(item) {
-        var tagPart = '';
+    let keysNBT = parsed.map((item) => {
+        let tagPart = '';
         
         // 使用全局ItemNBTConfig如果可用
         if (global.ItemNBTConfig && global.ItemNBTConfig.getTag) {
@@ -4252,37 +4110,18 @@ function buildCellNBTCellAPI(items, cellName, lore) {
         return '{ "#c":"ae2:i",id:"' + item.id + '"' + tagPart + ' }';
     }).join(',');
     
-    // 生成amtsNBT - 使用有符号长整型(L后缀)，添加简化溢出检查
-    var amtsNBT = parsed.map(function(item) {
-        var count = item.count;
-        // 确保count是整数
-        if (!Number.isInteger(count)) {
-            throw new Error('物品数量必须为整数: ' + count + ' (来自物品: ' + item.id + ')');
-        }
-        
-        // 检查是否在JavaScript安全整数范围内 (±2^53-1)，确保精度
-        var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER; // 2^53-1
-        if (count > MAX_SAFE_INTEGER || count < -MAX_SAFE_INTEGER) {
-            warn('[256k Cell API] 警告: 物品数量 ' + count + ' (来自物品: ' + item.id + ') 超出JavaScript安全整数范围，可能丢失精度');
-        }
-        
-        // 简化版Java long范围检查（使用普通数字，注意精度问题）
-        var MAX_LONG = 9223372036854775807; // 2^63-1
-        var MIN_LONG = -9223372036854775808; // -2^63
-        if (count > MAX_LONG || count < MIN_LONG) {
-            warn('[256k Cell API] 警告: 物品数量 ' + count + ' (来自物品: ' + item.id + ') 超出 Java long 范围，可能无法正确存储');
-        }
-        
-        return count + 'L';
+    // 生成amtsNBT
+    let amtsNBT = parsed.map((item) => {
+        return item.count + 'L';
     }).join(',');
     
     // 生成显示标签
-    var displayTag = '';
+    let displayTag = '';
     if (cellName) {
-        var lorePart = '';
+        let lorePart = '';
         if (lore && Array.isArray(lore) && lore.length > 0) {
-            var loreLines = lore;
-            var loreJson = loreLines.map(function(line) { return '\'{"text":"' + line + '"}\''; }).join(',');
+            let loreLines = lore;
+            let loreJson = loreLines.map(line => '\'{"text":"' + line + '"}\'').join(',');
             lorePart = ',Lore:[' + loreJson + ']';
         }
         displayTag = 'display:{Name:\'{"text":"' + cellName + '"}\'' + lorePart + '},';
@@ -4311,22 +4150,13 @@ function addCellAssemblerRecipeCellAPI(recipeId, cellName, itemList, lore, input
     // 因为它需要访问 gtceu 对象 
     
     try { 
-        // 配方去重检查
-        if (_registeredCellRecipes.has(recipeId)) {
-            warn('[256k Cell API] 配方 ' + recipeId + ' 已存在，跳过注册');
-            return false;
-        }
-        
         // 参数默认值 
-        circuit = (circuit !== undefined && circuit !== null) ? circuit : 1; 
-        duration = duration || estimateDurationCellAPI(itemList.reduce(function(sum, item) { 
-            var parsed = parseItemStringCellAPI(item); 
+        circuit = circuit || 1; 
+        duration = duration || estimateDurationCellAPI(itemList.reduce((sum, item) => { 
+            let parsed = parseItemStringCellAPI(item); 
             return sum + parsed.count; 
         }, 0)); 
-        // 智能电压估算：检查是否包含无限单元格和流体
-        var hasInfinityCell = itemList.some(function(item) { return item.includes('expatternprovider:infinity_cell'); });
-        var hasFluid = inputFluids && Array.isArray(inputFluids) && inputFluids.length > 0;
-        eut = eut || estimateTierCellAPI(itemList.length, hasFluid, hasInfinityCell); 
+        eut = eut || estimateTierCellAPI(itemList.length); 
         
         // 验证配方ID格式 
         if (!recipeId || !recipeId.includes(':')) { 
@@ -4334,31 +4164,31 @@ function addCellAssemblerRecipeCellAPI(recipeId, cellName, itemList, lore, input
         } 
         
         // 生成物品包NBT 
-        var cellNBT = buildCellNBTCellAPI(itemList, cellName, lore); 
+        let cellNBT = buildCellNBTCellAPI(itemList, cellName, lore); 
         
         // 解析输入物品 
-        var parsedInputItems = inputItems.map(parseItemStringCellAPI); 
+        let parsedInputItems = inputItems.map(parseItemStringCellAPI); 
         
         // 解析输入流体 
-        var parsedInputFluids = []; 
+        let parsedInputFluids = []; 
         if (inputFluids && Array.isArray(inputFluids)) { 
             parsedInputFluids = inputFluids.map(parseFluidStringCellAPI); 
         } 
         
         // 返回一个函数，在 recipes 事件中执行 
         return function(gtceu) { 
-            var builder = gtceu.assembler(recipeId); 
+            let builder = gtceu.assembler(recipeId); 
             
             // 添加物品输出 
             builder.itemOutputs(Item.of('ae2:portable_item_cell_256k', cellNBT)); 
             
             // 添加物品输入 
-            parsedInputItems.forEach(function(item) { 
+            parsedInputItems.forEach(item => { 
                 builder.itemInputs(Item.of(item.id, item.count)); 
             }); 
             
             // 添加流体输入 
-            parsedInputFluids.forEach(function(fluid) { 
+            parsedInputFluids.forEach(fluid => { 
                 builder.fluidInputs(Fluid.of(fluid.fluid, fluid.amount)); 
             }); 
             
@@ -4369,16 +4199,16 @@ function addCellAssemblerRecipeCellAPI(recipeId, cellName, itemList, lore, input
             builder.duration(duration); 
             builder.EUt(eut); 
             
-            info('[256k Cell API] 配方已生成: ' + recipeId); 
-            info('  物品包: ' + cellName + ' (' + itemList.length + '种物品)'); 
-            info('  电压: ' + eut + ' EU/t, 耗时: ' + duration + ' ticks'); 
-            info('  电路: ' + circuit + ', 输入物品: ' + inputItems.length + '种');
+            info(`[256k Cell API] 配方已生成: ${recipeId}`); 
+            info(`  物品包: ${cellName} (${itemList.length}种物品)`); 
+            info(`  电压: ${eut} EU/t, 耗时: ${duration} ticks`); 
+            info(`  电路: ${circuit}, 输入物品: ${inputItems.length}种`);
             
             return true; 
         }; 
         
     } catch (err) { 
-        error('[256k Cell API] 配方生成失败 (' + recipeId + '): ' + err.message); 
+        error(`[256k Cell API] 配方生成失败 (${recipeId}): ${err.message}`); 
         return null; 
     } 
 }
@@ -4386,15 +4216,9 @@ function addCellAssemblerRecipeCellAPI(recipeId, cellName, itemList, lore, input
 // 直接注册组装机配方（不需要返回函数，直接执行）
 function addCellAssemblerRecipeDirect(recipeId, cellName, itemList, lore, inputItems, inputFluids, circuit, duration, eut, gtceu) { 
     try { 
-        // 配方去重检查
-        if (_registeredCellRecipes.has(recipeId)) {
-            warn('[256k Cell API] 配方 ' + recipeId + ' 已存在，跳过注册');
-            return false;
-        }
-        
-        circuit = (circuit !== undefined && circuit !== null) ? circuit : 1; 
-        duration = duration || estimateDurationCellAPI(itemList.reduce(function(sum, item) { 
-            var parsed = parseItemStringCellAPI(item); 
+        circuit = circuit || 1; 
+        duration = duration || estimateDurationCellAPI(itemList.reduce((sum, item) => { 
+            let parsed = parseItemStringCellAPI(item); 
             return sum + parsed.count; 
         }, 0)); 
         eut = eut || estimateTierCellAPI(itemList.length); 
@@ -4404,24 +4228,21 @@ function addCellAssemblerRecipeDirect(recipeId, cellName, itemList, lore, inputI
             throw new Error('配方ID格式不正确，应使用 命名空间:路径 格式'); 
         } 
         
-        var cellNBT = buildCellNBTCellAPI(itemList, cellName, lore); 
-        var parsedInputItems = inputItems.map(parseItemStringCellAPI); 
+        const cellNBT = buildCellNBTCellAPI(itemList, cellName, lore); 
+        const parsedInputItems = inputItems.map(parseItemStringCellAPI); 
         
-        var builder = gtceu.assembler(recipeId);
-        builder.itemOutputs(Item.of('ae2:portable_item_cell_256k', cellNBT));
-        parsedInputItems.forEach(function(item) {
-            builder.itemInputs(Item.of(item.id, item.count));
+        let builder = gtceu.assembler(recipeId); 
+        builder.itemOutputs(Item.of('ae2:portable_item_cell_256k', cellNBT)); 
+        parsedInputItems.forEach(item => { 
+            builder.itemInputs(Item.of(item.id, item.count)); 
         }); 
         
         // 添加流体输入（如果存在）
         if (inputFluids && Array.isArray(inputFluids) && inputFluids.length > 0) {
-            var parsedInputFluids = inputFluids.map(parseFluidStringCellAPI); 
-            for (var i = 0; i < parsedInputFluids.length; i++) { 
-                var fluid = parsedInputFluids[i];
-                if (builder.fluidInputs) { 
-                    builder.fluidInputs(Fluid.of(fluid.fluid, fluid.amount)); 
-                }
-            }
+            const parsedInputFluids = inputFluids.map(parseFluidStringCellAPI); 
+            parsedInputFluids.forEach(fluid => { 
+                builder.fluidInputs(Fluid.of(fluid.fluid, fluid.amount)); 
+            }); 
         }
         
         builder.circuit(circuit); 
@@ -4433,8 +4254,6 @@ function addCellAssemblerRecipeDirect(recipeId, cellName, itemList, lore, inputI
         info(`  电压: ${eut} EU/t, 耗时: ${duration} ticks`); 
         info(`  电路: ${circuit}, 输入物品: ${inputItems.length}种`); 
         
-        // 记录已注册的配方ID
-        _registeredCellRecipes.add(recipeId);
         return true; 
     } catch (err) { 
         error(`[256k Cell API] 配方直接注册失败 (${recipeId}): ${err.message}`); 
@@ -4514,42 +4333,7 @@ var CellAPI = {
     parseItemString: parseItemStringCellAPI,
     parseFluidString: parseFluidStringCellAPI,
     getCellIdByTier: getCellIdByTierCellAPI,
-    validateRecipe: validateCellRecipe,
-    exportRecipe: exportRecipeToJson,
-    checkCompatibility: checkCompatibility,
-    measurePerformance: measurePerformance,
     checkDependencies: checkDependenciesCellAPI,
-    
-    // 批量注册方法
-    addBatchRecipes: function(recipes, gtceu) {
-        if (!recipes || !Array.isArray(recipes)) {
-            throw new Error('recipes 参数必须是一个数组');
-        }
-        if (!gtceu) {
-            throw new Error('gtceu 参数不能为空');
-        }
-        
-        let success = 0, failed = 0;
-        recipes.forEach(recipe => {
-            try {
-                let result = addCellAssemblerRecipeDirect(
-                    recipe.id, recipe.name, recipe.items, recipe.lore,
-                    recipe.inputs || [], recipe.fluids || [], recipe.circuit || 1,
-                    recipe.duration, recipe.eut, gtceu
-                );
-                if (result) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            } catch (err) {
-                error(`[256k Cell API] 批量注册配方失败 (${recipe.id || '未知'}): ${err.message}`);
-                failed++;
-            }
-        });
-        info(`[CellAPI] 批量注册完成: 成功 ${success}, 失败 ${failed}`);
-        return { success, failed };
-    },
     
     // 版本信息
     version: '1.0.0',
@@ -4594,7 +4378,7 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
 
     let keysNBT = parsed.map((item) => {
         let [amt, id, innerId] = item;
-        let tagPart = (global.ItemNBTConfig && global.ItemNBTConfig.getTag) ? global.ItemNBTConfig.getTag(id, innerId) : '';
+        let tagPart = ItemNBTConfig.getTag(id, innerId);
         
 
 
@@ -4661,24 +4445,27 @@ if (typeof global !== 'undefined') global.packed_cell_nbt2 = packed_cell_nbt2;
 const shanhai_packed_infinity_cell = (cellname, type, list, lore) => {
     const list_length = list.length;
     
+    // 生成 amounts 数组 [1L, 1L, ...]
     let amtsNBT = "1L,".repeat(list_length - 1) + '1L';
     
+    // 生成 keys 数组
     let keysNBT = list.map(id => {
-        return '{"#c":"ae2:i","id":"expatternprovider:infinity_cell","tag":{"record":{"#c":"ae2:' + type + '","id":"' + id + '"}}}';
+        return '{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:' + type + '",id:"' + id + '"}}}';
     }).join(",");
     
+    // 生成 display 标签
     let displayTag = '';
     if (cellname) {
         let loreJson = '';
         if (lore && Array.isArray(lore) && lore.length > 0) {
-            let loreArray = lore.map(line => '{"text":"' + line.replace(/§/g, '\u00A7') + '"}').join(',');
+            let loreArray = lore.map(line => '\'{"text":"' + line + '"}\'').join(',');
             loreJson = ',Lore:[' + loreArray + ']';
         }
-        displayTag = 'display:{Name:\'{"text":"' + cellname.replace(/§/g, '\u00A7') + '"}\'' + loreJson + '},';
+        displayTag = 'display:{Name:\'{"text":"' + cellname + '"}\'' + loreJson + '},';
     }
     
     return Item.of('ae2:portable_item_cell_256k',
-        '{RepairCost:0,' + displayTag + 'amts:[L;' + amtsNBT + '],ic:' + list_length + 'L,internalCurrentPower:2000000.0d,keys:[' + keysNBT + ']}');
+        '{RepairCost:0,' + displayTag + 'amts:[L;' + amtsNBT + '],ic:' + list_length + 'L,internalCurrentPower:1999840.5d,keys:[' + keysNBT + ']}');
 };
 
 // ========== 输出物品盘配方 ==========
