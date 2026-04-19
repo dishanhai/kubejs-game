@@ -6,7 +6,7 @@ ItemEvents.tooltip(tooltip => {
     tooltip.add('dishanhai:cosmic_probe_mk', '获取液体无需算力');
     tooltip.add('gtceu:nan_certificate','大猪咪的证明!')
     tooltip.add('kubejs:suprachronal_mainframe_complex','§2物质创造模块让主机更便宜')
-});
+})
 
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
@@ -37,7 +37,7 @@ e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
         text.add('§1按§2住§3§lSHIFT§r§5查看§k§l§n终末协议');
     }
 });
-});
+})
     
 ItemEvents.tooltip(e=>{
 e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
@@ -450,10 +450,33 @@ const superAEPackNBT = (displayName, lore) => {
     '    }';
 };
 
-// 注册超级AE包到JEI
+// 注册超级AE包到JEI - 从全局变量读取
 JEIEvents.addItems(event => {
     console.log('山海私货-正在向 JEI 注册超级AE包...')
     
+    // 方法1：从全局变量读取（推荐）
+    if (typeof global !== 'undefined' && global.superAEPackItemList && global.superAEPackLore) {
+        const itemList = global.superAEPackItemList;
+        const lore = global.superAEPackLore;
+        
+        console.log('📦 从全局变量读取超级AE包: ' + itemList.length + ' 种物品');
+        
+        // 使用全局的 packed_cell_nbt2 函数（如果存在）
+        let nbt;
+        if (typeof global.packed_cell_nbt2 === 'function') {
+            nbt = global.packed_cell_nbt2(itemList, '超级AE包', lore);
+        } else {
+            // 备用：使用本地定义的函数
+            nbt = superAEPackNBT('超级AE包', lore);
+        }
+        
+        event.add(Item.of('ae2:portable_item_cell_256k', nbt));
+        console.log('✅ 超级AE包 已成功注册到 JEI');
+        return;
+    }
+    
+    // 方法2：备用方案 - 使用本地列表（确保与配方同步）
+    console.log('⚠️ 全局变量未找到，使用本地列表');
     superAEPackItemCount = superAEPackItems.length;
     console.log('📦 超级AE包包含 ' + superAEPackItemCount + ' 种物品');
     
@@ -526,7 +549,8 @@ function parseCellContent(item) {
  * @param {number} maxDisplay - 最大显示数量
  * @returns {Array} 格式化后的文本行数组
  */
-function formatItemListForTooltip(items, maxDisplay = 5) {
+function formatItemListForTooltip(items, maxDisplay) {
+    if (maxDisplay === undefined) maxDisplay = 5;
     if (!items || items.length === 0) {
         return ['§7物品包为空'];
     }
@@ -610,6 +634,9 @@ ItemEvents.tooltip(event => {
 // ========== 256k物品包自定义JEI描述 ==========
 
 // 注册通用256k物品包描述
+// JEIEvents.addDescription 在当前KubeJS版本中不可用，已禁用
+// 如需JEI描述，请使用工具提示替代
+/*
 JEIEvents.addDescription(event => {
     event.addItem('ae2:portable_item_cell_256k', [
         '§6256k便携物品元件',
@@ -628,6 +655,7 @@ JEIEvents.addDescription(event => {
         '§8山海私货 - 256k物品包系统'
     ]);
 });
+*/
 
 // ========== 隐藏无效物品包 ==========
 
@@ -646,7 +674,9 @@ if (typeof global !== 'undefined') {
     }
     
     // 添加JEI相关API
-    global.CellAPI.registerJEIPreview = function(cellItemId = 'ae2:portable_item_cell_256k', maxDisplay = 5) {
+    global.CellAPI.registerJEIPreview = function(cellItemId, maxDisplay) {
+        if (cellItemId === undefined) cellItemId = 'ae2:portable_item_cell_256k';
+        if (maxDisplay === undefined) maxDisplay = 5;
         console.log('[256k Cell API - JEI] 注册物品包预览: ' + cellItemId + ', 最大显示: ' + maxDisplay);
         
         // 这里实际上已经通过上面的ItemEvents.tooltip全局处理了

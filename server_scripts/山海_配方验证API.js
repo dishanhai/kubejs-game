@@ -1607,7 +1607,7 @@ ServerEvents.commandRegistry(function(event) {
     // 注册 /配方验证 命令
     event.register(
         Commands.literal('配方验证')
-            .requires(function(source) {
+            .requires(source => {
                 // 检查是否为玩家且为OP
                 if (source.getEntity && source.getEntity()) {
                     var player = source.getEntity();

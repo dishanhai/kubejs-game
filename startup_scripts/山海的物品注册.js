@@ -99,7 +99,7 @@ global.shanhaiRecipeAPI.createDynamicText(text, options)
             }
         };
     }
-StartupEvents.registry('item', e =>{
+StartupEvents.registry('item', function(e) {
     let colorAPI = getColorAPI();
     e.create('dishanhai:cosmic_probe_mk')
     .displayName('MK1—宇宙探测器')

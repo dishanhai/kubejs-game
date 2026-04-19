@@ -11,6 +11,7 @@ var API_Version = '2.7.2'//api版本
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 将在配方初始化时设置
 var superAEPackLore = null; // 超级AE包的Lore描述
+var superAEPackItemList = null; // 超级AE包物品列表
 
 // CellAPI 配方去重检测
 var _registeredCellRecipes = new Set();
@@ -2280,8 +2281,8 @@ ServerEvents.recipes(function(e) {
     // =====================================================
     
     var gtr = e.recipes.gtceu;
-    const GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
-    const VA = GTValues.VA;
+    var GTValues = Java.loadClass('com.gregtechceu.gtceu.api.GTValues');
+    var VA = GTValues.VA;
     const [ULV,LV,MV,HV,EV,IV,LuV,ZPM,UV,UHV,UEV,UIV,UXV,OpV,MAX] = VA;
     const [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = VA;
     // =================================================================
@@ -3014,7 +3015,7 @@ machine.duration(20)
 }) 
 
 let voidtimer = timer_voidflux_reaction.end()
-    console.log(`[山海的bug私货] 🗓️ 量子虹吸矩阵配方添加完毕 成功:${voidfluxSuccess} | 失败:${voidfluxFailed} | 耗时${voidtimer}ms`)
+    console.log(`[山海的big私货] 🗓️ 量子虹吸矩阵配方添加完毕 成功:${voidfluxSuccess} | 失败:${voidfluxFailed} | 耗时${voidtimer}ms`)
 
     if (Platform.isLoaded('gtl_extend')){
     info('🔌 检测到 gtl_extend 模组，添加扩展配方');
@@ -3210,7 +3211,7 @@ let dishanhai_timer_end = dishanhai_timer.end();
 info(`✔️ 山海的♾️物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${dishanhai_timer_end}ms`);
 
 const time_di = dishanhai_timer.end()
-console.log(`🗓️ [山海的bug私货] ♾️级物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${time_di}ms`)
+console.log(`🗓️ [山海的big私货] ♾️级物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${time_di}ms`)
 
     //神鸿蒙(作弊配方,默认禁用)
     safeAddRecipe('cosmos_simulation', 'dishanhai:creator_God_home', () => {
@@ -4529,10 +4530,10 @@ var CellAPI = {
             throw new Error('gtceu 参数不能为空');
         }
         
-        let success = 0, failed = 0;
-        recipes.forEach(recipe => {
+        var success = 0, failed = 0;
+        recipes.forEach(function(recipe) {
             try {
-                let result = addCellAssemblerRecipeDirect(
+                var result = addCellAssemblerRecipeDirect(
                     recipe.id, recipe.name, recipe.items, recipe.lore,
                     recipe.inputs || [], recipe.fluids || [], recipe.circuit || 1,
                     recipe.duration, recipe.eut, gtceu
@@ -4543,12 +4544,12 @@ var CellAPI = {
                     failed++;
                 }
             } catch (err) {
-                error(`[256k Cell API] 批量注册配方失败 (${recipe.id || '未知'}): ${err.message}`);
+                error('[256k Cell API] 批量注册配方失败 (' + (recipe.id || '未知') + '): ' + err.message);
                 failed++;
             }
         });
-        info(`[CellAPI] 批量注册完成: 成功 ${success}, 失败 ${failed}`);
-        return { success, failed };
+        info('[CellAPI] 批量注册完成: 成功 ' + success + ', 失败 ' + failed);
+        return { success: success, failed: failed };
     },
     
     // 版本信息
@@ -4580,21 +4581,23 @@ if (global.__kubejs_cell_api_reload_count === undefined) {
 }
 global.__kubejs_cell_api_reload_count++;
 
-info(`[256k Cell API] 热重载次数: ${global.__kubejs_cell_api_reload_count}`);
+info('[256k Cell API] 热重载次数: ' + global.__kubejs_cell_api_reload_count);
 
-// ========== 无限盘配方生成 ==========
-let packed_cell_nbt2 = (list, displayName, lore) => {
+// ========== ae包配方生成 ==========
+var packed_cell_nbt2 = function(list, displayName, lore) {
     if (displayName === undefined) displayName = null;
     if (lore === undefined) lore = null;
-    let parsed = list.map(entry => {
-        let match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
+    var parsed = list.map(function(entry) {
+        var match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
         if (!match) throw new Error("Invalid format: " + entry);
         return [match[1], match[2], match[3]]; // [amount, id, innerId]
     });
 
-    let keysNBT = parsed.map((item) => {
-        let [amt, id, innerId] = item;
-        let tagPart = (global.ItemNBTConfig && global.ItemNBTConfig.getTag) ? global.ItemNBTConfig.getTag(id, innerId) : '';
+    var keysNBT = parsed.map(function(item) {
+        var amt = item[0];
+        var id = item[1];
+        var innerId = item[2];
+        var tagPart = (global.ItemNBTConfig && global.ItemNBTConfig.getTag) ? global.ItemNBTConfig.getTag(id, innerId) : '';
         
 
 
@@ -4630,17 +4633,17 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
         return '{ "#c":"ae2:i",id:"' + id + '"' + tagPart + ' }';
     }).join(',');
     
-    let amtsNBT = parsed.map((item) => {
-        let [amt] = item;
+    var amtsNBT = parsed.map(function(item) {
+        var amt = item[0];
         return amt + 'L';
     }).join(',');
     
-    let displayTag = '';
+    var displayTag = '';
     if (displayName) {
-        let lorePart = '';
+        var lorePart = '';
         if (lore) {
-            let loreLines = Array.isArray(lore) ? lore : [lore];
-            let loreJson = loreLines.map(line => '\'{"text":"' + line + '"}\'').join(',');
+            var loreLines = Array.isArray(lore) ? lore : [lore];
+            var loreJson = loreLines.map(function(line) { return '\'{"text":"' + line + '"}\''; }).join(',');
             lorePart = ',Lore:[' + loreJson + ']';
         }
         displayTag = 'display:{Name:\'{"text":"' + displayName + '"}\'' + lorePart + '},';
@@ -4658,20 +4661,20 @@ let packed_cell_nbt2 = (list, displayName, lore) => {
 if (typeof global !== 'undefined') global.packed_cell_nbt2 = packed_cell_nbt2;
 
 // 简化的无限单元格打包函数（按照DiskSavior模式）
-const shanhai_packed_infinity_cell = (cellname, type, list, lore) => {
-    const list_length = list.length;
+var shanhai_packed_infinity_cell = function(cellname, type, list, lore) {
+    var list_length = list.length;
     
-    let amtsNBT = "1L,".repeat(list_length - 1) + '1L';
+    var amtsNBT = "1L,".repeat(list_length - 1) + '1L';
     
-    let keysNBT = list.map(id => {
+    var keysNBT = list.map(function(id) {
         return '{"#c":"ae2:i","id":"expatternprovider:infinity_cell","tag":{"record":{"#c":"ae2:' + type + '","id":"' + id + '"}}}';
     }).join(",");
     
-    let displayTag = '';
+    var displayTag = '';
     if (cellname) {
-        let loreJson = '';
+        var loreJson = '';
         if (lore && Array.isArray(lore) && lore.length > 0) {
-            let loreArray = lore.map(line => '{"text":"' + line.replace(/§/g, '\u00A7') + '"}').join(',');
+            var loreArray = lore.map(function(line) { return '{"text":"' + line.replace(/§/g, '\u00A7') + '"}'; }).join(',');
             loreJson = ',Lore:[' + loreArray + ']';
         }
         displayTag = 'display:{Name:\'{"text":"' + cellname.replace(/§/g, '\u00A7') + '"}\'' + loreJson + '},';
@@ -4694,7 +4697,7 @@ ServerEvents.recipes(event => {
     try {
         
         // 超级AE包物品列表
-        var superAEPackItemList = [
+        superAEPackItemList = [
             '1x constructionwand:infinity_wand','16777216x expatternprovider:ex_pattern_provider','1x gtceu:echoite_vajra','4x expatternprovider:ex_pattern_access_part','16777216x expatternprovider:ex_import_bus_part','16777216x expatternprovider:ex_export_bus_part','10x ironfurnaces:unobtainium_furnace','16x expatternprovider:ex_drive','1x mekanism:mekasuit_helmet','1x mekanism:mekasuit_bodyarmor','1x mekanism:mekasuit_pants','1x mekanism:mekasuit_boots','3x ae2:quantum_entangled_singularity','1x gtmadvancedhatch:net_data_stick','1x ae2:portable_item_cell_1k','1x gtmadvancedhatch:adaptive_net_energy_terminal','16777216x gtmadvancedhatch:adaptive_net_laser_source_hatch','16777216x gtmadvancedhatch:adaptive_net_energy_output_hatch','1x ae2wtlib:wireless_universal_terminal','16777216x expatternprovider:wireless_connect','4x ae2:pattern_encoding_terminal','16777216x gtceu:me_input_hatch','16777216x ae2:capacity_card','1x ae2:wireless_access_point','4x minecraft:flint_and_steel','1x sov:spear_of_void','100x avaritia:star_fuel','1x ironfurnaces:augment_generator','16777216x ae2:fuzzy_card','16777216x minecraft:orange_dye',
             '16777216x minecraft:light_gray_dye','16777216x minecraft:light_blue_dye','16777216x ae2:void_card','16777216x minecraft:gray_dye','16777216x ae2:basic_card','16777216x ae2:equal_distribution_card','16777216x minecraft:magenta_dye','16777216x ae2:crafting_card','16777216x ae2:inverter_card','16777216x ae2:speed_card','32x ae2:creative_energy_cell','16777216x ae2:quantum_link','16777216x ae2:quantum_ring','16777216x gtceu:me_input_bus','16777216x expatternprovider:assembler_matrix_glass','16777216x ae2:crafting_terminal','16777216x expatternprovider:ex_interface','16777216x ae2:fluix_smart_cable','16777216x ae2:fluix_glass_cable','16777216x ae2:fluix_covered_dense_cable','16777216x ae2:fluix_smart_dense_cable','16777216x ae2:blank_pattern','16777216x minecraft:pink_dye','16777216x minecraft:purple_dye','16777216x minecraft:red_dye','16777216x ae2:cable_anchor','16777216x ae2:redstone_card','16777216x ae2:logic_processor','16777216x ae2:calculation_processor','16777216x ae2:engineering_processor',
             '16777216x minecraft:black_dye','16777216x minecraft:yellow_dye','16777216x minecraft:green_dye','16777216x minecraft:blue_dye','16777216x minecraft:lime_dye','16777216x ae2:advanced_card','16777216x minecraft:cyan_dye','16777216x minecraft:white_dye','16777216x ae2:quartz_fiber','16777216x expatternprovider:ex_io_port','16777216x ae2:level_emitter','16777216x ae2:toggle_bus','16777216x gtladditions:infinity_input_dual_hatch','16777216x gtladditions:me_super_pattern_buffer','16777216x gtladditions:me_super_pattern_buffer_proxy','16777216x gtceu:uv_dual_output_hatch','16777216x gtceu:uv_dual_input_hatch','16777216x gtceu:me_extended_export_buffer','16777216x gtceu:me_extended_async_export_buffer','16777216x gtceu:tag_filter_me_stock_bus_part_machine','16777216x gtceu:me_dual_hatch_stock_part_machine','16777216x extendedae_plus:assembler_matrix_upload_core','1024x extendedae_plus:1024x_crafting_accelerator','16777216x extendedae_plus:labeled_wireless_transceiver','16777216x merequester:requester','16777216x extendedae_plus:wireless_transceiver','16777216x extendedae_plus:channel_card',
@@ -4702,6 +4705,7 @@ ServerEvents.recipes(event => {
             '10240000x gtceu:certus_quartz_dust','10240000x gtceu:certus_quartz_gem','1x sophisticatedbackpacks:netherite_backpack','1x fluxnetworks:flux_controller','1024000x fluxnetworks:flux_point','1024000x fluxnetworks:flux_plug','1x gtceu:molecular_assembler_matrix','1x gtceu:me_molecular_assembler_io','70x gtlcore:advanced_assembly_line_unit','320x gtlcore:iridium_casing','80x gtlcore:hyper_mechanical_casing','84x gtlcore:molecular_casing','20x gtceu:hsse_frame','56x gtceu:naquadah_alloy_frame','78x gtceu:trinium_frame','36x gtceu:europium_frame','306x gtceu:high_power_casing','48x gtceu:advanced_computer_casing','36x gtceu:fusion_glass','104x gtceu:superconducting_coil','17x gtceu:assembly_line_casing','32x gtceu:assembly_line_grating','90x gtceu:large_scale_assembler_casing','1x gtlcore:ultimate_terminal','10240000x gtmadvancedhatch:max_configurable_dual_hatch_input_16p','5x gtceu:me_craft_speed_core','20x gtceu:me_craft_pattern_container','64x gtceu:me_craft_parallel_core','1x ae2wtlib:magnet_card','1x ae2_ftbquest_detector:me_quests_detector'
         ];
         superAEPackItemCount = superAEPackItemList.length;
+
         superAEPackLore = [
             '§7包含所有AE2、GTCEu和相关模组的顶级物品',
             '§7物品种类: §e' + superAEPackItemCount + '§7 种',
@@ -4709,6 +4713,11 @@ ServerEvents.recipes(event => {
             '§7包含无线终端、量子纠缠、分子装配矩阵等',
             '§8山海私货 v2.2'
         ];
+        // 导出到全局变量供JEI脚本使用
+        if (typeof global !== 'undefined') {
+            global.superAEPackItemList = superAEPackItemList;
+            global.superAEPackLore = superAEPackLore;
+        }
         
         event.shapeless(
             Item.of('ae2:portable_item_cell_256k', packed_cell_nbt2(superAEPackItemList, '超级AE包', superAEPackLore)), 
@@ -4763,7 +4772,7 @@ ServerEvents.recipes(event => {
     const VA = GTValues.VA;
     const [ULV, LV, MV, HV, EV, IV, LuV, ZPM, UV, UHV, UEV, UIV, UXV, OpV, MAX] = VA;
     const [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = VA;
-    
+    var gtr = event.recipes.gtceu;
     const piggrecipeId = 'dishanhai:assembler_template';
     
     try {
@@ -4802,9 +4811,9 @@ ServerEvents.recipes(event => {
         error('❌ 天基大礼包配方生成失败: ' + err.message);
     }
     
-    info('🔧 开始生成大礼包模板...');       
+    info('🔧 开始生成猪咪大礼包...');       
 
-const templaterecipeId = 'dishanhai:tianji_gift_pack';
+const templaterecipeId = 'dishanhai:Piggy_Big_Package';
 
 try {
     // 定义礼包内容
@@ -4814,20 +4823,20 @@ try {
     
     let templateItemCount = templateItemList_2.length;
     let templateLore = [
-        '§7这是一个大礼包',
+        '§7这是一个猪咪大礼包',
         '§7物品种类: §e' + templateItemCount + '§7 种',
-        '§7', 
+        '§4由CellAPI生成', 
         '§8山海私货 v2.3'
     ];
     
     // 使用 CellAPI 的 addAssemblerRecipe 方法
 if (global.CellAPI && typeof global.CellAPI.addAssemblerRecipeDirect === 'function') {
-    global.CellAPI.addAssemblerRecipeDirect(
+        global.CellAPI.addAssemblerRecipeDirect(
             templaterecipeId,
-            '大礼包',
+            '猪咪大礼包',
             templateItemList_2, 
             templateLore,
-            ['dishanhai:piggy', 'gtladditions:space_infinity_integrated_ore_processor'],  // 输入物品
+            ['dishanhai:piggy','dishanhai:halo_end'],  // 输入物品
             [],  // 输入流体
             1,   // 电路配置
             200, // 耗时
@@ -4836,19 +4845,19 @@ if (global.CellAPI && typeof global.CellAPI.addAssemblerRecipeDirect === 'functi
         );
     } else {
         // 使用原始的 packed_cell_nbt2 方式
-        const cellNBT = packed_cell_nbt2(templateItemList_2, '天基大礼包', templateLore);
+        const cellNBT = packed_cell_nbt2(templateItemList_2, '猪咪大礼包', templateLore);
         safeAddRecipe('assembler', templaterecipeId, () => {
         gtr.assembler(templaterecipeId)
             .circuit(1)
-            .itemInputs('dishanhai:piggy', 'gtladditions:space_infinity_integrated_ore_processor')
+            .itemInputs('dishanhai:piggy', 'dishanhai:halo_end')
             .itemOutputs(Item.of('ae2:portable_item_cell_256k', cellNBT))
             .duration(200)
             .EUt(LV);
     });
 }
-    info('✅ 大礼包配方已生成: ' + templaterecipeId);
+    info('✅ 猪咪大礼包配方已生成: ' + templaterecipeId);
 } catch(err) {
-    error('❌ 大礼包配方生成失败: ' + err.message);
+    error('❌ 猪咪大礼包配方生成失败: ' + err.message);
 }
 
 

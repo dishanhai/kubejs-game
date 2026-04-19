@@ -2,6 +2,7 @@
 alwaysApply: true
 ---
 kubejs采用Rhino引擎（不是 Node.js 或现代浏览器）
+严禁使用kubejs不支持的es6语法
 禁止使用Rhino引擎不支持的javascript语法
 检测token用量是否超过模型限制 自主进行压缩上下文
 创建新文件必须要iife包裹 老文件已有iife 需要在iife中写入代码
