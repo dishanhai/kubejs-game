@@ -706,7 +706,8 @@ let syncStatsToGlobal = function() {
 };
 
 // ========== 山海私货全局API ==========
-global.shanhaiAPI = {
+// 智能API合并：如果已有全局API，则合并而不是覆盖
+var newShanhaiAPI = {
     getStats: protectAPI(
         function() { return recipeStats; },
         [], // 无参数
@@ -716,7 +717,74 @@ global.shanhaiAPI = {
     safeAddRecipe: protectAPI(
         function(type, id, recipeFunc) {
             try {
-                recipeFunc();
+                // 创建安全物品创建函数
+                var safeItemOf = (function() {
+                    var originalItemOf = Item.of;
+                    var placeholderId = 'dishanhai:zwf';
+                    
+                    return function safeItemOf() {
+                        try {
+                            // 调用原始Item.of，根据参数数量调用
+                            if (arguments.length === 0) {
+                                return originalItemOf();
+                            } else if (arguments.length === 1) {
+                                return originalItemOf(arguments[0]);
+                            } else if (arguments.length === 2) {
+                                return originalItemOf(arguments[0], arguments[1]);
+                            } else {
+                                return originalItemOf(arguments[0], arguments[1], arguments[2]);
+                            }
+                        } catch (error) {
+                            // 如果物品创建失败，使用占位符替代
+                            var errorMsg = error.message || String(error);
+                            warn('[API safeAddRecipe] 物品无法匹配，使用占位符替代: ' + errorMsg);
+                            
+                            // 尝试从参数中获取数量
+                            var count = 1;
+                            var tag = null;
+                            var id = placeholderId;
+                            
+                            // 解析参数：可能是单个字符串或多个参数
+                            if (arguments.length === 1 && typeof arguments[0] === 'string') {
+                                // 格式如 "1x minecraft:diamond" 或 "minecraft:diamond"
+                                var str = arguments[0];
+                                var match = str.match(/^(\d+)x\s+(.+)$/);
+                                if (match) {
+                                    count = parseInt(match[1], 10);
+                                    id = match[2];
+                                } else {
+                                    id = str;
+                                }
+                            } else if (arguments.length >= 1) {
+                                // 格式如 Item.of(id, count, tag)
+                                id = arguments[0];
+                                if (arguments.length >= 2 && typeof arguments[1] === 'number') {
+                                    count = arguments[1];
+                                }
+                                if (arguments.length >= 3 && typeof arguments[2] === 'object') {
+                                    tag = arguments[2];
+                                }
+                            }
+                            
+                            // 始终使用占位符ID，但保留原始数量
+                            if (tag) {
+                                return originalItemOf(placeholderId, count, tag);
+                            } else {
+                                return originalItemOf(placeholderId, count);
+                            }
+                        }
+                    };
+                })();
+                
+                // 创建recipeObj对象，包含安全物品创建函数
+                var recipeObj = {
+                    safeItemOf: safeItemOf,
+                    type: type,
+                    id: id
+                };
+                
+                // 调用配方函数，传递recipeObj
+                recipeFunc(recipeObj);
                 recordRecipe(type, true, id);
                 return true;
             } catch(err) {
@@ -762,6 +830,57 @@ global.shanhaiAPI = {
         [],
         { logPerformance: true, requireOp: true }
     ),
+    
+    // 无限单元格创建函数
+    infinityCell: function(cellString, type) {
+        // 解析无限单元格格式，如 "expatternprovider:infinity_cell@gtceu:hydrogen"
+        if (!cellString || typeof cellString !== 'string') {
+            throw new Error('cellString 参数必须是字符串');
+        }
+        
+        // 检查是否为无限单元格格式
+        if (!cellString.includes('@')) {
+            throw new Error('无限单元格格式必须包含 @ 符号，如 "expatternprovider:infinity_cell@gtceu:hydrogen"');
+        }
+        
+        // 解析物品字符串
+        var parsed = parseItemStringCellAPI(cellString);
+        if (!parsed) {
+            throw new Error('无法解析无限单元格格式: ' + cellString);
+        }
+        
+        // 验证是否为无限单元格
+        if (!parsed.id.includes('infinity_cell')) {
+            warn('[shanhaiAPI.infinityCell] 警告: 物品ID不包含 "infinity_cell"，但格式包含 @ 符号: ' + cellString);
+        }
+        
+        // 确定类型（物品 'i' 或流体 'f'）
+        var itemType = type || 'i'; // 默认物品类型
+        
+        // 特殊处理：某些ID默认为流体类型
+        if (parsed.innerId === 'gtceu:stellar_energy_rocket_fuel' || 
+            parsed.innerId === 'gtceu:hydrogen' || 
+            parsed.innerId === 'gtceu:helium') {
+            itemType = 'f';
+        }
+        
+        // 如果用户明确指定了类型，使用用户指定的类型
+        if (type && (type === 'i' || type === 'f')) {
+            itemType = type;
+        }
+        
+        // 构建NBT标签
+        var nbt = {
+            record: {
+                "#c": "ae2:" + itemType,
+                "id": parsed.innerId
+            }
+        };
+        
+        // 返回Item对象
+        return Item.of(parsed.id, nbt);
+    },
+    
     // 清除本地默认值（供配方控制API调用）
     clearLocalDefault: function(recipeId) {
         // 这个函数会在 ServerEvents.recipes 内部被覆盖
@@ -769,6 +888,31 @@ global.shanhaiAPI = {
         return false;
     }
 };
+
+// 合并现有API（如果存在）
+if (global.shanhaiAPI && typeof global.shanhaiAPI === 'object') {
+    // 复制现有API的所有属性到新API对象
+    var mergedCount = 0;
+    var overriddenCount = 0;
+    for (var key in global.shanhaiAPI) {
+        if (global.shanhaiAPI.hasOwnProperty(key)) {
+            // 只有在新API中不存在该属性时才复制（避免覆盖）
+            if (!newShanhaiAPI.hasOwnProperty(key)) {
+                newShanhaiAPI[key] = global.shanhaiAPI[key];
+                mergedCount++;
+            } else {
+                // 属性已存在，新版本优先
+                overriddenCount++;
+            }
+        }
+    }
+    info('已合并现有山海API：合并 ' + mergedCount + ' 个属性，覆盖 ' + overriddenCount + ' 个属性');
+} else {
+    info('初始化新的山海API');
+}
+
+// 设置全局API
+global.shanhaiAPI = newShanhaiAPI;
 
 
 // =====================================================
@@ -2289,6 +2433,66 @@ ServerEvents.recipes(function(e) {
     // =============== safeAddRecipe (配方加载系统主控安全添加配方) ==========
     // =============== 配方加载系统主控集成 (v2.4新增) ==========
     // =====================================================
+    
+    // 安全物品创建包装器
+    function createSafeItemOfWrapper() {
+        var originalItemOf = Item.of;
+        var placeholderId = 'dishanhai:zwf';
+        
+        return function safeItemOf() {
+            try {
+                // 调用原始Item.of，根据参数数量调用
+                if (arguments.length === 0) {
+                    return originalItemOf();
+                } else if (arguments.length === 1) {
+                    return originalItemOf(arguments[0]);
+                } else if (arguments.length === 2) {
+                    return originalItemOf(arguments[0], arguments[1]);
+                } else {
+                    return originalItemOf(arguments[0], arguments[1], arguments[2]);
+                }
+            } catch (error) {
+                // 如果物品创建失败，使用占位符替代
+                var errorMsg = error.message || String(error);
+                warn('[safeAddRecipe] 物品无法匹配，使用占位符替代: ' + errorMsg);
+                
+                // 尝试从参数中获取数量
+                var count = 1;
+                var tag = null;
+                var id = placeholderId;
+                
+                // 解析参数：可能是单个字符串或多个参数
+                if (arguments.length === 1 && typeof arguments[0] === 'string') {
+                    // 格式如 "1x minecraft:diamond" 或 "minecraft:diamond"
+                    var str = arguments[0];
+                    var match = str.match(/^(\d+)x\s+(.+)$/);
+                    if (match) {
+                        count = parseInt(match[1], 10);
+                        id = match[2];
+                    } else {
+                        id = str;
+                    }
+                } else if (arguments.length >= 1) {
+                    // 格式如 Item.of(id, count, tag)
+                    id = arguments[0];
+                    if (arguments.length >= 2 && typeof arguments[1] === 'number') {
+                        count = arguments[1];
+                    }
+                    if (arguments.length >= 3 && typeof arguments[2] === 'object') {
+                        tag = arguments[2];
+                    }
+                }
+                
+                // 始终使用占位符ID，但保留原始数量
+                if (tag) {
+                    return originalItemOf(placeholderId, count, tag);
+                } else {
+                    return originalItemOf(placeholderId, count);
+                }
+            }
+        };
+    }
+    
     function safeAddRecipe(arg1,arg2,arg3,arg4){
         let type,id,recipeFunc,recipeObj;
 
@@ -2437,8 +2641,11 @@ ServerEvents.recipes(function(e) {
         // ---- 跳过 duration 检查 ----
         // 对于直接传入函数的情况，不检查 duration 和 EUt，由函数内部处理
         if (typeof arg3 === 'function') {
-            // 执行配方函数
+            // 执行配方函数（提供安全物品创建函数）
+            var safeItemOf = createSafeItemOfWrapper();
             try{
+                // 添加安全物品创建函数到recipeObj，供配方函数使用
+                recipeObj.safeItemOf = safeItemOf;
                 recipeFunc(recipeObj);
                 recordRecipe(type,true,id);
                 return true;
@@ -2488,7 +2695,10 @@ ServerEvents.recipes(function(e) {
         }
 
         // ---- 执行 ----
+        var safeItemOf = createSafeItemOfWrapper();
         try{
+            // 添加安全物品创建函数到recipeObj，供配方函数使用
+            recipeObj.safeItemOf = safeItemOf;
             recipeFunc(recipeObj);
             recordRecipe(type,true,id);
             return true;
@@ -2552,7 +2762,7 @@ const assrecipes = [
         duration: 20,
         // 添加一个特殊标记，让配方函数抛出错误
         triggerJsError: true
-    }*/,
+    }
     { 
         id: 'test_recipe_load_control',
         type: 'assembler', 
@@ -2564,7 +2774,7 @@ const assrecipes = [
         circuit: null,
         EUt: mv,
         duration: 100
-    }
+    }*/
 ];
 
 // 配方验证函数
@@ -2670,6 +2880,8 @@ const universalRecipes = [
     { id: 'assembler_dye_law_cleaning_gravity_configuration_maintenance_hatch',notConsumable:'32x dishanhai:wzcz1', type: 'assembler', itemInputs: ['gtceu:maintenance_hatch', 'minecraft:red_dye', 'minecraft:blue_dye'], itemOutputs: ['gtceu:law_cleaning_gravity_configuration_maintenance_hatch'], EUt: mv, duration: 20 },
     { id: 'all_exquisite_gems_output', type: 'laser_engraver', notConsumable: ['64x dishanhai:wzmk2', 'gtceu:glass_lens'],itemInputs: ['gtceu:silicon_dust'],circuit: 20,EUt: mv,duration: 20,dynamicOutputs: true},
     {id:'Dye_component_pack',type:'assembler',itemInputs: ['minecraft:dandelion'],dy_cell:true, EUt: ulv, duration: 20 },
+    // 测试占位符替换功能 - 使用不存在的物品ID，应被替换为'dishanhai:zwf'（已禁用，需要显式使用Item.safeOf）
+    {id:'test_placeholder',type:'assembler',itemInputs: ['nonexistent:invalid_item', '2x another:missing_item'], itemOutputs: ['3x invalid:output_item'], defaultEnabled: false, EUt: ulv, duration: 20 },
 ];
 
 var sanitize = function(v) {
@@ -3971,6 +4183,7 @@ var ItemNBTConfig = {
    
     Celestial_Rift_Engine:',"tag":{BlockEntityTag:{astralArrayInventory:{Items:[{Count:127b,Slot:0,id:"gtladditions:astral_array"}],Size:1}}}',
     
+    macro:',"tag":{BlockEntityTag: {parallelAmount: 9223372036854775807L,astralArrayCount: 382,drLimit: 10}}',
     // ========== Mekanism 套装配置 ==========
     mekanism: {
         helmet: ',tag:{mekData:{EnergyContainers:[{Container:0b,stored:"4096000000"}],FluidTanks:[{Tank:0b,stored:{Amount:128000,FluidName:"mekanism:nutritional_paste"}}],ProtectionPoints:153600.00610351562d,ShieldEntropy:0.0d,modules:{"mekanism:electrolytic_breathing_unit":{amount:4,enabled:1b,fill_held:1b},"mekanism:energy_unit":{amount:8,enabled:1b},"mekanism:inhalation_purification_unit":{amount:1,beneficial_effects:0b,enabled:1b,harmful_effects:1b,neutral_effects:1b},"mekanism:nutritional_injection_unit":{},"mekanismgenerators:solar_recharging_unit":{amount:8,enabled:1b},"moremekasuitmodules:advanced_interception_system_unit":{},"moremekasuitmodules:automatic_attack_unit":{amount:4,attack_hostile:1b,attack_neutral:0b,attack_other:0b,attack_player:0b,enabled:1b,range:4},"moremekasuitmodules:energy_shield_unit":{amount:10,enable_shield:1b,enabled:1b},"moremekasuitmodules:hp_boots_unit":{amount:64,enabled:1b},"moremekasuitmodules:infinite_energy_supply_unit":{},"moremekasuitmodules:infinite_interception_and_rescue_system_unit":{amount:1,chunkRemove:1b,damagesource:0b,damagesourceIndirect:0b,enabled:1b},"moremekasuitmodules:insulated_unit":{},"moremekasuitmodules:power_enhancement_unit":{amount:64,enabled:1b}}}}',
@@ -4025,6 +4238,9 @@ var ItemNBTConfig = {
         }
         if (itemId === 'gtladditions:thread_modifier_hatch') {
             return this.Celestial_Rift_Engine;
+        }
+        if (itemId === 'gtladditions:macro_atomic_resonant_fragment_stripper') {
+            return this.macro;
         }
         // Mekanism套装 - 简化版
         if (Platform.isLoaded('mekanism')) {
@@ -5050,7 +5266,8 @@ try {
       'dishanhai:piggy','gtladditions:forge_of_the_antichrist','397x gtladditions:central_graviton_flow_regulator','357x gtladditions:mediary_graviton_flow_regulator','345x gtladditions:remote_graviton_flow_regulator','11008x gtladditions:suprachronal_magnetic_confinement_casing','6566x gtladditions:god_forge_trim_casing','162x gtladditions:god_forge_support_casing','824x gtladditions:god_forge_inner_casing','155x gtladditions:spatially_transcendent_gravitational_lens','1x expatternprovider:infinity_cell@gtceu:hydrogen','1x expatternprovider:infinity_cell@gtceu:helium',
       '2x gtladditions:arcanic_astrograph','1068x gtlcore:dimension_injection_casing','1792x gtlcore:create_casing','66x gtceu:high_power_casing','336x kubejs:dimension_creation_casing','96x kubejs:dimensional_stability_casing','276x kubejs:spacetime_compression_field_generator'/*伪神模块*/,'100x gtladditions:phonon_conduit','420x gtladditions:suprachronal_magnetic_confinement_casing','720x gtladditions:god_forge_trim_casing','500x gtladditions:god_forge_support_casing','56x gtladditions:god_forge_energy_casing','1x gtladditions:heliophase_leyline_crystallizer','3x gtladditions:heliothermal_plasma_fabricator','10x gtladditions:heliofusion_exoticizer','2x gtladditions:heliofluix_melting_core','4x gtladditions:helioflare_power_forge',
       '1x gtladditions:apocalyptic_torsion_quantum_matrix','864x gtladditions:quantum_glass','11520x gtlcore:qft_coil','216x gtlcore:spacetimecontinuumripper','10927x gtlcore:dimensionally_transcendent_casing','6285x gtlcore:manipulator','841x kubejs:dimensional_bridge_casing'
-      ,'4x gtladditions:thread_modifier_hatch'
+      ,'4x gtladditions:thread_modifier_hatch','1x gtladditions:macro_atomic_resonant_fragment_stripper','4230x gtlcore:qft_coil','1718x gtlcore:sps_casing','5507x gtlcore:hyper_mechanical_casing','937x gtlcore:echo_casing','218x gtlcore:fusion_casing_mk5','360x gtceu:quantumchromodynamically_confined_matter_frame','786x gtceu:neutronium_frame','627x gtceu:high_power_casing','1086x gtceu:fusion_glass','344x kubejs:eternity_coil_block','156x kubejs:dyson_receiver_casing','666x kubejs:dyson_control_toroid','66x kubejs:dyson_control_casing','8x kubejs:dimensional_stability_casing','162x kubejs:dimensional_bridge_casing','24x kubejs:annihilate_core'
+
     ];
     global.templateItemList_2 = templateItemList_2;
     let templateItemCount = templateItemList_2.length;

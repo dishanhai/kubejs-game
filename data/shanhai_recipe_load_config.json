@@ -58,7 +58,7 @@
 	"assembler_dense_neutron_plasma_cell": true,
 	"creator_God_home": false,
 	"czmk": true,
-	"wzcz1": false,
+	"wzcz1": true,
 	"wzcz2": true,
 	"wzcz3": true,
 	"uv_to_universal": true,
@@ -111,5 +111,6 @@
 	"capacity_card": true,
 	"super_energy_card": true,
 	"super_speed_card": true,
-	"overclock_card": true
+	"overclock_card": true,
+	"test_placeholder": false
 }
