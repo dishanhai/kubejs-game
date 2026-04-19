@@ -633,7 +633,7 @@ ItemEvents.tooltip(function(event) {
 
 // ========== 256k物品包自定义JEI描述 ==========
 
-// 注册通用256k物品包描述
+/* 注册通用256k物品包描述 - 已禁用，因为JEIEvents.addDescription在某些KubeJS版本中不可用
 // 检查JEIEvents.addDescription是否可用（某些KubeJS版本可能不支持）
 if (typeof JEIEvents !== 'undefined' && typeof JEIEvents.addDescription === 'function') {
     JEIEvents.addDescription(function(event) {
@@ -660,6 +660,7 @@ if (typeof JEIEvents !== 'undefined' && typeof JEIEvents.addDescription === 'fun
     // 可选：尝试其他方法添加描述
     // 例如通过工具提示或其他JEI事件
 }
+*/
 
 // ========== 隐藏无效物品包 ==========
 

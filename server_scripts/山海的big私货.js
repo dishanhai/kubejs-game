@@ -2375,38 +2375,46 @@ ServerEvents.recipes(function(e) {
         debug('  recipeLoadConfig 中该配方的值 = ' + (global.shanhaiRecipeLoadConfig ? global.shanhaiRecipeLoadConfig[id] : 'N/A'));
         var recipeEnabled = true; // 默认启用
         
-        // ---- 优先检查 recipeObj.defaultEnabled (最高优先级) ----
-        if (recipeObj && typeof recipeObj.defaultEnabled === 'boolean') {
-            recipeEnabled = recipeObj.defaultEnabled;
-            debug('  配方默认值: 使用 defaultEnabled = ' + recipeEnabled + ' (true=启用, false=禁用)');
+        // ---- 修改后的优先级：配置文件 > defaultEnabled > 本地默认值 ----
+        // 首先检查配方控制API（配置文件）
+        if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && 
+            typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
+            recipeEnabled = global.shanhaiRecipeControlAPI.isRecipeEnabled(id);
+            debug('  配方控制API检查结果: ' + recipeEnabled + ' (配置文件优先)');
         }
-        // ---- 如果没有 defaultEnabled，检查本地默认值系统 (v2.33新增) ----
-        else {
-            // 首先检查本地默认值，如果设置则使用设置值
+        // 尝试从山海私货API检查（向后兼容）
+        else if (typeof global.shanhaiRecipeAPI !== 'undefined' && 
+                 typeof global.shanhaiRecipeAPI.isRecipeEnabled === 'function') {
+            debug('  山海私货API可用，正在检查...');
+            recipeEnabled = global.shanhaiRecipeAPI.isRecipeEnabled(id);
+            debug('  山海私货API检查结果: ' + recipeEnabled + ' (配置文件优先)');
+        }
+        
+        // 检查配置文件是否明确设置了该配方
+        var hasConfigInFile = false;
+        if (global.shanhaiRecipeLoadConfig) {
+            // 检查两种可能的ID格式：原ID和带命名空间的ID
+            hasConfigInFile = global.shanhaiRecipeLoadConfig.hasOwnProperty(id) ||
+                              global.shanhaiRecipeLoadConfig.hasOwnProperty('dishanhai:' + id);
+        }
+        
+        // 只有当配置文件中没有明确设置该配方时，才考虑使用 defaultEnabled
+        // 并且只有在当前结果为默认启用(true)时才覆盖
+        if (!hasConfigInFile && recipeEnabled === true && recipeObj && typeof recipeObj.defaultEnabled === 'boolean') {
+            recipeEnabled = recipeObj.defaultEnabled;
+            debug('  使用 defaultEnabled (配置文件未设置且当前为默认启用): ' + recipeEnabled);
+        }
+        // 如果配置文件没有设置且没有 defaultEnabled，检查本地默认值系统 (v2.33新增)
+        // 同样，只有在当前结果为默认启用时才覆盖
+        else if (!hasConfigInFile && recipeEnabled === true) {
             var localDefault = getLocalRecipeDefault(id);
             if (localDefault !== null) {
                 recipeEnabled = localDefault;
-                debug('  本地默认值系统: 使用设置值 ' + recipeEnabled + ' (true=启用, false=禁用)');
-            }
-            // 如果没有本地默认值，则尝试从配方控制API检查
-            else if (typeof global.shanhaiRecipeControlAPI !== 'undefined' && 
-                    typeof global.shanhaiRecipeControlAPI.isRecipeEnabled === 'function') {
-                debug('  配方控制API可用，正在检查...');
-                recipeEnabled = global.shanhaiRecipeControlAPI.isRecipeEnabled(id);
-                debug('  配方控制API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
-            }
-            // 尝试从山海私货API检查（向后兼容）
-            else if (typeof global.shanhaiRecipeAPI !== 'undefined' && 
-                     typeof global.shanhaiRecipeAPI.isRecipeEnabled === 'function') {
-                debug('  山海私货API可用，正在检查...');
-                recipeEnabled = global.shanhaiRecipeAPI.isRecipeEnabled(id);
-                debug('  山海私货API检查结果: ' + recipeEnabled + ' (true=启用, false=禁用)');
-            }
-            // 如果都没有，使用默认值（启用所有配方）
-            else {
-                debug('  警告: 未找到可用的配方控制API，将默认启用所有配方');
+                debug('  使用本地默认值: ' + recipeEnabled);
             }
         }
+        
+        // 如果都没有设置，保持默认值（启用所有配方）
         
         if (!recipeEnabled) {
             info('⏭️ 配方加载已禁用，跳过: ' + id + ' (' + type + ')');
@@ -4762,11 +4770,45 @@ info('[256k Cell API] 热重载次数: ' + global.__kubejs_cell_api_reload_count
 var packed_cell_nbt2 = function(list, displayName, lore) {
     if (displayName === undefined) displayName = null;
     if (lore === undefined) lore = null;
-    var parsed = list.map(function(entry) {
+    // ========== 新增：物品合并逻辑 ==========
+    var itemMap = new Map();
+    
+    for (var i = 0; i < list.length; i++) {
+        var entry = list[i];
         var match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
         if (!match) throw new Error("Invalid format: " + entry);
-        return [match[1], match[2], match[3]]; // [amount, id, innerId]
+        
+        var amount = parseInt(match[1], 10);
+        var id = match[2];
+        var innerId = match[3] || null;
+        
+        var key = id + (innerId ? '@' + innerId : '');
+        
+        if (itemMap.has(key)) {
+            var existing = itemMap.get(key);
+            existing.amount += amount;
+            if (typeof debug === 'function') {
+                debug('[packed_cell_nbt2] 合并物品: ' + key + ' (' + (existing.amount - amount) + ' + ' + amount + ' = ' + existing.amount + ')');
+            }
+        } else {
+            itemMap.set(key, {
+                amount: amount,
+                id: id,
+                innerId: innerId
+            });
+        }
+    }
+    
+    // 转换回数组格式
+    var parsed = [];
+    itemMap.forEach(function(value, key) {
+        parsed.push([String(value.amount), value.id, value.innerId]);
     });
+    
+    if (typeof info === 'function') {
+        info('[packed_cell_nbt2] 物品合并完成: ' + list.length + ' -> ' + parsed.length + ' 种物品');
+    }
+    // ========== 合并逻辑结束 ==========
 
     var keysNBT = parsed.map(function(item) {
         var amt = item[0];
@@ -4828,7 +4870,7 @@ var packed_cell_nbt2 = function(list, displayName, lore) {
            '        RepairCost:0,\n' +
            (displayTag ? '        ' + displayTag + '\n' : '') +
            '        amts:[L;' + amtsNBT + '],\n' +
-           '        ic:' + list.length + 'L,\n' +
+           '        ic:' + parsed.length + 'L,\n' +
            '        internalCurrentPower:2000000.0d,\n' +
            '        keys:[' + keysNBT + ']\n' +
            '    }';
@@ -5653,10 +5695,11 @@ ServerEvents.loaded(event => {
     // 1. 初始化保护（延迟执行，确保其他脚本已加载）
     event.server.scheduleInTicks(20, function() { initializeProtection(event); });
     
-    // ========== 配置持久化修复 ==========
+    // ========== 配置持久化修复（已禁用） ==========
     (function() {
+        return; // 禁用配置持久化修复
 
-        
+
         function collectRecipeDefaultsFromCollector() {
             var recipeDefaults = {};
             var collector = global.shanhaiRecipeCollector || global.shanhaiRecipeInfoCollector;
@@ -5673,12 +5716,12 @@ ServerEvents.loaded(event => {
             for (var key in collector) {
                 if (collector.hasOwnProperty(key) && key !== '_statistics') {
                     var info = collector[key];
-                    var defaultValue = true;
+                    // ⚠️ 修改：不要设置默认值，只记录已明确设置的
                     if (info && typeof info.defaultEnabled !== 'undefined') {
-                        defaultValue = info.defaultEnabled === true;
+                        recipeDefaults[key] = info.defaultEnabled === true;
+                        count++;
                     }
-                    recipeDefaults[key] = defaultValue;
-                    count++;
+                    // 如果没有明确设置 defaultEnabled，不添加到默认值列表
                 }
             }
             
