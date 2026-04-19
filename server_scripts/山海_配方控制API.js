@@ -55,6 +55,7 @@ var LOG_LEVEL = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 var currentLogLevel = LOG_LEVEL.INFO;
 var isConfigInitialized = false;
 var DEFAULT_CONFIG_PATH = 'kubejs/data/shanhai_recipe_defaults.json';
+var DISABLE_AUTO_MERGE_DEFAULTS = true; // 禁用自动合并默认值，防止配置覆盖
 var defaultConfig;
 
 function getTimestamp() {
@@ -518,30 +519,11 @@ function initRecipeLoadConfig(forceReload) {
         return;
     }
     
-    // ========== 新增：强制创建默认配置 ==========
-    if (!recipeLoadConfig || Object.keys(recipeLoadConfig).length === 0) {
-        recipeLoadConfig = {
-            "overclock_card": true,
-            "2x": true,
-            "8x": true,
-            "64x": true,
-            "1024x": true,
-            "max_x": true,
-            "capacity_card": true,
-            "super_energy_card": true,
-            "super_speed_card": true,
-            "cztj": false,
-            "creator_God_home": false
-        };
-        debug('✅ 强制创建默认配置，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-        isConfigInitialized = true;
-        
-        // 同步到全局
-        if (typeof global !== 'undefined') {
-            global.shanhaiRecipeLoadConfig = recipeLoadConfig;
-        }
-        return;
-    }
+    // 移除强制创建默认配置的早期返回逻辑
+    // 现在让函数继续执行文件加载逻辑，只在所有加载失败时才使用默认配置
+    
+    debug('开始初始化配方加载配置...');
+    debug('当前recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
     
     debug('开始初始化配方加载配置...');
     debug('当前recipeLoadConfig类型: ' + typeof recipeLoadConfig + ', 键数量: ' + (recipeLoadConfig && typeof recipeLoadConfig === 'object' ? Object.keys(recipeLoadConfig).length : 'N/A'));
@@ -693,27 +675,16 @@ function initRecipeLoadConfig(forceReload) {
             }
         }
         
-        // ========== 修复：如果文件配置为空，使用默认配置 ==========
+        // ========== 修复：如果文件配置为空，使用空配置（绝不从默认值文件覆盖）==========
         if (!loaded || (recipeLoadConfig && typeof recipeLoadConfig === 'object' && Object.keys(recipeLoadConfig).length === 0)) {
-            if (defaultConfig && typeof defaultConfig === 'object' && Object.keys(defaultConfig).length > 0) {
-                recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
-                loaded = true;
-                debug('✅ 使用默认配置初始化，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
-                
-                // 立即保存默认配置到文件
-                try {
-                    if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
-                        JsonIO.write(possiblePaths[0], recipeLoadConfig);
-                        debug('默认配置已保存到文件');
-                    }
-                } catch (saveErr) {
-                    debug('保存默认配置失败: ' + saveErr.message);
-                }
-            } else {
-                // 如果没有默认配置，才初始化为空
-                recipeLoadConfig = {};
-                debug('配方加载配置已初始化（空配置）');
-            }
+            // 重要：永远不要用默认配置覆盖用户的配置
+            // 即使用户的配置文件是空的，也不应该被默认值覆盖
+            recipeLoadConfig = {};
+            loaded = true;
+            debug('配方加载配置已初始化（空配置），不会从默认值文件覆盖');
+            
+            // 注意：不自动保存空配置，保持原文件不变
+            // 如果用户想要默认配置，可以使用 /配方扫描注册 命令手动添加
         }
         // ========== 修复结束 ==========
         
@@ -794,8 +765,22 @@ function initRecipeLoadConfig(forceReload) {
                         recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
                         debug('✅ 从默认配置恢复，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
                     } else {
-                        debug('无法从备份文件恢复，初始化为空配置');
-                        recipeLoadConfig = {};
+                        debug('尝试使用硬编码默认配置作为最后的后备选项');
+                        // 硬编码默认配置（11个关键配方开关）
+                        recipeLoadConfig = {
+                            "overclock_card": true,
+                            "2x": true,
+                            "8x": true,
+                            "64x": true,
+                            "1024x": true,
+                            "max_x": true,
+                            "capacity_card": true,
+                            "super_energy_card": true,
+                            "super_speed_card": true,
+                            "cztj": false,
+                            "creator_God_home": true  // 注意：用户配置中为true，硬编码中为false
+                        };
+                        debug('✅ 已加载硬编码默认配置，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
                     }
                 }
             }
@@ -849,7 +834,8 @@ function initRecipeLoadConfig(forceReload) {
                 
                 // 合并默认值到现有配置（不覆盖现有值）
                 var mergedCount = 0;
-                if (!skipDefaultMerge) {
+                // 检查是否禁用自动合并默认值
+                if (!DISABLE_AUTO_MERGE_DEFAULTS && !skipDefaultMerge) {
                     for (var key in defaultConfig) {
                         if (defaultConfig.hasOwnProperty(key)) {
                             var value = defaultConfig[key];
@@ -863,6 +849,8 @@ function initRecipeLoadConfig(forceReload) {
                             }
                         }
                     }
+                } else if (DISABLE_AUTO_MERGE_DEFAULTS) {
+                    debug('自动合并默认值已禁用，跳过合并');
                 }
                 
                 if (mergedCount > 0) {
@@ -1014,8 +1002,22 @@ function initRecipeLoadConfig(forceReload) {
                     recipeLoadConfig = JSON.parse(JSON.stringify(defaultConfig));
                     warn('✅ 从默认配置恢复，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
                 } else {
-                    warn('无法恢复配置，初始化为空配置');
-                    recipeLoadConfig = {};
+                    warn('尝试使用硬编码默认配置作为最后的后备选项');
+                    // 硬编码默认配置（11个关键配方开关）
+                    recipeLoadConfig = {
+                        "overclock_card": true,
+                        "2x": true,
+                        "8x": true,
+                        "64x": true,
+                        "1024x": true,
+                        "max_x": true,
+                        "capacity_card": true,
+                        "super_energy_card": true,
+                        "super_speed_card": true,
+                        "cztj": false,
+                        "creator_God_home": true  // 注意：用户配置中为true，硬编码中为false
+                    };
+                    warn('✅ 已加载硬编码默认配置，共 ' + Object.keys(recipeLoadConfig).length + ' 个条目');
                 }
             } else {
                 warn('无法从备份恢复，但当前已有 ' + currentKeys + ' 个配置，保留当前配置');
@@ -1095,24 +1097,60 @@ function saveRecipeLoadConfig() {
         var configCount = Object.keys(cleanConfig).length;
         debug('准备保存 ' + configCount + ' 个配置条目');
         
-        // ========== 强制使用内存模式，不写入文件 ==========
-        // 只保存到全局变量，不写文件
+        // ========== 修复：强制写入文件 ==========
+        var fileSaved = false;
+        var errorMsg = null;
+        
+        // 1. 保存到全局变量
         if (typeof global !== 'undefined') {
             global.shanhaiRecipeLoadConfig = cleanConfig;
-            debug('配置已保存到 global.shanhaiRecipeLoadConfig（内存模式）');
+            debug('配置已保存到 global.shanhaiRecipeLoadConfig');
         }
         
-        // 尝试保存到文件（可选，不强制）
+        // 2. 强制保存到文件
+        var CONFIG_FILE = 'kubejs/data/shanhai_recipe_load_config.json';
+        
         try {
             if (typeof JsonIO !== 'undefined' && typeof JsonIO.write === 'function') {
-                JsonIO.write('kubejs/data/shanhai_recipe_load_config.json', cleanConfig);
-                debug('配置已同步到文件');
+                JsonIO.write(CONFIG_FILE, cleanConfig);
+                fileSaved = true;
+                info('✅ 配置已写入文件: ' + CONFIG_FILE + ' (' + configCount + ' 个条目)');
+            } else {
+                errorMsg = 'JsonIO API 不可用';
             }
         } catch (fileErr) {
-            debug('文件保存失败（已忽略）: ' + fileErr.message);
+            errorMsg = fileErr.message;
+            error('文件保存失败: ' + errorMsg);
         }
         
-        info('配方配置已保存（内存模式），共 ' + configCount + ' 个条目');
+        // 3. 尝试备用方法：使用 Java 文件操作
+        if (!fileSaved) {
+            try {
+                var File = Java.loadClass('java.io.File');
+                var FileWriter = Java.loadClass('java.io.FileWriter');
+                
+                var file = new File(CONFIG_FILE);
+                if (!file.getParentFile().exists()) {
+                    file.getParentFile().mkdirs();
+                }
+                
+                var writer = new FileWriter(file);
+                writer.write(JSON.stringify(cleanConfig, null, 2));
+                writer.close();
+                
+                fileSaved = true;
+                info('✅ 配置已通过 Java 文件操作写入文件: ' + CONFIG_FILE);
+            } catch (javaErr) {
+                error('Java 文件操作也失败: ' + javaErr.message);
+            }
+        }
+        
+        if (!fileSaved) {
+            error('❌ 配置文件写入失败！错误: ' + errorMsg);
+            error('   配置已保存到内存，但重启服务器后会丢失');
+            return false;
+        }
+        
         return true;
         
     } catch (err) {

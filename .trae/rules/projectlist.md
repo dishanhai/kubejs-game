@@ -14,7 +14,7 @@ kubejs-forge-2001.6.5-build.14 forge 1.20.1
 山海的物品注册.js
 山海的无限盘注册.js
 C:\Users\dishanhai\Desktop\山海的神人私货2.2fix1路径下
-山海的代码库.js
+山海的代码库.js(代称:代码库,不是git仓库,仅用于存储代码与模板)
 山海的api测试脚本.js
 山海_API测试脚本.js
 日志.md

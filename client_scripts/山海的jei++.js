@@ -2,14 +2,14 @@
 // 超级AE包全局变量
 var superAEPackItemCount = 0; // 与服务器端同步
 
-ItemEvents.tooltip(tooltip => {
+ItemEvents.tooltip(function(tooltip) {
     tooltip.add('dishanhai:cosmic_probe_mk', '获取液体无需算力');
     tooltip.add('gtceu:nan_certificate','大猪咪的证明!')
     tooltip.add('kubejs:suprachronal_mainframe_complex','§2物质创造模块让主机更便宜')
 })
 
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:create_mk', function(item, _, text) {
     if (e.shift) {
         text.add(`§4寂灭纪元§r的钟声，岂是旧神§a所能阻挡？
 §2终末重启§7的浪潮§9已至。§5超限拓扑学已验证。
@@ -39,8 +39,8 @@ e.addAdvanced('dishanhai:create_mk', (item, _, text) => {
 });
 })
     
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:csj', function(item, advanced, text) {
     if (e.shift) {
         text.add(`§8§o「对冲宇宙·创世纪」\n§7在对冲的伊始，即使已经投入了全部的超重元素，方舟依然无法战胜占有反宇宙的理事会。
             §c他们在“桥”的另一端，正不断地阻挠着对冲宇宙计划。
@@ -66,8 +66,8 @@ e.addAdvanced('dishanhai:csj', (item, advanced, text) => {
 
 
 
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:wzmk2', (item, advanced, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:wzmk2', function(item, advanced, text) {
     if (e.shift) {
         text.add(`§b理论物质档案 · 奇异夸克团
 §7编号：§f■X-021■§b第三协议·物质转化部§7
@@ -116,8 +116,8 @@ e.addAdvanced('dishanhai:wzmk2', (item, advanced, text) => {
 });
 })
 
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:big_tear', (item, advanced, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:big_tear', function(item, advanced, text) {
     if (e.shift) {
         text.add(`§b蓝星文明技术资料存档
 §7编号：§f■■■§b蓝星乌托邦§7
@@ -165,8 +165,8 @@ e.addAdvanced('dishanhai:big_tear', (item, advanced, text) => {
 });
 })
 
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:time_reversal_protocol', (item, advanced, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:time_reversal_protocol', function(item, advanced, text) {
     if (e.shift) {
         text.add(`蓝星文明技术资料存挡
 编号：甲■
@@ -211,9 +211,9 @@ e.addAdvanced('dishanhai:time_reversal_protocol', (item, advanced, text) => {
 });
 })
 
-ItemEvents.tooltip(e=>{
+ItemEvents.tooltip(function(e) {
 // 暗能量·零点能融合核心 - 模式三/四协议联动
-e.addAdvanced('dishanhai:wzcz3', (item, advanced, text) => {
+e.addAdvanced('dishanhai:wzcz3', function(item, advanced, text) {
     if (e.shift) {
         text.add(`§b方舟能源协议 · 超越核心
 §7编号：§f■EN-03-04■§b方舟总能源部§7
@@ -262,8 +262,8 @@ e.addAdvanced('dishanhai:wzcz3', (item, advanced, text) => {
     }
 })
 })
-ItemEvents.tooltip(e=>{
-e.addAdvanced('dishanhai:god_forge_mod', (item, advanced, text) => {
+ItemEvents.tooltip(function(e) {
+e.addAdvanced('dishanhai:god_forge_mod', function(item, advanced, text) {
     if (e.shift) {
         text.add('§1星§2辰§3的§4死§5亡§6，§7是§8宇§9宙§a最§c壮§f丽§的熔炉');
         text.add('§3当引力坍缩至极限，物质与时空一同碎裂，唯有物质幸存');
@@ -276,8 +276,8 @@ e.addAdvanced('dishanhai:god_forge_mod', (item, advanced, text) => {
     }
 });})
 
-JEIEvents.hideItems(e => {
-    const tags = [
+JEIEvents.hideItems(function(e) {
+    var tags = [
         'forge:ingots',
         'forge:storage_blocks',
         'forge:dusts',
@@ -290,46 +290,46 @@ JEIEvents.hideItems(e => {
         'forge:ores'
     ]
 
-    const regex = /^(alltheores|mekanism|allthemod):/
+    var regex = /^(alltheores|mekanism|allthemod):/
 
-    const idsToHide = new Set()
+    var idsToHide = new Set()
 
-    tags.forEach(tag => {
-        Ingredient.of('#' + tag).getItemIds().forEach(id => {
+    tags.forEach(function(tag) {
+        Ingredient.of('#' + tag).getItemIds().forEach(function(id) {
             if (regex.test(id)) {
                 idsToHide.add(id)
             }
         })
     })
 
-    idsToHide.forEach(id => e.hide(id))
+    idsToHide.forEach(function(id) { e.hide(id); })
 })
 
 //单独删除 模组额外物品 无统一标签 不删了 头疼
-JEIEvents.hideItems(e =>{
+JEIEvents.hideItems(function(e) {
     e.hide(['alltheores:lead_clump','alltheores:aluminum_clump','alltheores:copper_clump','alltheores:nickel_clump','alltheores:osmium_clump','alltheores:platinum_clump','alltheores:silver_clump','alltheores:tin_clump','alltheores:uranium_clump','alltheores:zinc_clump','alltheores:iridium_clump'])
 })
 
 // ========== 无限染料元件包pro JEI 注册 ==========
 
 // 生成256k便携物品细胞，支持Lore显示（按照DiskSavior模式）
-const shanhai_packed_infinity_cell_256k = (cellname, type, list, lore) => {
-    const list_length = list.length;
+var shanhai_packed_infinity_cell_256k = function(cellname, type, list, lore) {
+    var list_length = list.length;
     
     // 生成 amounts 数组 [1L, 1L, ...]
-    let amtsNBT = "1L,".repeat(list_length - 1) + '1L';
+    var amtsNBT = "1L,".repeat(list_length - 1) + '1L';
     
     // 生成 keys 数组
-    let keysNBT = list.map(id => {
+    var keysNBT = list.map(function(id) {
         return '{"#c":"ae2:i",id:"expatternprovider:infinity_cell",tag:{record:{"#c":"ae2:' + type + '",id:"' + id + '"}}}';
     }).join(",");
     
     // 生成 display 标签
-    let displayTag = '';
+    var displayTag = '';
     if (cellname) {
-        let loreJson = '';
+        var loreJson = '';
         if (lore && Array.isArray(lore) && lore.length > 0) {
-            let loreArray = lore.map(line => '\'{"text":"' + line + '"}\'').join(',');
+            var loreArray = lore.map(function(line) { return '\'{"text":"' + line + '"}\''; }).join(',');
             loreJson = ',Lore:[' + loreArray + ']';
         }
         displayTag = 'display:{Name:\'{"text":"' + cellname + '"}\'' + loreJson + '},';
@@ -340,7 +340,7 @@ const shanhai_packed_infinity_cell_256k = (cellname, type, list, lore) => {
 }
 
 // 注册无限染料元件包pro到JEI
-JEIEvents.addItems(event => {
+JEIEvents.addItems(function(event) {
     console.log('山海私货-正在向 JEI 注册无限染料元件包pro...')
     
     // 动态获取染料物品列表（使用 #forge:dyes 标签）
@@ -364,7 +364,7 @@ JEIEvents.addItems(event => {
 // ========== 超级AE包 JEI 注册 ==========
 
 // 超级AE包物品列表（与服务器端配方保持一致）
-const superAEPackItems = [
+var superAEPackItems = [
     '1x constructionwand:infinity_wand','16777216x expatternprovider:ex_pattern_provider','1x gtceu:echoite_vajra','4x expatternprovider:ex_pattern_access_part','16777216x expatternprovider:ex_import_bus_part','16777216x expatternprovider:ex_export_bus_part','10x ironfurnaces:unobtainium_furnace','16x expatternprovider:ex_drive','1x mekanism:mekasuit_helmet','1x mekanism:mekasuit_bodyarmor','1x mekanism:mekasuit_pants','1x mekanism:mekasuit_boots','3x ae2:quantum_entangled_singularity','1x gtmadvancedhatch:net_data_stick','1x ae2:portable_item_cell_1k','1x gtmadvancedhatch:adaptive_net_energy_terminal','16777216x gtmadvancedhatch:adaptive_net_laser_source_hatch','16777216x gtmadvancedhatch:adaptive_net_energy_output_hatch','1x ae2wtlib:wireless_universal_terminal','16777216x expatternprovider:wireless_connect','4x ae2:pattern_encoding_terminal','16777216x gtceu:me_input_hatch','16777216x ae2:capacity_card','1x ae2:wireless_access_point','4x minecraft:flint_and_steel','1x sov:spear_of_void','100x avaritia:star_fuel','1x ironfurnaces:augment_generator','16777216x ae2:fuzzy_card','16777216x minecraft:orange_dye',
     '16777216x minecraft:light_gray_dye','16777216x minecraft:light_blue_dye','16777216x ae2:void_card','16777216x minecraft:gray_dye','16777216x ae2:basic_card','16777216x ae2:equal_distribution_card','16777216x minecraft:magenta_dye','16777216x ae2:crafting_card','16777216x ae2:inverter_card','16777216x ae2:speed_card','32x ae2:creative_energy_cell','16777216x ae2:quantum_link','16777216x ae2:quantum_ring','16777216x gtceu:me_input_bus','16777216x expatternprovider:assembler_matrix_glass','16777216x ae2:crafting_terminal','16777216x expatternprovider:ex_interface','16777216x ae2:fluix_smart_cable','16777216x ae2:fluix_glass_cable','16777216x ae2:fluix_covered_dense_cable','16777216x ae2:fluix_smart_dense_cable','16777216x ae2:blank_pattern','16777216x minecraft:pink_dye','16777216x minecraft:purple_dye','16777216x minecraft:red_dye','16777216x ae2:cable_anchor','16777216x ae2:redstone_card','16777216x ae2:logic_processor','16777216x ae2:calculation_processor','16777216x ae2:engineering_processor',
     '16777216x minecraft:black_dye','16777216x minecraft:yellow_dye','16777216x minecraft:green_dye','16777216x minecraft:blue_dye','16777216x minecraft:lime_dye','16777216x ae2:advanced_card','16777216x minecraft:cyan_dye','16777216x minecraft:white_dye','16777216x ae2:quartz_fiber','16777216x expatternprovider:ex_io_port','16777216x ae2:level_emitter','16777216x ae2:toggle_bus','16777216x gtladditions:infinity_input_dual_hatch','16777216x gtladditions:me_super_pattern_buffer','16777216x gtladditions:me_super_pattern_buffer_proxy','16777216x gtceu:uv_dual_output_hatch','16777216x gtceu:uv_dual_input_hatch','16777216x gtceu:me_extended_export_buffer','16777216x gtceu:me_extended_async_export_buffer','16777216x gtceu:tag_filter_me_stock_bus_part_machine','16777216x gtceu:me_dual_hatch_stock_part_machine','16777216x extendedae_plus:assembler_matrix_upload_core','1024x extendedae_plus:1024x_crafting_accelerator','16777216x extendedae_plus:labeled_wireless_transceiver','16777216x merequester:requester','16777216x extendedae_plus:wireless_transceiver','16777216x extendedae_plus:channel_card',
@@ -373,18 +373,18 @@ const superAEPackItems = [
 ];
 
 // 超级AE包NBT生成函数（简化版，基于packed_cell_nbt2逻辑）
-const superAEPackNBT = (displayName, lore) => {
+var superAEPackNBT = function(displayName, lore) {
     if (displayName === undefined) displayName = null;
     if (lore === undefined) lore = null;
-    let parsed = superAEPackItems.map(entry => {
-        let match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
+    var parsed = superAEPackItems.map(function(entry) {
+        var match = entry.match(/^(\d+)\s*x\s*([^@]+)(?:@(.+))?$/);
         if (!match) throw new Error("Invalid format: " + entry);
         return [match[1], match[2], match[3]]; // [amount, id, innerId]
     });
 
-    let keysNBT = parsed.map((item) => {
-        let [amt, id, innerId] = item;
-        let tagPart = '';
+    var keysNBT = parsed.map(function(item) {
+        var [amt, id, innerId] = item;
+        var tagPart = '';
         
         // 无限单元格特殊处理：如果指定了内部物品ID，则添加record标签
         if (id === 'expatternprovider:infinity_cell' && innerId) {
@@ -424,17 +424,17 @@ const superAEPackNBT = (displayName, lore) => {
         return '{ "#c":"ae2:i",id:"' + id + '"' + tagPart + ' }';
     }).join(',');
 
-    let amtsNBT = parsed.map((item) => {
-        let [amt] = item;
+    var amtsNBT = parsed.map(function(item) {
+        var [amt] = item;
         return amt + 'L';
     }).join(',');
 
-    let displayTag = '';
+    var displayTag = '';
     if (displayName) {
-        let lorePart = '';
+        var lorePart = '';
         if (lore) {
-            let loreLines = Array.isArray(lore) ? lore : [lore];
-            let loreJson = loreLines.map(line => '\'{"text":"' + line + '"}\'').join(',');
+            var loreLines = Array.isArray(lore) ? lore : [lore];
+            var loreJson = loreLines.map(function(line) { return '\'{"text":"' + line + '"}\''; }).join(',');
             lorePart = ',Lore:[' + loreJson + ']';
         }
         displayTag = 'display:{Name:\'{"text":"' + displayName + '"}\'' + lorePart + '},';
@@ -451,18 +451,18 @@ const superAEPackNBT = (displayName, lore) => {
 };
 
 // 注册超级AE包到JEI - 从全局变量读取
-JEIEvents.addItems(event => {
+JEIEvents.addItems(function(event) {
     console.log('山海私货-正在向 JEI 注册超级AE包...')
     
     // 方法1：从全局变量读取（推荐）
     if (typeof global !== 'undefined' && global.superAEPackItemList && global.superAEPackLore) {
-        const itemList = global.superAEPackItemList;
-        const lore = global.superAEPackLore;
+        var itemList = global.superAEPackItemList;
+        var lore = global.superAEPackLore;
         
         console.log('📦 从全局变量读取超级AE包: ' + itemList.length + ' 种物品');
         
         // 使用全局的 packed_cell_nbt2 函数（如果存在）
-        let nbt;
+        var nbt;
         if (typeof global.packed_cell_nbt2 === 'function') {
             nbt = global.packed_cell_nbt2(itemList, '超级AE包', lore);
         } else {
@@ -492,7 +492,7 @@ JEIEvents.addItems(event => {
 })
 
 // 启用NBT识别，确保256k便携物品元件根据NBT独立显示
-JEIEvents.subtypes(event => {
+JEIEvents.subtypes(function(event) {
     event.useNBT('ae2:portable_item_cell_256k');
 })
 
@@ -508,25 +508,25 @@ function parseCellContent(item) {
         return [];
     }
     
-    const nbt = item.nbt;
-    const result = [];
+    var nbt = item.nbt;
+    var result = [];
     
     // 尝试从NBT中提取keys和amts
     if (nbt.keys && nbt.amts && Array.isArray(nbt.keys) && Array.isArray(nbt.amts)) {
-        const minLength = Math.min(nbt.keys.length, nbt.amts.length);
-        for (let i = 0; i < minLength; i++) {
-            const key = nbt.keys[i];
-            const amt = nbt.amts[i];
+        var minLength = Math.min(nbt.keys.length, nbt.amts.length);
+        for (var i = 0; i < minLength; i++) {
+            var key = nbt.keys[i];
+            var amt = nbt.amts[i];
             
             if (key && key.id) {
-                const count = amt || 1;
-                let itemName = key.id;
+                var count = amt || 1;
+                var itemName = key.id;
                 
                 // 尝试获取物品显示名称
                 try {
-                    const itemStack = Item.of(key.id);
+                    var itemStack = Item.of(key.id);
                     if (itemStack && itemStack.getName) {
-                        const name = itemStack.getName().getString();
+                        var name = itemStack.getName().getString();
                         if (name && name !== key.id) {
                             itemName = name;
                         }
@@ -535,7 +535,7 @@ function parseCellContent(item) {
                     // 忽略名称获取错误，使用ID
                 }
                 
-                result.push(`${count}x ${itemName}`);
+                result.push(count + "x " + itemName);
             }
         }
     }
@@ -555,55 +555,55 @@ function formatItemListForTooltip(items, maxDisplay) {
         return ['§7物品包为空'];
     }
     
-    const result = [];
+    var tooltipResult = [];
     
     if (items.length <= maxDisplay) {
         // 全部显示
-        result.push('§7包含物品:');
-        items.forEach(item => {
-            result.push(` §8• §7${item}`);
+        tooltipResult.push('§7包含物品:');
+        items.forEach(function(item) {
+            tooltipResult.push(" §8• §7" + item);
         });
     } else {
         // 显示前maxDisplay项，然后显示剩余数量
-        result.push('§7包含物品 (前' + maxDisplay + '项):');
-        for (let i = 0; i < maxDisplay; i++) {
-            result.push(` §8• §7${items[i]}`);
+        tooltipResult.push('§7包含物品 (前' + maxDisplay + '项):');
+        for (var i = 0; i < maxDisplay; i++) {
+            tooltipResult.push(" §8• §7" + items[i]);
         }
-        result.push(` §7... 还有 ${items.length - maxDisplay} 项`);
+        tooltipResult.push(" §7... 还有 " + (items.length - maxDisplay) + " 项");
     }
     
     // 添加总计
-    const totalCount = items.reduce((sum, item) => {
-        const match = item.match(/^(\d+)x/);
+    var totalCount = items.reduce(function(sum, item) {
+        var match = item.match(/^(\d+)x/);
         return sum + (match ? parseInt(match[1]) : 1);
     }, 0);
-    result.push(`§7总计: §e${totalCount}§7 个物品，§e${items.length}§7 种类型`);
+    tooltipResult.push("§7总计: §e" + totalCount + "§7 个物品，§e" + items.length + "§7 种类型");
     
-    return result;
+    return tooltipResult;
 }
 
 // ========== 256k物品包工具提示处理器 ==========
 
-ItemEvents.tooltip(event => {
-    event.addAdvanced(['ae2:portable_item_cell_256k'], (item, advanced, text) => {
+ItemEvents.tooltip(function(event) {
+    event.addAdvanced(['ae2:portable_item_cell_256k'], function(item, advanced, text) {
         // 跳过已注册的特殊物品包（如无限染料元件包pro、超级AE包）
         // 这些已经有自己的工具提示
-        const nbt = item.nbt;
-        if (nbt && nbt.display && nbt.display.Name) {
-            const nameJson = nbt.display.Name;
-            if (typeof nameJson === 'string') {
-                if (nameJson.includes('无限染料元件包pro') || 
-                    nameJson.includes('超级AE包') ||
-                    nameJson.includes('天基大礼包')) {
+        var itemNbtData = item.nbt;
+        if (itemNbtData && itemNbtData.display && itemNbtData.display.Name) {
+            var displayNameJson = itemNbtData.display.Name;
+            if (typeof displayNameJson === 'string') {
+                if (displayNameJson.includes('无限染料元件包pro') || 
+                    displayNameJson.includes('超级AE包') ||
+                    displayNameJson.includes('天基大礼包')) {
                     return;
                 }
             }
         }
         
         // 解析物品包内容
-        const items = parseCellContent(item);
+        var cellItems = parseCellContent(item);
         
-        if (items.length === 0) {
+        if (cellItems.length === 0) {
             // 空物品包或无效物品包
             text.add('§8空256k物品包');
             text.add('§7通过组装机合成，可存储多种物品');
@@ -614,14 +614,14 @@ ItemEvents.tooltip(event => {
         if (event.shift) {
             // 按住Shift显示完整列表
             text.add('§6=== 256k物品包内容 ===');
-            const formattedItems = formatItemListForTooltip(items, 20); // Shift时显示更多
-            formattedItems.forEach(line => text.add(line));
+            var formattedItemList = formatItemListForTooltip(cellItems, 20); // Shift时显示更多
+            formattedItemList.forEach(function(line) { text.add(line); });
             text.add('§7§o松开Shift显示简洁视图');
         } else {
             // 默认显示简洁视图
             text.add('§6256k物品包');
-            const formattedItems = formatItemListForTooltip(items, 5); // 默认显示5项
-            formattedItems.forEach(line => text.add(line));
+            var formattedItemList = formatItemListForTooltip(cellItems, 5); // 默认显示5项
+            formattedItemList.forEach(function(line) { text.add(line); });
             text.add('§7§o按住§e Shift §7§o查看完整列表');
         }
         
@@ -634,32 +634,36 @@ ItemEvents.tooltip(event => {
 // ========== 256k物品包自定义JEI描述 ==========
 
 // 注册通用256k物品包描述
-// JEIEvents.addDescription 在当前KubeJS版本中不可用，已禁用
-// 如需JEI描述，请使用工具提示替代
-/*
-JEIEvents.addDescription(event => {
-    event.addItem('ae2:portable_item_cell_256k', [
-        '§6256k便携物品元件',
-        '§7AE2的便携式存储设备，可存储大量物品',
-        '§7特点:',
-        ' §8• §7支持256k种不同物品类型',
-        ' §8• §7可通过组装机自定义内容',
-        ' §8• §7内置能源，无需外部供电',
-        '§7使用方法:',
-        ' §8• §7在组装机中合成自定义物品包',
-        ' §8• §7将物品包放入物品栏即可使用',
-        ' §8• §7右键打开物品包界面',
-        '§7提示:',
-        ' §8• §7查看物品包工具提示可预览内容',
-        ' §8• §7按住Shift查看完整物品列表',
-        '§8山海私货 - 256k物品包系统'
-    ]);
-});
-*/
+// 检查JEIEvents.addDescription是否可用（某些KubeJS版本可能不支持）
+if (typeof JEIEvents !== 'undefined' && typeof JEIEvents.addDescription === 'function') {
+    JEIEvents.addDescription(function(event) {
+        event.addItem('ae2:portable_item_cell_256k', [
+            '§6256k便携物品元件',
+            '§7AE2的便携式存储设备，可存储大量物品',
+            '§7特点:',
+            ' §8• §7支持256k种不同物品类型',
+            ' §8• §7可通过组装机自定义内容',
+            ' §8• §7内置能源，无需外部供电',
+            '§7使用方法:',
+            ' §8• §7在组装机中合成自定义物品包',
+            ' §8• §7将物品包放入物品栏即可使用',
+            ' §8• §7右键打开物品包界面',
+            '§7提示:',
+            ' §8• §7查看物品包工具提示可预览内容',
+            ' §8• §7按住Shift查看完整物品列表',
+            '§8山海私货 - 256k物品包系统'
+        ]);
+    });
+    console.log('[JEI++] 已注册256k物品包JEI描述');
+} else {
+    console.warn('[JEI++] 警告：JEIEvents.addDescription不可用，跳过256k物品包描述注册');
+    // 可选：尝试其他方法添加描述
+    // 例如通过工具提示或其他JEI事件
+}
 
 // ========== 隐藏无效物品包 ==========
 
-JEIEvents.hideItems(event => {
+JEIEvents.hideItems(function(event) {
     // 注意：我们不直接隐藏ae2:portable_item_cell_256k，因为合法的物品包需要显示
     // 这个功能由工具提示处理器处理，显示"空物品包"提示
 });
@@ -675,8 +679,10 @@ if (typeof global !== 'undefined') {
     
     // 添加JEI相关API
     global.CellAPI.registerJEIPreview = function(cellItemId, maxDisplay) {
+        // 设置参数默认值（Rhino引擎不支持ES6默认参数语法）
         if (cellItemId === undefined) cellItemId = 'ae2:portable_item_cell_256k';
         if (maxDisplay === undefined) maxDisplay = 5;
+        
         console.log('[256k Cell API - JEI] 注册物品包预览: ' + cellItemId + ', 最大显示: ' + maxDisplay);
         
         // 这里实际上已经通过上面的ItemEvents.tooltip全局处理了
@@ -690,7 +696,7 @@ if (typeof global !== 'undefined') {
     global.CellAPI.addCellDescription = function(cellItem, extraInfo) {
         if (!cellItem) return;
         
-        const itemId = typeof cellItem === 'string' ? cellItem : cellItem.getId();
+        var itemId = typeof cellItem === 'string' ? cellItem : cellItem.getId();
         console.log('[256k Cell API - JEI] 添加物品描述: ' + itemId);
         
         // 在实际环境中，我们需要在这里添加JEI描述
