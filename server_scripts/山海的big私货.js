@@ -13,7 +13,7 @@ var superAEPackItemCount = 0; // 将在配方初始化时设置
 var superAEPackLore = null; // 超级AE包的Lore描述
 var superAEPackItemList = null; // 超级AE包物品列表
 
-// CellAPI 配方去重检测
+//  配方去重检测
 var _registeredCellRecipes = new Set();
 
 // ========== 全局配置初始化 ==========
@@ -2442,15 +2442,39 @@ ServerEvents.recipes(function(e) {
         return function safeItemOf() {
             try {
                 // 调用原始Item.of，根据参数数量调用
+                var result;
                 if (arguments.length === 0) {
-                    return originalItemOf();
+                    result = originalItemOf();
                 } else if (arguments.length === 1) {
-                    return originalItemOf(arguments[0]);
+                    result = originalItemOf(arguments[0]);
                 } else if (arguments.length === 2) {
-                    return originalItemOf(arguments[0], arguments[1]);
+                    result = originalItemOf(arguments[0], arguments[1]);
                 } else {
-                    return originalItemOf(arguments[0], arguments[1], arguments[2]);
+                    result = originalItemOf(arguments[0], arguments[1], arguments[2]);
                 }
+                
+                // 检查Item.of是否返回了minecraft:air（表示物品不存在）
+                // 但需要排除用户确实想要minecraft:air的情况
+                if (result && result.id === 'minecraft:air') {
+                    var inputId = arguments.length >= 1 ? arguments[0] : '';
+                    var checkId = inputId;
+                    
+                    // 解析字符串格式，如 "3x nonexistent:item"
+                    if (typeof inputId === 'string') {
+                        var match = inputId.match(/^(\d+)x\s+(.+)$/);
+                        if (match) {
+                            checkId = match[2]; // 提取物品ID部分
+                        }
+                    }
+                    
+                    if (typeof inputId === 'string' && checkId !== 'minecraft:air' && checkId !== 'air') {
+                        // 用户请求的不是minecraft:air，但Item.of返回了air，说明物品无效
+                        // 抛出异常以触发占位符替换
+                        throw new Error('物品不存在，Item.of返回minecraft:air: ' + checkId);
+                    }
+                }
+                
+                return result;
             } catch (error) {
                 // 如果物品创建失败，使用占位符替代
                 var errorMsg = error.message || String(error);
@@ -4268,7 +4292,7 @@ if (typeof global !== 'undefined') {
     info('§a[物品NBT库] 已加载，共注册 ' + Object.keys(ItemNBTConfig).length + ' 个配置项');
 }
 
-// ========== 256k物品包API - 完整修复版 ==========
+// ========== 256k物品包API - 完整修复版 ==========(cellapi)
 // 版本 2.0 - 修复所有已知问题
 
 // ========== 内部工具函数 ==========
@@ -5256,8 +5280,9 @@ ServerEvents.recipes(event => {
         error('❌ 天基大礼包配方生成失败: ' + err.message);
     }
     
-    info('🔧 开始生成猪咪大礼包...');       
 
+
+    info('🔧 开始生成猪咪大礼包...');       
 const templaterecipeId = 'dishanhai:Piggy_Big_Package';
 
 try {
@@ -5267,11 +5292,12 @@ try {
       '2x gtladditions:arcanic_astrograph','1068x gtlcore:dimension_injection_casing','1792x gtlcore:create_casing','66x gtceu:high_power_casing','336x kubejs:dimension_creation_casing','96x kubejs:dimensional_stability_casing','276x kubejs:spacetime_compression_field_generator'/*伪神模块*/,'100x gtladditions:phonon_conduit','420x gtladditions:suprachronal_magnetic_confinement_casing','720x gtladditions:god_forge_trim_casing','500x gtladditions:god_forge_support_casing','56x gtladditions:god_forge_energy_casing','1x gtladditions:heliophase_leyline_crystallizer','3x gtladditions:heliothermal_plasma_fabricator','10x gtladditions:heliofusion_exoticizer','2x gtladditions:heliofluix_melting_core','4x gtladditions:helioflare_power_forge',
       '1x gtladditions:apocalyptic_torsion_quantum_matrix','864x gtladditions:quantum_glass','11520x gtlcore:qft_coil','216x gtlcore:spacetimecontinuumripper','10927x gtlcore:dimensionally_transcendent_casing','6285x gtlcore:manipulator','841x kubejs:dimensional_bridge_casing'
       ,'4x gtladditions:thread_modifier_hatch','1x gtladditions:macro_atomic_resonant_fragment_stripper','4230x gtlcore:qft_coil','1718x gtlcore:sps_casing','5507x gtlcore:hyper_mechanical_casing','937x gtlcore:echo_casing','218x gtlcore:fusion_casing_mk5','360x gtceu:quantumchromodynamically_confined_matter_frame','786x gtceu:neutronium_frame','627x gtceu:high_power_casing','1086x gtceu:fusion_glass','344x kubejs:eternity_coil_block','156x kubejs:dyson_receiver_casing','666x kubejs:dyson_control_toroid','66x kubejs:dyson_control_casing','8x kubejs:dimensional_stability_casing','162x kubejs:dimensional_bridge_casing','24x kubejs:annihilate_core'
+      ,'1x gtladditions:light_hunter_space_station','4643x gtladditions:gravity_stabilization_casing','1348x gtladditions:extreme_density_casing','208x gtlcore:ultimate_stellar_containment_casing','120x gtlcore:super_computation_component','27x gtlcore:hyper_core','9558x gtlcore:naquadah_alloy_casing','80x gtlcore:sps_casing','720x gtlcore:enhance_hyper_mechanical_casing','293x gtlcore:dragon_strength_tritanium_casing','666x gtlcore:echo_casing','4094x gtlcore:dimensionally_transcendent_casing','5884x gtlcore:dimension_injection_casing','224x gtlcore:molecular_casing','120x gtlcore:improved_superconductor_coil','176x gtlcore:fusion_casing_mk5','64x gtlcore:fusion_casing_mk4','2400x gtlcore:uxv_hermetic_casing','1073x ae2:quartz_vibrant_glass','560x gtceu:neutronium_frame','454x gtceu:high_power_casing','230x gtceu:computer_heat_vent','258x gtceu:advanced_computer_casing','3528x gtceu:fusion_glass','144x gtceu:uhv_ultimate_battery','1029x gtceu:uxv_machine_casing','180x gtceu:uiv_machine_casing','2528x gtceu:uhv_machine_casing','3651x gtceu:atomic_casing','1440x kubejs:restraint_device','280x kubejs:containment_field_generator','1500x kubejs:spacetime_assembly_line_unit','12x kubejs:force_field_glass','20x kubejs:module_connector','1038x kubejs:dimensional_bridge_casing','34x kubejs:dimensional_bridge_casing'
 
     ];
     global.templateItemList_2 = templateItemList_2;
     let templateItemCount = templateItemList_2.length;
-    let Machine = 8;
+    let Machine = 10;
     let templateLore = [
         '§7这是一个猪咪大礼包,猪咪大王的馈赠',
         '§7它只被授予给猪咪们,所以你是猪咪吗😋',
