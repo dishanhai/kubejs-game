@@ -2920,7 +2920,7 @@ var sanitize = function(v) {
 };
 
 info(`🔓 通用配方开始加载，共 ${universalRecipes.length} 个`);
-const timer = new Timer('通用配方添加');
+let timer = new Timer('通用配方添加');
 var success = 0, fail = 0;
 
 universalRecipes.forEach(function(recipe) {
@@ -3419,71 +3419,85 @@ const dishanhairecipes = [
 let dishanhaiSucc = 0;
 let dishanhaifail = 0;
 
+info(`🔓 山海自定义配方开始加载，共 ${dishanhairecipes.length} 个`);
+success = 0; fail = 0;
+
 dishanhairecipes.forEach(recipe => {
-    // 统一处理小写和大写 EUt
-    const eutValue = recipe.eut ?? recipe.EUt;
-    try {
-        safeAddRecipe(
-            recipe.type,
-            `dishanhai:${recipe.id}`,
-            () => {
-                const machine = gtr[recipe.type](`dishanhai:${recipe.id}`);
-                
-                if (recipe.notConsumable) {
-                    if (Array.isArray(recipe.notConsumable)) {
-                        recipe.notConsumable.forEach(item => machine.notConsumable(item));
-                    } else {
-                        machine.notConsumable(recipe.notConsumable);
-                    }
-                }
-                
-                if (recipe.notConsumableFluid) {
-                    if (Array.isArray(recipe.notConsumableFluid)) {
-                        recipe.notConsumableFluid.forEach(fluid => machine.notConsumableFluid(fluid));
-                    } else {
-                        machine.notConsumableFluid(recipe.notConsumableFluid);
-                    }
-                }
-                
-                if (recipe.circuit != null) machine.circuit(recipe.circuit);
-                if (recipe.itemInputs?.length) machine.itemInputs.apply(machine, recipe.itemInputs);
-                if (recipe.inputFluids?.length) machine.inputFluids.apply(machine, recipe.inputFluids);
-                if (recipe.itemOutputs?.length) machine.itemOutputs.apply(machine, recipe.itemOutputs);
-                if (recipe.outputFluids?.length) machine.outputFluids.apply(machine, recipe.outputFluids);
-                if (recipe.blastFurnaceTemp > 0) machine.blastFurnaceTemp(recipe.blastFurnaceTemp);
-                
-                machine.duration(recipe.duration);
-                
-                // 使用统一后的 eutValue
-                if (eutValue != null) {
-                    machine.EUt(eutValue);
-                }
-                
-               if (recipe.addData != null) {
-    try {
-        const key = recipe.addDataid || "SCTier";
-        // 检查 machine 是否有 addData 方法
-        if (typeof machine.addData === 'function') {
-            machine.addData(key, recipe.addData);
-        } else {
-            debug(`⚠️ 机器 ${recipe.type} 不支持 addData 方法，跳过`);
+    // 首先验证配方
+    const validation = validateRecipe(recipe);
+    if (!validation.valid) {
+        console.error(`❌ 配方验证失败: ${recipe.id} (${recipe.type}) - ${validation.error}`);
+        broadcastRecipeError(recipe.type, recipe.id, validation.error);
+        fail++;
+        return;
+    }
+    
+    const ok = safeAddRecipe(recipe, r => {
+        const machine = gtr[r.type](r.id);
+        
+        // 检查是否触发JavaScript执行错误（测试用）
+        if (r.triggerJsError) {
+            throw new Error("测试JavaScript执行错误：这是在配方函数内部抛出的错误");
         }
-    } catch(e) {
-        debug(`⚠️ addData 设置失败: ${e.message}`);
-    }
-}
-            },
-            recipe
-        );
-        dishanhaiSucc++;
-    } catch(err) {
-        dishanhaifail++;
-        console.error(`❌ 配方 ${recipe.id} 处理异常: ${err.message}`);
-    }
+        
+        machine.duration(r.duration);
+        if (r.type !== 'cosmos_simulation' && r.EUt != null) machine.EUt(r.EUt);
+
+        // 动态输出处理（如精致宝石）
+        if (r.dynamicOutputs) {
+            let gemOutputIds = Ingredient.of('#forge:exquisite_gems').getItemIds();
+            let outputs = gemOutputIds.map(id => `16x ${id}`);
+            if (outputs.length) machine.itemOutputs.apply(machine, outputs);
+        }
+
+        // 不可消耗物品
+        let val = sanitize(r.notConsumable);
+        if (val) (Array.isArray(val) ? val : [val]).forEach(i => machine.notConsumable(i));
+        
+        // 不可消耗流体
+        val = sanitize(r.notConsumableFluid);
+        if (val) (Array.isArray(val) ? val : [val]).forEach(i => machine.notConsumableFluid(i));
+
+        // 电路
+        let c = sanitize(r.circuit);
+        if (c != null) machine.circuit(c);
+
+        // 输入/输出数组 - 全部改用 .apply
+        ['itemInputs', 'inputFluids', 'itemOutputs', 'outputFluids'].forEach(k => {
+            let arr = sanitize(r[k]);
+            if (arr?.length && !r.dynamicOutputs) {
+                machine[k].apply(machine, arr);
+            }
+        });
+
+        // 高炉温度
+        let t = sanitize(r.blastFurnaceTemp);
+        if (t != null) machine.blastFurnaceTemp(t);
+
+        // 额外数据
+        let [ad, aid] = [sanitize(r.addData), sanitize(r.addDataid)];
+        if (ad != null && aid != null) machine.addData(aid, ad);
+
+        // 研究要求
+        if (r.stationResearch && r.type === 'assembly_line') {
+            const s = r.stationResearch;
+            let [rs, ds, eu, cw] = [sanitize(s.researchStack), sanitize(s.dataStack), sanitize(s.EUt), sanitize(s.CWUt)];
+            if (rs != null && ds != null && eu != null && cw != null) {
+                machine.stationResearch(b => b.researchStack(Item.of(rs)).dataStack(Item.of(ds)).EUt(eu).CWUt(cw));
+            } else console.warn(`⚠️ ${r.id} stationResearch 无效`);
+        } else if (r.stationResearch) console.warn(`⚠️ ${r.id} 类型 ${r.type} 不支持 stationResearch`);
+
+        machine.save();
+    });
+    ok ? success++ : fail++;
 });
 
+// 更新统计变量
+dishanhaiSucc = success;
+dishanhaifail = fail;
+
 let dishanhai_timer_end = dishanhai_timer.end();
-info(`✔️ 山海的♾️物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${dishanhai_timer_end}ms`);
+info(`✔️ 山海自定义配方添加完成 | 成功: ${dishanhaiSucc} | 失败: ${dishanhaifail} | 耗时: ${dishanhai_timer_end}ms`);
 
 const time_di = dishanhai_timer.end()
 console.log(`🗓️ [山海的big私货] ♾️级物品配方添加完毕 成功:${dishanhaiSucc} | 失败:${dishanhaifail} | 耗时:${time_di}ms`)
