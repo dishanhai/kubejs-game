@@ -2429,10 +2429,10 @@ ServerEvents.recipes(function(e) {
     var VA = GTValues.VA;
     const [ULV,LV,MV,HV,EV,IV,LuV,ZPM,UV,UHV,UEV,UIV,UXV,OpV,MAX] = VA;
     const [ulv, lv, mv, hv, ev, iv, luv, zpm, uv, uhv, uev, uiv, uxv, opv, max] = VA;
-    // =================================================================
-    // =============== safeAddRecipe (配方加载系统主控安全添加配方) ==========
-    // =============== 配方加载系统主控集成 (v2.4新增) ==========
-    // =====================================================
+    // ===================================================================
+    // =============== safeAddRecipe (配方加载系统主控安全添加配方) ===========
+    // =============== 配方加载系统主控集成(v2.3新增)&配方统计主控 =============
+    // ===================================================================
     
     // 安全物品创建包装器
     function createSafeItemOfWrapper() {
@@ -2454,7 +2454,6 @@ ServerEvents.recipes(function(e) {
                 }
                 
                 // 检查Item.of是否返回了minecraft:air（表示物品不存在）
-                // 但需要排除用户确实想要minecraft:air的情况
                 if (result && result.id === 'minecraft:air') {
                     var inputId = arguments.length >= 1 ? arguments[0] : '';
                     var checkId = inputId;
@@ -2468,7 +2467,7 @@ ServerEvents.recipes(function(e) {
                     }
                     
                     if (typeof inputId === 'string' && checkId !== 'minecraft:air' && checkId !== 'air') {
-                        // 用户请求的不是minecraft:air，但Item.of返回了air，说明物品无效
+                        // 请求的不是minecraft:air，但Item.of返回了air，说明物品无效
                         // 抛出异常以触发占位符替换
                         throw new Error('物品不存在，Item.of返回minecraft:air: ' + checkId);
                     }
@@ -2978,7 +2977,7 @@ universalRecipes.forEach(function(recipe) {
         if (ad != null && aid != null) machine.addData(aid, ad);
 
         // 研究要求
-        if (r.stationResearch && r.type === 'assembly_line') {
+        if (r.stationResearch && (r.type === 'assembly_line' || r.type === 'suprachronal_assembly_line' || r.type === 'circuit_assembly_line' || r.type === 'component_assembly_line')) {
             const s = r.stationResearch;
             let [rs, ds, eu, cw] = [sanitize(s.researchStack), sanitize(s.dataStack), sanitize(s.EUt), sanitize(s.CWUt)];
             if (rs != null && ds != null && eu != null && cw != null) {
@@ -3366,7 +3365,7 @@ let voidtimer = timer_voidflux_reaction.end()
                 .duration(20);
         });
         }
-//============== 无限级通用配方 =================(wx ， wuxian ， ♾️)
+//==============  通用配方 =================(wx ， wuxian ， ♾️)
 info('山海的♾️级物品配方允许加载🔓');
 const dishanhai_timer = new Timer('山海的♾️物品配方');
 
@@ -3414,6 +3413,7 @@ const dishanhairecipes = [
     {
         id:'assembler_dense_neutron_plasma_cell',type:'assembler',itemOutputs:['15x kubejs:dense_neutron_plasma_cell'],itemInputs:['kubejs:extremely_durable_plasma_cell','3x kubejs:quantum_chromodynamic_charge','3x gtceu:heavy_quark_degenerate_matter_block'],inputFluids:['gtceu:dense_neutron_plasma'],EUt:uxv,duration:20
     },
+
 ];
 
 let dishanhaiSucc = 0;
@@ -3479,7 +3479,7 @@ dishanhairecipes.forEach(recipe => {
         if (ad != null && aid != null) machine.addData(aid, ad);
 
         // 研究要求
-        if (r.stationResearch && r.type === 'assembly_line') {
+        if (r.stationResearch && (r.type === 'assembly_line' || r.type === 'suprachronal_assembly_line' || r.type === 'circuit_assembly_line' || r.type === 'component_assembly_line')) {
             const s = r.stationResearch;
             let [rs, ds, eu, cw] = [sanitize(s.researchStack), sanitize(s.dataStack), sanitize(s.EUt), sanitize(s.CWUt)];
             if (rs != null && ds != null && eu != null && cw != null) {
