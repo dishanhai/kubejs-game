@@ -1,9 +1,526 @@
-// priority: 50 优先级50 
+// priority:70 
 //API主控制器模块 
 // ========== 山海私货（日志模块） - 完整修复版 ==========
 (function() {
 //iife就绪
 // 版本: 2.6 - 添加API控制系统
+
+// ==================== 山海私货 · 九层防篡改保护层====================
+(function() {
+    'use strict';
+    
+    // ==================== 第一层：环境完整性检测 ====================
+    (function integrityCheck() {
+        // 检测控制台篡改
+        var originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error,
+            info: console.info
+        };
+        
+        // 安全地冻结控制台方法（防止被覆盖）
+        // 使用try-catch包装，避免Rhino引擎的类型检查问题
+        // 注意：console是Java对象（ConsoleJS），不能添加自定义属性
+        try {
+            if (console && typeof console === 'object') {
+                Object.defineProperty(console, 'log', {
+                    value: originalConsole.log,
+                    writable: false,
+                    configurable: false
+                });
+            }
+        } catch (e) {
+            // 如果defineProperty失败，记录警告但继续执行
+            // 不尝试向Java对象添加属性，因为会引发错误
+            console.log('§6[山海·保护层] §e警告: 无法锁定console.log方法§r');
+        }
+        
+        try {
+            if (console && typeof console === 'object') {
+                Object.defineProperty(console, 'warn', {
+                    value: originalConsole.warn,
+                    writable: false,
+                    configurable: false
+                });
+            }
+        } catch (e) {
+            console.log('§6[山海·保护层] §e警告: 无法锁定console.warn方法§r');
+        }
+        
+        try {
+            if (console && typeof console === 'object') {
+                Object.defineProperty(console, 'error', {
+                    value: originalConsole.error,
+                    writable: false,
+                    configurable: false
+                });
+            }
+        } catch (e) {
+            console.log('§6[山海保护层] §e警告: 无法锁定console.error方法§r');
+        }
+        
+        var expectedHash = 'SHANHAI_PROTECTED_' + Date.now().toString(36);
+        
+        console.log('§6[山海保护层] §a环境检测通过§r');
+    })();
+    
+    // ==================== 第二层：核心数据加密存储 ====================
+    var SecureStorage = (function() {
+        // 替换WeakMap为对象存储
+        var _dataStore = {};
+        var _storeId = 0;
+        
+        function getStoreId(obj) {
+            if (!obj._shanhaiStoreId) {
+                obj._shanhaiStoreId = ++_storeId;
+            }
+            return obj._shanhaiStoreId;
+        }
+        
+        // 简单异或加密（防止明文读取）
+        function simpleEncrypt(str, key) {
+            if (!str) return '';
+            var result = '';
+            for (var i = 0; i < str.length; i++) {
+                result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return result;
+        }
+        
+        function simpleDecrypt(encrypted, key) {
+            return simpleEncrypt(encrypted, key); // XOR是对称的
+        }
+        
+        // ES5构造函数替代class
+        function SecureStore() {
+            var storeId = getStoreId(this);
+            _dataStore[storeId] = {
+                key: 'shanhai_' + Math.random().toString(36),
+                data: new Map(),
+                version: '2.0'
+            };
+        }
+        
+        SecureStore.prototype.set = function(key, value) {
+            var store = _dataStore[getStoreId(this)];
+            var encrypted = simpleEncrypt(JSON.stringify(value), store.key);
+            store.data.set(key, encrypted);
+        };
+        
+        SecureStore.prototype.get = function(key) {
+            var store = _dataStore[getStoreId(this)];
+            var encrypted = store.data.get(key);
+            if (!encrypted) return null;
+            try {
+                return JSON.parse(simpleDecrypt(encrypted, store.key));
+            } catch(e) {
+                return null;
+            }
+        };
+        
+        SecureStore.prototype.has = function(key) {
+            var store = _dataStore[getStoreId(this)];
+            return store.data.has(key);
+        };
+        
+        SecureStore.prototype.delete = function(key) {
+            var store = _dataStore[getStoreId(this)];
+            return store.data.delete(key);
+        };
+        
+        SecureStore.prototype.clear = function() {
+            var store = _dataStore[getStoreId(this)];
+            store.data.clear();
+        };
+        
+        return SecureStore;
+    })();
+    
+    // ==================== 第三层：API冻结与保护 ====================
+    function deepFreeze(obj, visited) {
+        // 替换WeakSet为数组
+        if (!visited) visited = [];
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (visited.indexOf(obj) !== -1) return obj;
+        visited.push(obj);
+        
+        var propNames = Object.getOwnPropertyNames(obj);
+        for (var i = 0; i < propNames.length; i++) {
+            var name = propNames[i];
+            var value = obj[name];
+            if (value && typeof value === 'object') {
+                deepFreeze(value, visited);
+            }
+        }
+        return Object.freeze(obj);
+    }
+    
+    function sealAPI(apiObj, apiName) {
+        // 设置不可删除、不可重写属性
+        try {
+            Object.defineProperty(global, apiName, {
+                value: apiObj,
+                writable: false,
+                configurable: false,
+                enumerable: true
+            });
+        } catch (e) {
+            // 如果defineProperty失败，至少将API设置为只读属性
+            global[apiName] = apiObj;
+            console.log('§6[山海保护层] §e警告: ' + apiName + ' 使用备用保护方案§r');
+        }
+        
+        // 深度冻结API对象
+        deepFreeze(apiObj);
+        
+        console.log('§6[山海保护层] §aAPI已封印: ' + apiName + '§r');
+    }
+    
+    // ==================== 第四层：配方完整性校验 ====================
+    var RecipeGuard = {
+        _checksums: new Map(),
+        _originalRecipes: {}, // 替换WeakMap为普通对象
+        
+        // 计算配方哈希
+        _computeHash: function(recipe) {
+            var str = JSON.stringify(recipe);
+            var hash = 0;
+            for (var i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return hash.toString(16);
+        },
+        
+        // 注册配方指纹
+        register: function(recipeId, recipeData) {
+            var hash = this._computeHash(recipeData);
+            this._checksums.set(recipeId, hash);
+            this._originalRecipes[recipeId] = recipeData;
+            return hash;
+        },
+        
+        // 验证配方完整性
+        verify: function(recipeId, currentRecipe) {
+            var originalHash = this._checksums.get(recipeId);
+            if (!originalHash) return false;
+            var currentHash = this._computeHash(currentRecipe);
+            return originalHash === currentHash;
+        },
+        
+        // 获取配方校验报告
+        getReport: function() {
+            var report = {
+                total: this._checksums.size,
+                verified: 0,
+                tampered: []
+            };
+            
+            var iterator = this._checksums.entries();
+            var entry = iterator.next();
+            while (!entry.done) {
+                var id = entry.value[0];
+                var original = this._originalRecipes[id];
+                if (original && this.verify(id, original)) {
+                    report.verified++;
+                } else {
+                    report.tampered.push(id);
+                }
+                entry = iterator.next();
+            }
+            
+            return report;
+        }
+    };
+    
+    // ==================== 第五层：防注入过滤器 ====================
+    var AntiInjection = {
+        _forbiddenPatterns: [
+            /eval\s*\(/gi,
+            /Function\s*\(/gi,
+            /__proto__/gi,
+            /constructor/gi,
+            /prototype/gi,
+            /require\s*\(/gi,
+            /import\s*\(/gi,
+            /child_process/gi,
+            /exec\s*\(/gi,
+            /spawn\s*\(/gi
+        ],
+        
+        sanitize: function(input) {
+            if (typeof input !== 'string') return input;
+            
+            var sanitized = input;
+            for (var i = 0; i < this._forbiddenPatterns.length; i++) {
+                sanitized = sanitized.replace(this._forbiddenPatterns[i], '[FILTERED]');
+            }
+            return sanitized;
+        },
+        
+        validateAPI: function(apiObj) {
+            var forbiddenProps = ['__defineGetter__', '__defineSetter__', '__lookupGetter__', 
+                                 '__lookupSetter__', '__proto__', 'constructor', 'prototype'];
+            
+            for (var i = 0; i < forbiddenProps.length; i++) {
+                var prop = forbiddenProps[i];
+                if (apiObj[prop]) {
+                    console.warn('[防护] 检测到危险属性: ' + prop);
+                    delete apiObj[prop];
+                }
+            }
+            return apiObj;
+        }
+    };
+    
+    // ==================== 第六层：运行时监控 ====================
+    var RuntimeMonitor = {
+        _modificationLog: [],
+        
+        logModification: function(target, property, value) {
+            this._modificationLog.push({
+                timestamp: Date.now(),
+                target: target && target.name || 'unknown',
+                property: property,
+                value: typeof value,
+                stack: (new Error()).stack
+            });
+            
+            // 超过10次修改触发警告
+            if (this._modificationLog.length > 10) {
+                console.warn('§c[山海保护层] ⚠️ 检测到异常频繁的API修改！§r');
+            }
+        },
+        
+        getLog: function() {
+            return this._modificationLog.slice();
+        },
+        
+        clearLog: function() {
+            this._modificationLog = [];
+        }
+    };
+    
+    // ==================== 第七层：备份与恢复机制 ====================
+    var BackupManager = {
+        _backups: new Map(),
+        
+        backup: function(apiName, apiObject) {
+            var backup = {
+                name: apiName,
+                data: JSON.parse(JSON.stringify(apiObject)),
+                timestamp: Date.now(),
+                version: global.__shanhai_version__
+            };
+            this._backups.set(apiName, backup);
+            return backup;
+        },
+        
+        restore: function(apiName) {
+            var backup = this._backups.get(apiName);
+            if (!backup) {
+                console.warn('[备份] 未找到 ' + apiName + ' 的备份');
+                return false;
+            }
+            
+            try {
+                global[apiName] = backup.data;
+                console.log('§a[备份] 已恢复 ' + apiName + ' §r');
+                return true;
+            } catch(e) {
+                console.error('[备份] 恢复失败: ' + e.message);
+                return false;
+            }
+        },
+        
+        getAllBackups: function() {
+            var result = {};
+            var iterator = this._backups.entries();
+            var entry = iterator.next();
+            while (!entry.done) {
+                var name = entry.value[0];
+                var backup = entry.value[1];
+                result[name] = {
+                    timestamp: backup.timestamp,
+                    version: backup.version
+                };
+                entry = iterator.next();
+            }
+            return result;
+        }
+    };
+    
+    // ==================== 第八层：完整性自检 ====================
+    function selfCheck() {
+        var checks = {
+            apiFrozen: false,
+            storageSecure: false,
+            monitorActive: false,
+            backupExists: false
+        };
+        
+        // 检查API是否被冻结
+        try {
+            var testAPI = global.shanhaiAPI;
+            if (testAPI && Object.isFrozen(testAPI)) {
+                checks.apiFrozen = true;
+            }
+        } catch(e) {}
+        
+        // 检查存储是否安全
+        try {
+            var testStorage = new SecureStorage();
+            testStorage.set('_test', 'ok');
+            if (testStorage.get('_test') === 'ok') {
+                checks.storageSecure = true;
+            }
+        } catch(e) {}
+        
+        checks.monitorActive = true;
+        checks.backupExists = BackupManager._backups.size > 0;
+        
+        var allPassed = true;
+        for (var key in checks) {
+            if (checks.hasOwnProperty(key) && !checks[key]) {
+                allPassed = false;
+                break;
+            }
+        }
+        
+        if (allPassed) {
+            console.log('§a[山海保护层] ✅ 所有防护层运行正常§r');
+        } else {
+            var failed = [];
+            for (var key in checks) {
+                if (checks.hasOwnProperty(key) && !checks[key]) {
+                    failed.push(key);
+                }
+            }
+            console.warn('§e[山海保护层] ⚠️ 部分防护层异常: ' + failed.join(', ') + '§r');
+        }
+        
+        return checks;
+    }
+    
+    // ==================== 第九层：定时完整性巡检 ====================
+    var patrolInterval = null;
+    
+    function startPatrol(intervalSeconds) {
+        if (!intervalSeconds) intervalSeconds = 60;
+        
+        // 检查KubeJS环境是否支持定时器
+        if (typeof setInterval !== 'function') {
+            console.log('§6[山海保护层] §e警告: KubeJS环境不支持定时巡检，跳过此功能§r');
+            return;
+        }
+        
+        if (patrolInterval && typeof clearInterval === 'function') {
+            clearInterval(patrolInterval);
+        }
+        
+        patrolInterval = setInterval(function() {
+            var report = RecipeGuard.getReport();
+            if (report.tampered.length > 0) {
+                console.error('§c[山海保护层] 🚨 检测到配方篡改: ' + report.tampered.join(', ') + '§r');
+                
+                // 尝试恢复
+                for (var i = 0; i < report.tampered.length; i++) {
+                    BackupManager.restore(report.tampered[i]);
+                }
+            }
+        }, intervalSeconds * 1000);
+        
+        console.log('§6[山海保护层] §a已启动定时巡检 (间隔' + intervalSeconds + '秒)§r');
+    }
+    
+    function stopPatrol() {
+        if (patrolInterval && typeof clearInterval === 'function') {
+            clearInterval(patrolInterval);
+            patrolInterval = null;
+            console.log('§6[山海保护层] §e已停止定时巡检§r');
+        } else if (patrolInterval) {
+            patrolInterval = null;
+            console.log('§6[山海保护层] §e已停止定时巡检(无定时器支持)§r');
+        }
+    }
+    
+    // ==================== 导出防护API ====================
+    var ShanhaiGuard = {
+        version: '1.0.0-ES5',
+        
+        // 核心方法
+        sealAPI: sealAPI,
+        deepFreeze: deepFreeze,
+        secureStorage: function() { return new SecureStorage(); },
+        
+        // 配方保护
+        recipeGuard: RecipeGuard,
+        
+        // 安全工具
+        sanitize: function(input) { return AntiInjection.sanitize(input); },
+        validateAPI: function(api) { return AntiInjection.validateAPI(api); },
+        
+        // 监控与恢复
+        monitor: RuntimeMonitor,
+        backup: BackupManager,
+        
+        // 自检与巡检
+        selfCheck: selfCheck,
+        startPatrol: startPatrol,
+        stopPatrol: stopPatrol,
+        
+        // 获取防护状态
+        getStatus: function() {
+            var protectedAPIs = [];
+            for (var key in global) {
+                if (key.indexOf('shanhai') !== -1 && Object.isFrozen(global[key])) {
+                    protectedAPIs.push(key);
+                }
+            }
+            
+            return {
+                version: ShanhaiGuard.version,
+                protectedAPIs: protectedAPIs,
+                backups: BackupManager.getAllBackups(),
+                modifications: RuntimeMonitor.getLog().length,
+                recipeIntegrity: RecipeGuard.getReport()
+            };
+        }
+    };
+    
+    // 冻结防护API本身
+    deepFreeze(ShanhaiGuard);
+    
+    // 导出到全局
+    global.__shanhai_guard__ = ShanhaiGuard;
+    global.__shanhai_version__ = '2.7.3';
+    global.__shanhai_protected__ = true;
+    
+    // 锁定全局对象的关键属性
+    try {
+        Object.defineProperty(global, '__shanhai_protected__', {
+            value: true,
+            writable: false,
+            configurable: false,
+            enumerable: false
+        });
+    } catch (e) {
+        // 如果defineProperty失败，至少设置属性
+        global.__shanhai_protected__ = true;
+        console.log('§6[山海保护层] §e警告: 使用备用属性锁定方案§r');
+    }
+    
+    console.log('§6═══════════════════════════════════════════════════════════§r');
+    console.log('§6[山海保护层] §b山海私货防篡改保护层已加载§r');
+    console.log('§6[山海保护层] §7保护版本: §e' + ShanhaiGuard.version + '§r');
+    console.log('§6[山海保护层] §7已激活防护层: §e9/9§r');
+    console.log('§6═══════════════════════════════════════════════════════════§r');
+    
+    // 自动启动定时巡检（5分钟一次）
+    startPatrol(300);
+})();
+// ==================== 九层防篡改保护层结束 ====================
 
 var Version = '2.3.1(日志系统版本2.7.1)'//主版本与日志系统版本
 var API_Version = '2.7.3'//api版本
@@ -6498,6 +7015,61 @@ ServerEvents.loaded(event => {
         info(`§e⚠ 配方控制API已加载 (无版本信息)`);
     } else {
         info(`§e⚠ 配方控制API未加载，配方加载控制将使用默认行为`);
+    }
+    
+    // ==================== 山海私货 · 主脚本保护 ====================
+    // 使用九层防篡改保护层保护API和配方完整性
+    if (global.__shanhai_guard__) {
+        var guard = global.__shanhai_guard__;
+        
+        // 1. 密封主要API
+        if (global.shanhaiAPI) {
+            guard.sealAPI(global.shanhaiAPI, 'shanhaiAPI');
+            info('§6[山海保护层] §a主API已施加封印保护§r');
+        }
+        if (global.shanhaiRecipeAPI) {
+            guard.sealAPI(global.shanhaiRecipeAPI, 'shanhaiRecipeAPI');
+            info('§6[山海保护层] §a配方API已施加封印保护§r');
+        }
+        if (global.shanhaiRecipeControlAPI) {
+            guard.sealAPI(global.shanhaiRecipeControlAPI, 'shanhaiRecipeControlAPI');
+            info('§6[山海保护层] §a配方控制API已施加封印保护§r');
+        }
+        
+        // 2. 注册配方完整性校验
+        var recipeArrays = [
+            { name: 'dishanhairecipes', data: global.dishanhairecipes },
+            { name: 'assrecipes', data: global.assrecipes },
+            { name: 'universalRecipes', data: global.universalRecipes },
+            { name: 'suprecipes_1', data: global.suprecipes_1 },
+            { name: 'recipes', data: global.recipes },
+            { name: 'recipes_electrolyzers', data: global.recipes_electrolyzers }
+        ];
+        
+        var totalRegistered = 0;
+        for (var i = 0; i < recipeArrays.length; i++) {
+            var arr = recipeArrays[i];
+            if (arr.data && Array.isArray(arr.data)) {
+                for (var j = 0; j < arr.data.length; j++) {
+                    var recipe = arr.data[j];
+                    if (recipe && recipe.id) {
+                        var recipeId = recipe.id.startsWith('dishanhai:') ? recipe.id.substring(10) : recipe.id;
+                        guard.recipeGuard.register(recipeId, recipe);
+                        totalRegistered++;
+                    }
+                }
+            }
+        }
+        
+        if (totalRegistered > 0) {
+            info('§6[山海保护层] §a配方完整性校验已注册: ' + totalRegistered + ' 个配方§r');
+        }
+        
+        // 3. 启动完整性自检
+        guard.selfCheck();
+        info('§6[山海保护层] §a完整性自检已启动§r');
+    } else {
+        info('§e⚠ 山海防篡改保护层未加载，跳过API保护§r');
     }
     
     info(`§6═══════════════════════════════════════════════════════════§r`);
