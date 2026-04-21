@@ -745,24 +745,36 @@ global.shanhaiRecipeAPI.getTextUtilGradientComponent("文本", "full_color")
                     return '§r';
                 }
                 
-                // 从15个颜色的颜色池中随机挑选一个颜色（绝对禁用§0）
-                var colors = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
-                var colorIndex = Math.floor(Math.random() * colors.length);
+                // 鲜艳颜色池（绝对禁用§0，排除深色和灰色）
+                var colors = ['§a', '§b', '§c', '§d', '§e', '§f', '§6', '§9', '§2', '§3', '§4', '§5']; // 鲜艳颜色：亮绿、亮青、亮红、亮紫、黄、白、金、蓝、深绿、深青、深红、深紫
                 
-                // 确保索引在有效范围内
-                if (colorIndex >= colors.length) {
-                    colorIndex = colors.length - 1;
+                // 调试信息：记录调用
+                console.log('[山海私货] getSessionRandomSingleColorText: text="' + text + '", length=' + text.length);
+                
+                var result = "";
+                for (var i = 0; i < text.length; i++) {
+                    var char = text[i];
+                    var colorIndex = Math.floor(Math.random() * colors.length);
+                    
+                    // 确保索引在有效范围内
+                    if (colorIndex >= colors.length) {
+                        colorIndex = colors.length - 1;
+                    }
+                    
+                    var color = colors[colorIndex];
+                    
+                    // 验证颜色代码有效性（确保不是§0）
+                    if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
+                        console.warn('[山海私货] getSessionRandomSingleColorText: 颜色无效，使用默认绿色');
+                        color = '§a'; // 默认绿色
+                    }
+                    
+                    result += color + char;
                 }
                 
-                var color = colors[colorIndex];
-                
-                // 验证颜色代码有效性（确保不是§0）
-                if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
-                    color = '§a'; // 默认绿色
-                }
-                
-                // 整个文本使用同一个随机颜色
-                return color + text + "§r";
+                result += "§r"; // 重置颜色
+                console.log('[山海私货] getSessionRandomSingleColorText: 结果="' + result + '"');
+                return result;
             },
             
             getRandomGradientText: function(text) {
@@ -1137,6 +1149,12 @@ global.shanhaiRecipeAPI.getTextUtilGradientComponent("文本", "full_color")
     
     // 在事件处理器外部初始化API和提示系统
     var colorAPI = getColorAPI();
+    console.log('[山海私货] 颜色API已获取，类型: ' + (typeof colorAPI));
+    console.log('[山海私货] colorAPI.getSessionRandomSingleColorText 是否存在: ' + (typeof colorAPI.getSessionRandomSingleColorText !== 'undefined'));
+    if (typeof colorAPI.getSessionRandomSingleColorText !== 'undefined') {
+        var testResult = colorAPI.getSessionRandomSingleColorText('测试');
+        console.log('[山海私货] 测试 getSessionRandomSingleColorText("测试"): "' + testResult + '"');
+    }
     colorAPI.initItemTooltipSystem();
     
 StartupEvents.registry('item', function(e) {
@@ -1195,7 +1213,13 @@ e.create('dishanhai:time_reversal_protocol')
 
 
     e.create('dishanhai:piggy')
-    .displayName(colorAPI.getSessionRandomSingleColorText('创始·猪咪'))
+    .displayName((function() {
+        var name = colorAPI.getSessionRandomSingleColorText('创始·猪咪');
+        console.log('[山海私货] piggy物品名称: "' + name + '"');
+        console.log('[山海私货] 名称长度: ' + name.length);
+        console.log('[山海私货] 包含§字符: ' + name.includes('§'));
+        return name;
+    })())
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
     colorAPI.registerItemTooltip('dishanhai:piggy', [
@@ -1264,3 +1288,26 @@ e.create('dishanhai:time_reversal_protocol')
 // 物品动态提示系统已集成到colorAPI中
 // 使用 colorAPI.initItemTooltipSystem() 和 colorAPI.registerItemTooltip() 来管理提示
 
+// 在文件末尾，所有 StartupEvents 之后添加 
+StartupEvents.postInit(event => { 
+    // 使用 TextUtil 生成渐变文本（TextUtil 在启动阶段应该可用） 
+    try { 
+        if (typeof TextUtil !== 'undefined' && typeof TextUtil.full_color === 'function') { 
+            global.shanhaiDynamicLoreText = TextUtil.full_color("由CellAPI生成,显示由JEIcellAPI生成"); 
+            console.log('[山海私货] 已使用 TextUtil.full_color 生成动态Lore文本'); 
+        } else { 
+            // 备用：手动生成彩虹文本 
+            let text = "由CellAPI生成,显示由JEIcellAPI生成"; 
+            let colors = ['§c','§6','§e','§a','§b','§9','§d']; 
+            let result = ""; 
+            for (let i = 0; i < text.length; i++) { 
+                result += colors[i % colors.length] + text[i]; 
+            } 
+            global.shanhaiDynamicLoreText = result + "§r"; 
+            console.log('[山海私货] TextUtil不可用，使用备用方案生成动态Lore文本'); 
+        } 
+    } catch (e) { 
+        console.error('[山海私货] 生成动态Lore文本失败: ' + e); 
+        global.shanhaiDynamicLoreText = "§7由CellAPI生成,显示由JEIcellAPI生成"; 
+    } 
+});

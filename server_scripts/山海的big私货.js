@@ -1077,9 +1077,9 @@ function getStaticRandomText(text, seed) {
 }
 
 /**
- * 获取会话随机单色文本
- * 每次游戏重新加载后从15个颜色的颜色池（绝对禁用§0）中随机挑选一个颜色
- * 整个文本使用同一个随机颜色
+ * 获取会话随机彩色文本
+ * 每次游戏重新加载后为每个字符从鲜艳颜色池中随机挑选一个颜色
+ * 每个字符使用不同的随机鲜艳颜色
  * @param {string} text - 要着色的文本
  * @returns {string} 彩色文本
  */
@@ -1095,16 +1095,311 @@ function getSessionRandomSingleColorText(text) {
         return '§r';
     }
     
-    // 获取随机颜色（使用现有的getRandomColor函数，它已确保不使用§0）
-    var color = getRandomColor();
+    // 鲜艳颜色池（绝对禁用§0，排除深色和灰色）
+    var brightColors = ['§a', '§b', '§c', '§d', '§e', '§f', '§6', '§9', '§2', '§3', '§4', '§5']; // 鲜艳颜色：亮绿、亮青、亮红、亮紫、黄、白、金、蓝、深绿、深青、深红、深紫
     
-    // 验证颜色代码有效性（二次检查确保不是§0）
-    if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
-        color = '§a'; // 默认绿色
+    // 调试信息：记录调用
+    console.log('[山海私货] getSessionRandomSingleColorText: text="' + text + '", length=' + text.length);
+    
+    var result = "";
+    for (var i = 0; i < text.length; i++) {
+        var char = text[i];
+        var colorIndex = Math.floor(Math.random() * brightColors.length);
+        
+        // 确保索引在有效范围内
+        if (colorIndex >= brightColors.length) {
+            colorIndex = brightColors.length - 1;
+        }
+        
+        var color = brightColors[colorIndex];
+        
+        // 验证颜色代码有效性（确保不是§0）
+        if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
+            console.warn('[山海私货] getSessionRandomSingleColorText: 颜色无效，使用默认绿色');
+            color = '§a'; // 默认绿色
+        }
+        
+        result += color + char;
     }
     
-    // 整个文本使用同一个随机颜色
-    return color + text + "§r";
+    result += "§r"; // 重置颜色
+    console.log('[山海私货] getSessionRandomSingleColorText: 结果="' + result + '"');
+    return result;
+}
+
+/**
+ * 获取TextUtil渐变文本
+ * 使用LDLib TextUtil提供的预定义渐变样式
+ * @param {string} text - 要着色的文本
+ * @param {string} style - 渐变样式名称
+ * @returns {string} 渐变文本字符串
+ */
+function getTextUtilGradient(text, style) {
+    // 辅助函数：转换TextUtil结果为字符串
+    function convertTextUtilResult(result) {
+        if (typeof result === 'string') {
+            return result;
+        } else if (typeof result === 'object' && result !== null) {
+            // TextUtil可能返回Component或其他对象
+            // 尝试多种转换方法
+            var convertedText = null;
+            
+            // 方法1: getString() - KubeJS Component常用方法
+            if (typeof result.getString === 'function') {
+                try {
+                    convertedText = result.getString();
+                    if (typeof convertedText === 'string' && convertedText.length > 0) {
+                        return convertedText;
+                    }
+                } catch (e) {
+                    console.error('[山海私货] convertTextUtilResult: getString()调用失败: ' + e);
+                }
+            }
+            
+            // 方法2: getContents()
+            if (typeof result.getContents === 'function') {
+                try {
+                    convertedText = result.getContents();
+                    if (typeof convertedText === 'string' && convertedText.length > 0) {
+                        return convertedText;
+                    }
+                } catch (e) {
+                    console.error('[山海私货] convertTextUtilResult: getContents()调用失败: ' + e);
+                }
+            }
+            
+            // 方法3: asString()
+            if (typeof result.asString === 'function') {
+                try {
+                    convertedText = result.asString();
+                    if (typeof convertedText === 'string' && convertedText.length > 0) {
+                        return convertedText;
+                    }
+                } catch (e) {
+                    console.error('[山海私货] convertTextUtilResult: asString()调用失败: ' + e);
+                }
+            }
+            
+            // 方法4: toString()
+            if (typeof result.toString === 'function') {
+                try {
+                    convertedText = result.toString();
+                    if (typeof convertedText === 'string' && convertedText.length > 0) {
+                        return convertedText;
+                    }
+                } catch (e) {
+                    console.error('[山海私货] convertTextUtilResult: toString()调用失败: ' + e);
+                }
+            }
+            
+            // 方法5: String()强制转换
+            try {
+                convertedText = String(result);
+                if (typeof convertedText === 'string' && convertedText.length > 0) {
+                    return convertedText;
+                }
+            } catch (e) {
+                console.error('[山海私货] convertTextUtilResult: String()转换失败: ' + e);
+            }
+            
+            // 所有转换方法都失败
+            console.warn('[山海私货] convertTextUtilResult: 无法转换TextUtil结果，返回空字符串');
+            return '';
+        } else if (typeof result === 'function') {
+            // 如果是函数，尝试调用它
+            try {
+                var funcResult = result();
+                if (typeof funcResult === 'string') {
+                    return funcResult;
+                } else {
+                    return String(funcResult);
+                }
+            } catch (e) {
+                console.error('[山海私货] convertTextUtilResult: 函数调用失败: ' + e);
+                return '';
+            }
+        } else {
+            // 其他类型直接转换为字符串
+            return String(result);
+        }
+    }
+    
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getTextUtilGradient: 文本必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    if (typeof style !== 'string') {
+        console.error('[山海私货] getTextUtilGradient: 样式必须是字符串，使用默认样式');
+        style = 'full_color';
+    }
+    
+    // 检查TextUtil是否可用
+    if (typeof TextUtil !== 'undefined') {
+        // 支持TextUtil预定义的渐变样式
+        if (style === 'full_color') return convertTextUtilResult(TextUtil.full_color(text));
+        if (style === 'dark_purplish_red') return convertTextUtilResult(TextUtil.dark_purplish_red(text));
+        if (style === 'white_blue') return convertTextUtilResult(TextUtil.white_blue(text));
+        if (style === 'purplish_red') return convertTextUtilResult(TextUtil.purplish_red(text));
+        if (style === 'golden') return convertTextUtilResult(TextUtil.golden(text));
+        if (style === 'dark_green') return convertTextUtilResult(TextUtil.dark_green(text));
+        
+        // TextUtil扩展样式（如果可用）
+        if (style === 'rainbow' && typeof TextUtil.rainbow === 'function') return convertTextUtilResult(TextUtil.rainbow(text));
+        if (style === 'fire' && typeof TextUtil.fire === 'function') return convertTextUtilResult(TextUtil.fire(text));
+        if (style === 'water' && typeof TextUtil.water === 'function') return convertTextUtilResult(TextUtil.water(text));
+        if (style === 'nature' && typeof TextUtil.nature === 'function') return convertTextUtilResult(TextUtil.nature(text));
+        if (style === 'ice' && typeof TextUtil.ice === 'function') return convertTextUtilResult(TextUtil.ice(text));
+        if (style === 'lava' && typeof TextUtil.lava === 'function') return convertTextUtilResult(TextUtil.lava(text));
+        if (style === 'magic' && typeof TextUtil.magic === 'function') return convertTextUtilResult(TextUtil.magic(text));
+        if (style === 'electric' && typeof TextUtil.electric === 'function') return convertTextUtilResult(TextUtil.electric(text));
+        
+        // 如果样式不被识别，使用默认渐变
+        console.warn('[山海私货] getTextUtilGradient: 未知样式 "' + style + '"，使用默认full_color');
+        return convertTextUtilResult(TextUtil.full_color(text));
+    }
+    
+    // TextUtil不可用时，使用基本颜色模拟效果
+    console.warn('[山海私货] getTextUtilGradient: TextUtil不可用，使用基本颜色模拟效果');
+    
+    var colors = [];
+    switch (style) {
+        case 'full_color':
+            colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+            break;
+        case 'dark_purplish_red':
+            colors = ['§4', '§5', '§4'];
+            break;
+        case 'white_blue':
+            colors = ['§f', '§b', '§f'];
+            break;
+        case 'purplish_red':
+            colors = ['§d', '§5', '§d'];
+            break;
+        case 'golden':
+            colors = ['§6', '§e', '§6'];
+            break;
+        case 'dark_green':
+            colors = ['§2', '§a', '§2'];
+            break;
+        case 'rainbow':
+            colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+            break;
+        case 'fire':
+            colors = ['§c', '§6', '§c'];
+            break;
+        case 'water':
+            colors = ['§b', '§9', '§b'];
+            break;
+        case 'nature':
+            colors = ['§a', '§2', '§a'];
+            break;
+        // 基础颜色样式（单一颜色）
+        case 'red':
+            colors = ['§c'];
+            break;
+        case 'green':
+            colors = ['§a'];
+            break;
+        case 'blue':
+            colors = ['§9'];
+            break;
+        case 'yellow':
+            colors = ['§e'];
+            break;
+        case 'purple':
+            colors = ['§5'];
+            break;
+        case 'cyan':
+            colors = ['§b'];
+            break;
+        case 'orange':
+            colors = ['§6'];
+            break;
+        case 'pink':
+            colors = ['§d'];
+            break;
+        case 'white':
+            colors = ['§f'];
+            break;
+        case 'gray':
+            colors = ['§7'];
+            break;
+        // 暗色系颜色
+        case 'dark_red':
+            colors = ['§4'];
+            break;
+        case 'dark_green':
+            colors = ['§2'];
+            break;
+        case 'dark_blue':
+            colors = ['§1'];
+            break;
+        case 'dark_purple':
+            colors = ['§5'];
+            break;
+        case 'dark_aqua':
+            colors = ['§3'];
+            break;
+        case 'dark_gray':
+            colors = ['§8'];
+            break;
+        case 'black':
+            colors = ['§0'];
+            break;
+        // 双色渐变
+        case 'gradient_red_blue':
+            colors = ['§c', '§9'];
+            break;
+        case 'gradient_green_yellow':
+            colors = ['§a', '§e'];
+            break;
+        case 'gradient_purple_pink':
+            colors = ['§5', '§d'];
+            break;
+        // 带格式的渐变（简单颜色，不含格式）
+        case 'bold_rainbow':
+            colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+            break;
+        case 'italic_fire':
+            colors = ['§c', '§6', '§c'];
+            break;
+        case 'underline_water':
+            colors = ['§b', '§9', '§b'];
+            break;
+        // 特殊效果（简单颜色模拟）
+        case 'shadow':
+            colors = ['§8', '§0'];
+            break;
+        case 'glow':
+            colors = ['§e', '§f'];
+            break;
+        case 'crystal':
+            colors = ['§b', '§f'];
+            break;
+        case 'galaxy':
+            colors = ['§5', '§9', '§b'];
+            break;
+        case 'nebula':
+            colors = ['§5', '§9', '§b', '§a'];
+            break;
+        case 'cosmic':
+            colors = ['§0', '§5', '§9', '§b', '§f'];
+            break;
+        default:
+            colors = ['§a', '§b', '§c', '§d', '§e', '§f'];
+    }
+    
+    // 生成渐变效果
+    var result = "";
+    var length = text.length;
+    for (var i = 0; i < length; i++) {
+        var colorIndex = i % colors.length;
+        result += colors[colorIndex] + text[i];
+    }
+    
+    return result + "§r";
 }
 
 /**
@@ -2491,6 +2786,26 @@ global.shanhaiRecipeAPI = {
      */
     rgbToHex: function(r, g, b) {
         return rgbToHex(r, g, b);
+    },
+
+    /**
+     * 获取TextUtil渐变文本
+     * 
+     * 使用LDLib的TextUtil类生成预定义的渐变样式文本。
+     * 如果TextUtil不可用，则使用基本颜色模拟效果。
+     * 
+     * @function getTextUtilGradient
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要处理的文本
+     * @param {string} style - 渐变样式名称
+     * @returns {string} 渐变文本
+     * @example
+     * // 使用TextUtil.full_color样式
+     * let gradient = global.shanhaiRecipeAPI.getTextUtilGradient("由CellAPI生成,显示由JEIcellAPI生成", "full_color");
+     * console.log(gradient); // 输出: 彩色渐变文本
+     */
+    getTextUtilGradient: function(text, style) {
+        return getTextUtilGradient(text, style);
     }
 };
 
@@ -6233,11 +6548,12 @@ try {
     global.templateItemList_2 = templateItemList_2;
     let templateItemCount = templateItemList_2.length;
     let Machine = 10;
+    let color_API_text = global.shanhaiDynamicLoreText || "§7由CellAPI生成,显示由JEIcellAPI生成";
     let templateLore = [
         '§7这是一个猪咪大礼包,猪咪大王的馈赠',
         '§7它只被授予给猪咪们,所以你是猪咪吗😋',
         '§7物品种类: §e' + templateItemCount + '§7 种,机器种类: §e' + Machine + '§7 种',
-        '§4由CellAPI生成,显示由JEIcellAPI生成', 
+        color_API_text,
         '§8山海私货V2.3'
     ];
     
