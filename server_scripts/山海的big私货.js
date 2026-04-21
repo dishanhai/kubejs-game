@@ -3741,7 +3741,34 @@ try {
     console.log(err);
 }
 
+var miracle = ['gtlcore:miracle_crystal']
+var crystalStacks = ['gtlcore:treasures_crystal','gtlcore:mining_crystal'];
+let output_1 = crystalStacks.map(stack => Item.of(stack, 16));
+let miracle_output = miracle.map(stack => Item.of(stack, 8));
+var fluid_input = ['gtceu:miracle_gas'];
+var input_quantity = fluid_input.map(fluid => fluid+' 10000');
+let Total_output = output_1.concat(miracle_output);
+safeAddRecipe('star_core_stripper', 'dishanhai:star_core_stripper_crystal', function() {
+    var builder = gtr.star_core_stripper('dishanhai:star_core_stripper_crystal')
+        .notConsumable('dishanhai:time_reversal_protocol')
+        .circuit(4)
+        .itemOutputs(Total_output)
+        .outputFluids(input_quantity)
+        .EUt(max)
+        .duration(200);
+    });
 
+var fluid_output_assembly = ['gtceu:oil','gtceu:oil_medium','gtceu:oil_heavy','gtceu:oil_light','gtceu:helium','minecraft:lava','gtceu:benzene','gtceu:barnarda_air','gtceu:hydrochloric_acid','gtceu:radon','gtceu:chlorine','gtceu:methane','gtceu:krypton','gtceu:fluorine','gtceu:natural_gas','gtceu:sulfuric_acid','gtceu:charcoal_byproducts','gtceu:deuterium','gtceu:neon','gtceu:nitric_acid','gtceu:coal_gas','gtceu:helium_3','gtceu:salt_water','gtceu:unknowwater','gtceu:xenon'];
+var Total_fluid_input = fluid_output_assembly.map(fluid => fluid+' 2147483647');
+
+safeAddRecipe('star_core_stripper', 'dishanhai:star_core_stripper_fluid_2', function() {
+    var builder = gtr.star_core_stripper('dishanhai:star_core_stripper_fluid_2')
+        .notConsumable('dishanhai:time_reversal_protocol')
+        .circuit(5)
+        .outputFluids(Total_fluid_input)
+        .EUt(max)
+        .duration(200);
+    });
 
     // ========== 伟哥罐子30倍组装机产出 ==========
     const assemblerRecipes = [
@@ -4389,21 +4416,6 @@ const recipes = [
         EUt: 20,
         duration: 20
     },
-    // ========== SOC配方 ==========
-    {
-        id: 'soc',
-        type: 'suprachronal_assembly_line',
-        notConsumable: ['64x gtceu:cosmic_nanoswarm', 'dishanhai:wzcz3'],
-        itemInputs: [
-            '4x gtladditions:infinity_wafer',
-            '12x avaritia:infinity_ingot',
-            '16x kubejs:cosmic_ram_wafer',
-            '64x kubejs:cosmic_soc_wafer'
-        ],
-        itemOutputs: ['dishanhai:soc'],
-        EUt: max,
-        duration: 20
-    }
 ];
 // 创造模块 - 修复版
 console.log(`[山海的big私货] 🔓创造现实修改模块配方开始添加`)
@@ -6092,7 +6104,7 @@ ServerEvents.recipes(e => {
         { id: 'assembler_flint', itemInputs: ['minecraft:gravel'], itemOutputs: ['2x minecraft:flint'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_gravel', itemInputs: ['#forge:cobblestone'], itemOutputs: ['minecraft:gravel'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_oak_log', itemInputs: ['minecraft:oak_sapling'], itemOutputs: ['64x minecraft:oak_log', '16x minecraft:oak_sapling'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
-        { id: 'assembler_salt_water', inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
+        { id: 'assembler_salt_water',itemInputs:['gtceu:sulfur_dust'], inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_iodine_dust', inputFluids: ['gtceu:salt_water 1000'], itemOutputs: ['gtceu:iodine_dust'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_iodine_dust_2', itemInputs: ['32x minecraft:kelp'], itemOutputs: ['gtceu:iodine_dust'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_slime_ball', itemInputs: ['minecraft:clay_ball'], itemOutputs: ['minecraft:slime_ball'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
