@@ -1,5 +1,4 @@
 // priority: 100
-// priority: 100
 /* ========== 颜色API ==========
 // 随机单色
 global.shanhaiRecipeAPI.getRandomColor()
@@ -30,14 +29,626 @@ global.shanhaiRecipeAPI.getGradientText(text, startColor, endColor)
 
 // 创建Component对象
 global.shanhaiRecipeAPI.createDynamicText(text, options)
+
+// ========== TextUtil渐变样式 & 自定义颜色 ==========
+
+// TextUtil基础样式（需安装LDLib）
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "full_color")
+// 返回: 全彩渐变文本
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "dark_purplish_red")
+// 返回: 暗紫红色渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "white_blue")
+// 返回: 白蓝渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "purplish_red")
+// 返回: 紫红色渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "golden")
+// 返回: 金色渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "dark_green")
+// 返回: 深绿色渐变
+
+// TextUtil扩展样式（如果可用）
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "rainbow")
+// 返回: 彩虹渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "fire")
+// 返回: 火焰渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "water")
+// 返回: 水流渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "nature")
+// 返回: 自然渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "ice")
+// 返回: 冰霜渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "lava")
+// 返回: 熔岩渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "magic")
+// 返回: 魔法渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("文本", "electric")
+// 返回: 雷电渐变
+
+// 基础颜色代码
+global.shanhaiRecipeAPI.getTextUtilGradient("红", "red")
+// 返回: "§c红"
+global.shanhaiRecipeAPI.getTextUtilGradient("绿", "green")
+// 返回: "§a绿"
+global.shanhaiRecipeAPI.getTextUtilGradient("蓝", "blue")
+// 返回: "§9蓝"
+global.shanhaiRecipeAPI.getTextUtilGradient("黄", "yellow")
+// 返回: "§e黄"
+global.shanhaiRecipeAPI.getTextUtilGradient("紫", "purple")
+// 返回: "§5紫"
+global.shanhaiRecipeAPI.getTextUtilGradient("青", "cyan")
+// 返回: "§b青"
+global.shanhaiRecipeAPI.getTextUtilGradient("橙", "orange")
+// 返回: "§6橙"
+global.shanhaiRecipeAPI.getTextUtilGradient("粉", "pink")
+// 返回: "§d粉"
+global.shanhaiRecipeAPI.getTextUtilGradient("白", "white")
+// 返回: "§f白"
+global.shanhaiRecipeAPI.getTextUtilGradient("灰", "gray")
+// 返回: "§7灰"
+
+// 暗色系颜色代码
+global.shanhaiRecipeAPI.getTextUtilGradient("暗红", "dark_red")
+// 返回: "§4暗红"
+global.shanhaiRecipeAPI.getTextUtilGradient("暗绿", "dark_green")
+// 返回: "§2暗绿"
+global.shanhaiRecipeAPI.getTextUtilGradient("暗蓝", "dark_blue")
+// 返回: "§1暗蓝"
+global.shanhaiRecipeAPI.getTextUtilGradient("暗紫", "dark_purple")
+// 返回: "§5暗紫"
+global.shanhaiRecipeAPI.getTextUtilGradient("暗青", "dark_aqua")
+// 返回: "§3暗青"
+global.shanhaiRecipeAPI.getTextUtilGradient("暗灰", "dark_gray")
+// 返回: "§8暗灰"
+global.shanhaiRecipeAPI.getTextUtilGradient("黑", "black")
+// 返回: "§0黑"
+
+// 基础渐变效果
+global.shanhaiRecipeAPI.getTextUtilGradient("彩虹", "rainbow")
+// 返回: "§c彩§6虹"（彩虹渐变）
+global.shanhaiRecipeAPI.getTextUtilGradient("火焰", "fire")
+// 返回: "§c火§6焰§e!"（红黄渐变）
+global.shanhaiRecipeAPI.getTextUtilGradient("水流", "water")
+// 返回: "§3水§9流§b!"（蓝青渐变）
+global.shanhaiRecipeAPI.getTextUtilGradient("自然", "nature")
+// 返回: "§2自§a然§e!"（绿黄渐变）
+
+// 双色渐变效果
+global.shanhaiRecipeAPI.getTextUtilGradient("红蓝渐变", "gradient_red_blue")
+// 返回: 红到蓝的平滑渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("绿黄渐变", "gradient_green_yellow")
+// 返回: 绿到黄的平滑渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("紫粉渐变", "gradient_purple_pink")
+// 返回: 紫到粉的平滑渐变
+
+// 带格式的渐变
+global.shanhaiRecipeAPI.getTextUtilGradient("粗体彩虹", "bold_rainbow")
+// 返回: 粗体彩虹渐变（§l）
+global.shanhaiRecipeAPI.getTextUtilGradient("斜体火焰", "italic_fire")
+// 返回: 斜体火焰渐变（§o）
+global.shanhaiRecipeAPI.getTextUtilGradient("下划线水流", "underline_water")
+// 返回: 下划线水流渐变（§n）
+
+// 特殊视觉效果
+global.shanhaiRecipeAPI.getTextUtilGradient("阴影", "shadow")
+// 返回: 阴影效果文本
+global.shanhaiRecipeAPI.getTextUtilGradient("发光", "glow")
+// 返回: 发光效果文本
+global.shanhaiRecipeAPI.getTextUtilGradient("水晶", "crystal")
+// 返回: 水晶效果文本
+global.shanhaiRecipeAPI.getTextUtilGradient("银河", "galaxy")
+// 返回: 银河效果文本（紫-蓝-青渐变）
+global.shanhaiRecipeAPI.getTextUtilGradient("星云", "nebula")
+// 返回: 星云效果文本（紫-蓝-青-绿渐变）
+global.shanhaiRecipeAPI.getTextUtilGradient("宇宙", "cosmic")
+// 返回: 宇宙效果文本（黑-紫-蓝-青-白渐变）
+
+// 获取所有可用样式
+global.shanhaiRecipeAPI.getAvailableTextUtilStyles()
+// 返回: ['full_color', 'rainbow', 'red', 'green', ...]（样式列表）
+
+// 创建Component对象（用于提示系统）
+global.shanhaiRecipeAPI.getTextUtilGradientComponent("文本", "full_color")
+// 返回: Component对象（可直接用于事件）
 */
 (function() {
-    // 辅助函数：安全获取颜色API
+    // 辅助函数：安全获取颜色API（包含TextUtil渐变支持）
     function getColorAPI() {
+        // 如果全局API存在，扩展它以包含TextUtil支持
         if (typeof global.shanhaiRecipeAPI !== 'undefined') {
-            return global.shanhaiRecipeAPI;
+            var api = global.shanhaiRecipeAPI;
+            
+            // 检查并添加TextUtil渐变方法（如果不存在）
+            if (typeof api.getTextUtilGradient === 'undefined') {
+                api.getTextUtilGradient = function(text, style) {
+                    // 检查TextUtil是否可用
+                    if (typeof TextUtil !== 'undefined') {
+                        if (style === 'full_color') return TextUtil.full_color(text);
+                        if (style === 'dark_purplish_red') return TextUtil.dark_purplish_red(text);
+                        if (style === 'white_blue') return TextUtil.white_blue(text);
+                        if (style === 'purplish_red') return TextUtil.purplish_red(text);
+                        if (style === 'golden') return TextUtil.golden(text);
+                        if (style === 'dark_green') return TextUtil.dark_green(text);
+                        // 扩展更多TextUtil样式（如果存在）
+                        if (style === 'rainbow' && typeof TextUtil.rainbow === 'function') return TextUtil.rainbow(text);
+                        if (style === 'fire' && typeof TextUtil.fire === 'function') return TextUtil.fire(text);
+                        if (style === 'water' && typeof TextUtil.water === 'function') return TextUtil.water(text);
+                        if (style === 'nature' && typeof TextUtil.nature === 'function') return TextUtil.nature(text);
+                        if (style === 'ice' && typeof TextUtil.ice === 'function') return TextUtil.ice(text);
+                        if (style === 'lava' && typeof TextUtil.lava === 'function') return TextUtil.lava(text);
+                        if (style === 'magic' && typeof TextUtil.magic === 'function') return TextUtil.magic(text);
+                        if (style === 'electric' && typeof TextUtil.electric === 'function') return TextUtil.electric(text);
+                    }
+                    
+                    // 自定义颜色实现（当TextUtil不可用或样式不存在时）
+                    // 基本颜色代码
+                    if (style === 'red') return "§c" + text;
+                    if (style === 'green') return "§a" + text;
+                    if (style === 'blue') return "§9" + text;
+                    if (style === 'yellow') return "§e" + text;
+                    if (style === 'purple') return "§5" + text;
+                    if (style === 'cyan') return "§b" + text;
+                    if (style === 'orange') return "§6" + text;
+                    if (style === 'pink') return "§d" + text;
+                    if (style === 'white') return "§f" + text;
+                    if (style === 'gray') return "§7" + text;
+                    if (style === 'dark_red') return "§4" + text;
+                    if (style === 'dark_green') return "§2" + text;
+                    if (style === 'dark_blue') return "§1" + text;
+                    if (style === 'dark_purple') return "§5" + text;
+                    if (style === 'dark_aqua') return "§3" + text;
+                    if (style === 'dark_gray') return "§8" + text;
+                    if (style === 'black') return "§0" + text;
+                    
+                    // 自定义渐变实现
+                    if (style === 'rainbow') {
+                        var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'fire') {
+                        var colors = ['§c', '§6', '§e'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'water') {
+                        var colors = ['§3', '§9', '§b'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'nature') {
+                        var colors = ['§2', '§a', '§e'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    
+                    // 双色渐变效果
+                    if (style === 'gradient_red_blue') {
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            var ratio = i / Math.max(1, text.length - 1);
+                            if (ratio < 0.5) {
+                                result += '§c' + text[i]; // 红色到蓝色之间
+                            } else {
+                                result += '§9' + text[i]; // 蓝色
+                            }
+                        }
+                        return result;
+                    }
+                    if (style === 'gradient_green_yellow') {
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            var ratio = i / Math.max(1, text.length - 1);
+                            if (ratio < 0.5) {
+                                result += '§a' + text[i]; // 绿色
+                            } else {
+                                result += '§e' + text[i]; // 黄色
+                            }
+                        }
+                        return result;
+                    }
+                    if (style === 'gradient_purple_pink') {
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            var ratio = i / Math.max(1, text.length - 1);
+                            if (ratio < 0.5) {
+                                result += '§5' + text[i]; // 紫色
+                            } else {
+                                result += '§d' + text[i]; // 粉色
+                            }
+                        }
+                        return result;
+                    }
+                    
+                    // 带格式的渐变
+                    if (style === 'bold_rainbow') {
+                        var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + '§l' + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'italic_fire') {
+                        var colors = ['§c', '§6', '§e'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + '§o' + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'underline_water') {
+                        var colors = ['§3', '§9', '§b'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + '§n' + text[i];
+                        }
+                        return result;
+                    }
+                    
+                    // 特殊效果
+                    if (style === 'shadow') {
+                        var result = '§8';
+                        for (var i = 0; i < text.length; i++) {
+                            result += text[i];
+                        }
+                        result += '§7';
+                        for (var i = 0; i < text.length; i++) {
+                            result += text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'glow') {
+                        var colors = ['§e', '§f', '§e', '§f', '§e'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'crystal') {
+                        var colors = ['§b', '§f', '§d', '§f', '§b'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'galaxy') {
+                        var colors = ['§5', '§d', '§9', '§b', '§5'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'nebula') {
+                        var colors = ['§5', '§d', '§9', '§b', '§a'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    if (style === 'cosmic') {
+                        var colors = ['§0', '§5', '§9', '§b', '§f'];
+                        var result = '';
+                        for (var i = 0; i < text.length; i++) {
+                            result += colors[i % colors.length] + text[i];
+                        }
+                        return result;
+                    }
+                    
+                    // 默认返回灰色文本
+                    return "§7" + text;
+                };
+            }
+            
+            // 检查并添加可用样式列表方法
+            if (typeof api.getAvailableTextUtilStyles === 'undefined') {
+                api.getAvailableTextUtilStyles = function() {
+                    if (typeof TextUtil !== 'undefined') {
+                        // 基础TextUtil样式
+                        var styles = ['full_color', 'dark_purplish_red', 'white_blue', 'purplish_red', 'golden', 'dark_green'];
+                        // 扩展TextUtil样式（如果存在）
+                        if (typeof TextUtil.rainbow === 'function') styles.push('rainbow');
+                        if (typeof TextUtil.fire === 'function') styles.push('fire');
+                        if (typeof TextUtil.water === 'function') styles.push('water');
+                        if (typeof TextUtil.nature === 'function') styles.push('nature');
+                        if (typeof TextUtil.ice === 'function') styles.push('ice');
+                        if (typeof TextUtil.lava === 'function') styles.push('lava');
+                        if (typeof TextUtil.magic === 'function') styles.push('magic');
+                        if (typeof TextUtil.electric === 'function') styles.push('electric');
+                        return styles;
+                    }
+                    // TextUtil不可用时，返回所有自定义样式
+                    return [
+                        // 基础颜色
+                        'red', 'green', 'blue', 'yellow', 'purple', 'cyan', 'orange', 'pink', 'white', 'gray',
+                        'dark_red', 'dark_green', 'dark_blue', 'dark_purple', 'dark_aqua', 'dark_gray', 'black',
+                        // 渐变效果
+                        'rainbow', 'fire', 'water', 'nature',
+                        // 高级效果
+                        'gradient_red_blue', 'gradient_green_yellow', 'gradient_purple_pink',
+                        'bold_rainbow', 'italic_fire', 'underline_water',
+                        'shadow', 'glow', 'crystal', 'galaxy', 'nebula', 'cosmic'
+                    ];
+                };
+            }
+            
+            // 检查并添加工具提示相关方法
+            if (typeof api._tooltipRegistry === 'undefined') {
+                api._tooltipRegistry = {};
+            }
+            
+            if (typeof api.registerItemTooltip === 'undefined') {
+                api.registerItemTooltip = function(itemId, tooltips) {
+                    if (!this._tooltipRegistry) {
+                        this._tooltipRegistry = {};
+                    }
+                    this._tooltipRegistry[itemId] = tooltips;
+                    console.log('注册物品提示: ' + itemId + ' (' + tooltips.length + '条提示)');
+                };
+            }
+            
+            if (typeof api.getItemTooltips === 'undefined') {
+                api.getItemTooltips = function(itemId) {
+                    if (this._tooltipRegistry && this._tooltipRegistry[itemId]) {
+                        return this._tooltipRegistry[itemId];
+                    }
+                    return null;
+                };
+            }
+            
+            if (typeof api.getTextUtilGradientComponent === 'undefined') {
+                api.getTextUtilGradientComponent = function(text, style) {
+                    // 检查TextUtil和Component是否可用
+                    if (typeof TextUtil !== 'undefined' && typeof Component !== 'undefined') {
+                        if (style === 'full_color') return Component.literal(TextUtil.full_color(text));
+                        if (style === 'dark_purplish_red') return Component.literal(TextUtil.dark_purplish_red(text));
+                        if (style === 'white_blue') return Component.literal(TextUtil.white_blue(text));
+                        if (style === 'purplish_red') return Component.literal(TextUtil.purplish_red(text));
+                        if (style === 'golden') return Component.literal(TextUtil.golden(text));
+                        if (style === 'dark_green') return Component.literal(TextUtil.dark_green(text));
+                        // 扩展更多TextUtil样式（如果存在）
+                        if (style === 'rainbow' && typeof TextUtil.rainbow === 'function') return Component.literal(TextUtil.rainbow(text));
+                        if (style === 'fire' && typeof TextUtil.fire === 'function') return Component.literal(TextUtil.fire(text));
+                        if (style === 'water' && typeof TextUtil.water === 'function') return Component.literal(TextUtil.water(text));
+                        if (style === 'nature' && typeof TextUtil.nature === 'function') return Component.literal(TextUtil.nature(text));
+                        if (style === 'ice' && typeof TextUtil.ice === 'function') return Component.literal(TextUtil.ice(text));
+                        if (style === 'lava' && typeof TextUtil.lava === 'function') return Component.literal(TextUtil.lava(text));
+                        if (style === 'magic' && typeof TextUtil.magic === 'function') return Component.literal(TextUtil.magic(text));
+                        if (style === 'electric' && typeof TextUtil.electric === 'function') return Component.literal(TextUtil.electric(text));
+                    }
+                    
+                    // 自定义颜色实现（当TextUtil不可用或样式不存在时）
+                    if (typeof Component !== 'undefined') {
+                        // 基本颜色代码
+                        if (style === 'red') return Component.literal("§c" + text);
+                        if (style === 'green') return Component.literal("§a" + text);
+                        if (style === 'blue') return Component.literal("§9" + text);
+                        if (style === 'yellow') return Component.literal("§e" + text);
+                        if (style === 'purple') return Component.literal("§5" + text);
+                        if (style === 'cyan') return Component.literal("§b" + text);
+                        if (style === 'orange') return Component.literal("§6" + text);
+                        if (style === 'pink') return Component.literal("§d" + text);
+                        if (style === 'white') return Component.literal("§f" + text);
+                        if (style === 'gray') return Component.literal("§7" + text);
+                        if (style === 'dark_red') return Component.literal("§4" + text);
+                        if (style === 'dark_green') return Component.literal("§2" + text);
+                        if (style === 'dark_blue') return Component.literal("§1" + text);
+                        if (style === 'dark_purple') return Component.literal("§5" + text);
+                        if (style === 'dark_aqua') return Component.literal("§3" + text);
+                        if (style === 'dark_gray') return Component.literal("§8" + text);
+                        if (style === 'black') return Component.literal("§0" + text);
+                        
+                        // 自定义渐变实现
+                        if (style === 'rainbow') {
+                            var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'fire') {
+                            var colors = ['§c', '§6', '§e'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'water') {
+                            var colors = ['§3', '§9', '§b'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'nature') {
+                            var colors = ['§2', '§a', '§e'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        
+                        // 双色渐变效果
+                        if (style === 'gradient_red_blue') {
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                var ratio = i / Math.max(1, text.length - 1);
+                                if (ratio < 0.5) {
+                                    result += '§c' + text[i]; // 红色到蓝色之间
+                                } else {
+                                    result += '§9' + text[i]; // 蓝色
+                                }
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'gradient_green_yellow') {
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                var ratio = i / Math.max(1, text.length - 1);
+                                if (ratio < 0.5) {
+                                    result += '§a' + text[i]; // 绿色
+                                } else {
+                                    result += '§e' + text[i]; // 黄色
+                                }
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'gradient_purple_pink') {
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                var ratio = i / Math.max(1, text.length - 1);
+                                if (ratio < 0.5) {
+                                    result += '§5' + text[i]; // 紫色
+                                } else {
+                                    result += '§d' + text[i]; // 粉色
+                                }
+                            }
+                            return Component.literal(result);
+                        }
+                        
+                        // 带格式的渐变
+                        if (style === 'bold_rainbow') {
+                            var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + '§l' + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'italic_fire') {
+                            var colors = ['§c', '§6', '§e'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + '§o' + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'underline_water') {
+                            var colors = ['§3', '§9', '§b'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + '§n' + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        
+                        // 特殊效果
+                        if (style === 'shadow') {
+                            var result = '§8';
+                            for (var i = 0; i < text.length; i++) {
+                                result += text[i];
+                            }
+                            result += '§7';
+                            for (var i = 0; i < text.length; i++) {
+                                result += text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'glow') {
+                            var colors = ['§e', '§f', '§e', '§f', '§e'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'crystal') {
+                            var colors = ['§b', '§f', '§d', '§f', '§b'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'galaxy') {
+                            var colors = ['§5', '§d', '§9', '§b', '§5'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'nebula') {
+                            var colors = ['§5', '§d', '§9', '§b', '§a'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                        if (style === 'cosmic') {
+                            var colors = ['§0', '§5', '§9', '§b', '§f'];
+                            var result = '';
+                            for (var i = 0; i < text.length; i++) {
+                                result += colors[i % colors.length] + text[i];
+                            }
+                            return Component.literal(result);
+                        }
+                    }
+                    
+                    // 默认返回灰色文本
+                    if (typeof Component !== 'undefined') {
+                        return Component.literal("§7" + text);
+                    }
+                    // 如果Component也不可用，返回普通字符串（虽然不太可能）
+                    return "§7" + text;
+                };
+            }
+            
+            if (typeof api.initItemTooltipSystem === 'undefined') {
+                var self = api;
+                api.initItemTooltipSystem = function() {
+                    // 检查是否已经初始化过
+                    if (this._tooltipSystemInitialized) {
+                        return;
+                    }
+                    
+                    // 设置事件监听器
+                    ForgeEvents.onEvent("net.minecraftforge.event.entity.player.ItemTooltipEvent", function(event) {
+                        // 安全检查：确保LDLib可用
+                        if (typeof LDLib !== 'undefined' && !LDLib.isClient()) {
+                            return;
+                        }
+                        
+                        var itemId = event.getItemStack().getId();
+                        var tooltips = self.getItemTooltips(itemId);
+                        
+                        if (tooltips && tooltips.length > 0) {
+                            for (var i = 0; i < tooltips.length; i++) {
+                                var tooltip = tooltips[i];
+                                event.getToolTip().add(self.getTextUtilGradientComponent(tooltip.text, tooltip.style));
+                            }
+                        }
+                    });
+                    
+                    this._tooltipSystemInitialized = true;
+                    console.log('物品提示系统已初始化');
+                };
+            }
+            
+            return api;
         }
-        // 备用方案：如果API不可用，提供简单的颜色函数
+        
+        // 备用方案：如果API不可用，提供完整的颜色函数（包含TextUtil支持）
         return {
             getRandomColor: function() {
                 let colors = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
@@ -96,11 +707,338 @@ global.shanhaiRecipeAPI.createDynamicText(text, options)
             
             createDynamicText: function(text, options) {
                 return '§b' + text + '§r';
+            },
+            
+            /**
+             * 使用LDLib TextUtil创建渐变文本
+             * 如果TextUtil不可用，返回默认灰色文本
+             * @param {string} text - 要着色的文本
+             * @param {string} style - 渐变样式: 'full_color', 'dark_purplish_red', 'white_blue', 'purplish_red', 'golden', 'dark_green'
+             * @returns {string} 带颜色代码的文本字符串
+             */
+            getTextUtilGradient: function(text, style) {
+                // 检查TextUtil是否可用
+                if (typeof TextUtil !== 'undefined') {
+                    if (style === 'full_color') return TextUtil.full_color(text);
+                    if (style === 'dark_purplish_red') return TextUtil.dark_purplish_red(text);
+                    if (style === 'white_blue') return TextUtil.white_blue(text);
+                    if (style === 'purplish_red') return TextUtil.purplish_red(text);
+                    if (style === 'golden') return TextUtil.golden(text);
+                    if (style === 'dark_green') return TextUtil.dark_green(text);
+                    // 扩展更多TextUtil样式（如果存在）
+                    if (style === 'rainbow' && typeof TextUtil.rainbow === 'function') return TextUtil.rainbow(text);
+                    if (style === 'fire' && typeof TextUtil.fire === 'function') return TextUtil.fire(text);
+                    if (style === 'water' && typeof TextUtil.water === 'function') return TextUtil.water(text);
+                    if (style === 'nature' && typeof TextUtil.nature === 'function') return TextUtil.nature(text);
+                    if (style === 'ice' && typeof TextUtil.ice === 'function') return TextUtil.ice(text);
+                    if (style === 'lava' && typeof TextUtil.lava === 'function') return TextUtil.lava(text);
+                    if (style === 'magic' && typeof TextUtil.magic === 'function') return TextUtil.magic(text);
+                    if (style === 'electric' && typeof TextUtil.electric === 'function') return TextUtil.electric(text);
+                }
+                
+                // 自定义颜色实现（当TextUtil不可用或样式不存在时）
+                // 基本颜色代码
+                if (style === 'red') return "§c" + text;
+                if (style === 'green') return "§a" + text;
+                if (style === 'blue') return "§9" + text;
+                if (style === 'yellow') return "§e" + text;
+                if (style === 'purple') return "§5" + text;
+                if (style === 'cyan') return "§b" + text;
+                if (style === 'orange') return "§6" + text;
+                if (style === 'pink') return "§d" + text;
+                if (style === 'white') return "§f" + text;
+                if (style === 'gray') return "§7" + text;
+                if (style === 'dark_red') return "§4" + text;
+                if (style === 'dark_green') return "§2" + text;
+                if (style === 'dark_blue') return "§1" + text;
+                if (style === 'dark_purple') return "§5" + text;
+                if (style === 'dark_aqua') return "§3" + text;
+                if (style === 'dark_gray') return "§8" + text;
+                if (style === 'black') return "§0" + text;
+                
+                // 自定义渐变实现
+                if (style === 'rainbow') {
+                    var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'fire') {
+                    var colors = ['§c', '§6', '§e'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'water') {
+                    var colors = ['§3', '§9', '§b'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'nature') {
+                    var colors = ['§2', '§a', '§e'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                
+                // 双色渐变效果
+                if (style === 'gradient_red_blue') {
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        var ratio = i / Math.max(1, text.length - 1);
+                        if (ratio < 0.5) {
+                            result += '§c' + text[i]; // 红色到蓝色之间
+                        } else {
+                            result += '§9' + text[i]; // 蓝色
+                        }
+                    }
+                    return result;
+                }
+                if (style === 'gradient_green_yellow') {
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        var ratio = i / Math.max(1, text.length - 1);
+                        if (ratio < 0.5) {
+                            result += '§a' + text[i]; // 绿色
+                        } else {
+                            result += '§e' + text[i]; // 黄色
+                        }
+                    }
+                    return result;
+                }
+                if (style === 'gradient_purple_pink') {
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        var ratio = i / Math.max(1, text.length - 1);
+                        if (ratio < 0.5) {
+                            result += '§5' + text[i]; // 紫色
+                        } else {
+                            result += '§d' + text[i]; // 粉色
+                        }
+                    }
+                    return result;
+                }
+                
+                // 带格式的渐变
+                if (style === 'bold_rainbow') {
+                    var colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + '§l' + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'italic_fire') {
+                    var colors = ['§c', '§6', '§e'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + '§o' + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'underline_water') {
+                    var colors = ['§3', '§9', '§b'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + '§n' + text[i];
+                    }
+                    return result;
+                }
+                
+                // 特殊效果
+                if (style === 'shadow') {
+                    var result = '§8';
+                    for (var i = 0; i < text.length; i++) {
+                        result += text[i];
+                    }
+                    result += '§7';
+                    for (var i = 0; i < text.length; i++) {
+                        result += text[i];
+                    }
+                    return result;
+                }
+                if (style === 'glow') {
+                    var colors = ['§e', '§f', '§e', '§f', '§e'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'crystal') {
+                    var colors = ['§b', '§f', '§d', '§f', '§b'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'galaxy') {
+                    var colors = ['§5', '§d', '§9', '§b', '§5'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'nebula') {
+                    var colors = ['§5', '§d', '§9', '§b', '§a'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                if (style === 'cosmic') {
+                    var colors = ['§0', '§5', '§9', '§b', '§f'];
+                    var result = '';
+                    for (var i = 0; i < text.length; i++) {
+                        result += colors[i % colors.length] + text[i];
+                    }
+                    return result;
+                }
+                
+                // 默认返回灰色文本
+                return "§7" + text;
+            },
+            
+            /**
+             * 获取可用的TextUtil样式列表
+             * @returns {Array<string>} 可用样式数组
+             */
+            getAvailableTextUtilStyles: function() {
+                if (typeof TextUtil !== 'undefined') {
+                    // 基础TextUtil样式
+                    var styles = ['full_color', 'dark_purplish_red', 'white_blue', 'purplish_red', 'golden', 'dark_green'];
+                    // 扩展TextUtil样式（如果存在）
+                    if (typeof TextUtil.rainbow === 'function') styles.push('rainbow');
+                    if (typeof TextUtil.fire === 'function') styles.push('fire');
+                    if (typeof TextUtil.water === 'function') styles.push('water');
+                    if (typeof TextUtil.nature === 'function') styles.push('nature');
+                    if (typeof TextUtil.ice === 'function') styles.push('ice');
+                    if (typeof TextUtil.lava === 'function') styles.push('lava');
+                    if (typeof TextUtil.magic === 'function') styles.push('magic');
+                    if (typeof TextUtil.electric === 'function') styles.push('electric');
+                    return styles;
+                }
+                // TextUtil不可用时，返回所有自定义样式
+                return [
+                    // 基础颜色
+                    'red', 'green', 'blue', 'yellow', 'purple', 'cyan', 'orange', 'pink', 'white', 'gray',
+                    'dark_red', 'dark_green', 'dark_blue', 'dark_purple', 'dark_aqua', 'dark_gray', 'black',
+                    // 渐变效果
+                    'rainbow', 'fire', 'water', 'nature',
+                    // 高级效果
+                    'gradient_red_blue', 'gradient_green_yellow', 'gradient_purple_pink',
+                    'bold_rainbow', 'italic_fire', 'underline_water',
+                    'shadow', 'glow', 'crystal', 'galaxy', 'nebula', 'cosmic'
+                ];
+            },
+            
+            /**
+             * 工具提示注册表（私有）
+             */
+            _tooltipRegistry: {},
+            
+            /**
+             * 为物品注册动态提示
+             * @param {string} itemId - 物品ID
+             * @param {Array<{text: string, style: string}>} tooltips - 提示文本数组
+             */
+            registerItemTooltip: function(itemId, tooltips) {
+                if (!this._tooltipRegistry) {
+                    this._tooltipRegistry = {};
+                }
+                this._tooltipRegistry[itemId] = tooltips;
+                console.log('注册物品提示: ' + itemId + ' (' + tooltips.length + '条提示)');
+            },
+            
+            /**
+             * 获取物品的动态提示
+             * @param {string} itemId - 物品ID
+             * @returns {Array<{text: string, style: string}>|null} 提示数组或null
+             */
+            getItemTooltips: function(itemId) {
+                if (this._tooltipRegistry && this._tooltipRegistry[itemId]) {
+                    return this._tooltipRegistry[itemId];
+                }
+                return null;
+            },
+            
+            /**
+             * 使用LDLib TextUtil创建渐变文本组件
+             * @param {string} text - 要着色的文本
+             * @param {string} style - 渐变样式
+             * @returns {Component} 文本组件
+             */
+            getTextUtilGradientComponent: function(text, style) {
+                // 检查TextUtil和Component是否可用
+                if (typeof TextUtil !== 'undefined' && typeof Component !== 'undefined') {
+                    if (style === 'full_color') return Component.literal(TextUtil.full_color(text));
+                    if (style === 'dark_purplish_red') return Component.literal(TextUtil.dark_purplish_red(text));
+                    if (style === 'white_blue') return Component.literal(TextUtil.white_blue(text));
+                    if (style === 'purplish_red') return Component.literal(TextUtil.purplish_red(text));
+                    if (style === 'golden') return Component.literal(TextUtil.golden(text));
+                    if (style === 'dark_green') return Component.literal(TextUtil.dark_green(text));
+                }
+                // 默认返回灰色文本
+                if (typeof Component !== 'undefined') {
+                    return Component.literal("§7" + text);
+                }
+                // 如果Component也不可用，返回普通字符串（虽然不太可能）
+                return "§7" + text;
+            },
+            
+            /**
+             * 初始化物品提示系统
+             * 需要调用此方法来激活动态提示功能
+             */
+            initItemTooltipSystem: function() {
+                var self = this;
+                
+                // 检查是否已经初始化过
+                if (this._tooltipSystemInitialized) {
+                    return;
+                }
+                
+                // 设置事件监听器
+                ForgeEvents.onEvent("net.minecraftforge.event.entity.player.ItemTooltipEvent", function(event) {
+                    // 安全检查：确保LDLib可用
+                    if (typeof LDLib !== 'undefined' && !LDLib.isClient()) {
+                        return;
+                    }
+                    
+                    var itemId = event.getItemStack().getId();
+                    var tooltips = self.getItemTooltips(itemId);
+                    
+                    if (tooltips && tooltips.length > 0) {
+                        for (var i = 0; i < tooltips.length; i++) {
+                            var tooltip = tooltips[i];
+                            event.getToolTip().add(self.getTextUtilGradientComponent(tooltip.text, tooltip.style));
+                        }
+                    }
+                });
+                
+                this._tooltipSystemInitialized = true;
+                console.log('物品提示系统已初始化');
             }
         };
     }
+    
+    // 在事件处理器外部初始化API和提示系统
+    var colorAPI = getColorAPI();
+    colorAPI.initItemTooltipSystem();
+    
 StartupEvents.registry('item', function(e) {
-    let colorAPI = getColorAPI();
     e.create('dishanhai:cosmic_probe_mk')
     .displayName('MK1—宇宙探测器')
      .texture('dishanhai_item:item/cosmic_probe_mk')
@@ -154,11 +1092,18 @@ e.create('dishanhai:time_reversal_protocol')
     })
     .tooltip('任务会送给你!,超级食物')
 
+
     e.create('dishanhai:piggy')
-    .displayName(colorAPI.getRandomRainbowText('传奇·猪咪'))
+    .displayName(colorAPI.getTextUtilGradient('至高·猪咪', 'full_color'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
-    .tooltip(colorAPI.getRandomRainbowText('传奇的猪咪大帝!'))
+    colorAPI.registerItemTooltip('dishanhai:piggy', [
+        { text: '祂屹立于创始时空的最顶端', style: 'full_color' },
+        { text: '祂俯视着所有时空的未来', style: 'full_color' },
+        { text: '祂俯视着所有时空的现在', style: 'full_color' },
+        { text: '祂俯视着所有时空的过去', style: 'full_color' },
+
+    ]);
 
     e.create('dishanhai:fishbig_shards')
     .displayName('鱼大碎片')
@@ -214,3 +1159,7 @@ e.create('dishanhai:time_reversal_protocol')
         .tooltip('§1超§2越§3维§4度§5存§6在§7的§8造§9物，§a来§b自§c至§d高§e维§f度§4的§2回§6响')
 
 })})();
+
+// 物品动态提示系统已集成到colorAPI中
+// 使用 colorAPI.initItemTooltipSystem() 和 colorAPI.registerItemTooltip() 来管理提示
+

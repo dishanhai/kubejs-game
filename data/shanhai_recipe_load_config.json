@@ -112,6 +112,6 @@
 	"super_energy_card": true,
 	"super_speed_card": true,
 	"overclock_card": true,
-	"test_placeholder": false,
+	"test_placeholder": true,
 	"star_core_stripper_ores": false
 }

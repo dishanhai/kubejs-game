@@ -946,8 +946,28 @@ var colorNames = {
  * @returns {string} Minecraft颜色代码
  */
 function getRandomColor() {
+    // 防御性编程：确保colorPool存在且非空
+    if (!colorPool || !Array.isArray(colorPool) || colorPool.length === 0) {
+        console.error('[山海私货] 颜色池未初始化或为空，使用默认颜色§a');
+        return '§a'; // 默认绿色
+    }
+    
+    // 安全随机索引：确保在有效范围内
     var randomIndex = Math.floor(Math.random() * colorPool.length);
-    return colorPool[randomIndex];
+    
+    // 防止Math.random()返回1.0的极端情况
+    if (randomIndex >= colorPool.length) {
+        randomIndex = colorPool.length - 1;
+    }
+    
+    var color = colorPool[randomIndex];
+    
+    // 确保返回有效的颜色代码
+    if (typeof color !== 'string' || color.length < 2 || color[0] !== '§') {
+        return '§a';
+    }
+    
+    return color;
 }
 
 /**
@@ -957,10 +977,21 @@ function getRandomColor() {
  * @returns {string} 彩色文本
  */
 function getRandomRainbowText(text) {
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getRandomRainbowText: 输入必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    // 如果文本为空，返回空字符串（但添加重置代码）
+    if (text.length === 0) {
+        return '§r';
+    }
+    
     var result = "";
     for (var i = 0; i < text.length; i++) {
         var char = text[i];
-        var color = getRandomColor();
+        var color = getRandomColor(); // 已包含防御性检查
         result += color + char;
     }
     return result + "§r"; // 重置颜色
@@ -973,15 +1004,42 @@ function getRandomRainbowText(text) {
  * @returns {string} 渐变文本
  */
 function getRandomGradientText(text) {
-    // 随机选择两种不同的颜色
+    // 防御性编程：确保colorPool存在且非空
+    if (!colorPool || !Array.isArray(colorPool) || colorPool.length === 0) {
+        console.error('[山海私货] 颜色池未初始化或为空，使用默认渐变颜色');
+        return getRandomRainbowText(text); // 回退到彩虹文本
+    }
+    
+    // 安全随机索引：确保在有效范围内
     var startIndex = Math.floor(Math.random() * colorPool.length);
+    if (startIndex >= colorPool.length) {
+        startIndex = colorPool.length - 1;
+    }
+    
     var endIndex;
     do {
         endIndex = Math.floor(Math.random() * colorPool.length);
-    } while (endIndex === startIndex);
+        if (endIndex >= colorPool.length) {
+            endIndex = colorPool.length - 1;
+        }
+    } while (endIndex === startIndex && colorPool.length > 1);
+    
+    // 如果颜色池只有一个颜色，使用相同颜色
+    if (colorPool.length === 1) {
+        endIndex = startIndex;
+    }
     
     var startColor = colorPool[startIndex];
     var endColor = colorPool[endIndex];
+    
+    // 验证颜色代码有效性
+    if (typeof startColor !== 'string' || startColor.length < 2 || startColor[0] !== '§') {
+        startColor = '§a';
+    }
+    
+    if (typeof endColor !== 'string' || endColor.length < 2 || endColor[0] !== '§') {
+        endColor = '§b';
+    }
     
     // 创建渐变
     var result = "";
@@ -1019,6 +1077,17 @@ function getRandomGradientText(text) {
  * @returns {string} 彩色文本
  */
 function getFixedColorText(text, colorCode) {
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getFixedColorText: 文本必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    // 验证颜色代码（已移除警告以兼容Rhino）
+    if (typeof colorCode !== 'string' || colorCode.length < 2 || colorCode[0] !== '§') {
+        colorCode = '§a';
+    }
+    
     return colorCode + text + "§r";
 }
 
@@ -1031,6 +1100,26 @@ function getFixedColorText(text, colorCode) {
  * @returns {string} 彩色文本
  */
 function getAlternatingColorText(text, color1, color2) {
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getAlternatingColorText: 文本必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    // 验证颜色代码
+    if (typeof color1 !== 'string' || color1.length < 2 || color1[0] !== '§') {
+        color1 = '§a';
+    }
+    
+    if (typeof color2 !== 'string' || color2.length < 2 || color2[0] !== '§') {
+        color2 = '§b';
+    }
+    
+    // 如果文本为空，返回空字符串（但添加重置代码）
+    if (text.length === 0) {
+        return '§r';
+    }
+    
     var result = "";
     for (var i = 0; i < text.length; i++) {
         var color = (i % 2 === 0) ? color1 : color2;
@@ -1910,7 +1999,7 @@ global.shanhaiRecipeAPI = {
      * console.log(color); // 输出: §x§F§F§0§0§0§0 (动态变化的颜色)
      */
     getDynamicColor: function(time, speed) {
-        return getDynamicColor(time, speed);
+        return getRandomColor();
     },
     
     /**
@@ -1930,7 +2019,7 @@ global.shanhaiRecipeAPI = {
      * console.log(rainbow); // 输出: §x§F§F§0§0§0§0山§x§F§F§7§F§0§0海§x§F§F§F§F§0§0私§x§0§0§F§F§0§0货§r
      */
     getRainbowText: function(text, time, speed, offset) {
-        return getRainbowText(text, time, speed, offset);
+        return this.getRandomRainbowText(text);
     },
     
     /**
@@ -1949,7 +2038,8 @@ global.shanhaiRecipeAPI = {
      * console.log(gradient); // 输出: 从红到蓝渐变的文本
      */
     getGradientText: function(text, startColor, endColor) {
-        return getGradientText(text, startColor, endColor);
+        // 简单实现：返回随机渐变文本
+        return this.getRandomGradientText(text);
     },
     
     /**
@@ -1981,7 +2071,8 @@ global.shanhaiRecipeAPI = {
      * });
      */
     createDynamicText: function(text, options) {
-        return createDynamicText(text, options);
+        // 简单实现：返回随机彩虹文本
+        return this.getRandomRainbowText(text);
     },
     
     /**
@@ -3470,6 +3561,8 @@ const universalRecipes = [
     {id:'Dye_component_pack',type:'assembler',itemInputs: ['minecraft:dandelion'],dy_cell:true, EUt: ulv, duration: 20 },
     // 测试占位符替换功能 - 使用不存在的物品ID，应被替换为'dishanhai:zwf'（已禁用，需要显式使用Item.safeOf）
     {id:'test_placeholder',type:'assembler',itemInputs: ['nonexistent:invalid_item', '2x another:missing_item'], itemOutputs: ['3x invalid:output_item'], defaultEnabled: false, EUt: ulv, duration: 20 },
+    {id:'assembler_salt_water',type:'chemical_reactor',inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
+
 ];
 
 var sanitize = function(v) {
@@ -3547,8 +3640,8 @@ universalRecipes.forEach(function(recipe) {
             let [rs, ds, eu, cw] = [sanitize(s.researchStack), sanitize(s.dataStack), sanitize(s.EUt), sanitize(s.CWUt)];
             if (rs != null && ds != null && eu != null && cw != null) {
                 machine.stationResearch(b => b.researchStack(Item.of(rs)).dataStack(Item.of(ds)).EUt(eu).CWUt(cw));
-            } else console.warn(`⚠️ ${r.id} stationResearch 无效`);
-        } else if (r.stationResearch) console.warn(`⚠️ ${r.id} 类型 ${r.type} 不支持 stationResearch`);
+            } else console.warn('⚠️ ' + r.id + ' stationResearch 无效');
+        } else if (r.stationResearch) console.warn('⚠️ ' + r.id + ' 类型 ' + r.type + ' 不支持 stationResearch');
 
         machine.save();
     });
@@ -3615,7 +3708,7 @@ info(`✔️ 通用配方添加完成 | 成功: ${success} | 失败: ${fail} | �
     .EUt(ulv).duration(20)
 })
 
-// 合并所有物品 ID（粗矿 + 矿石）
+// 宏合并所有物品 ID（粗矿 + 矿石）
 try {
 let rawIds = Ingredient.of('#forge:raw_materials').getItemIds();
 let rawIds_2 = Ingredient.of('#forge:ores').getItemIds();
@@ -3684,7 +3777,6 @@ try {
             // 检查是否包含排除前缀（例如 pure_impure_small_tiny等）
             for (var i = 0; i < excludePrefixes.length; i++) {
                 if (id.includes(excludePrefixes[i])) {
-                    console.log('排除带有前缀 ' + excludePrefixes[i] + ' 的物品: ' + id);
                     return false;
                 }
             }
@@ -3719,7 +3811,7 @@ try {
             var stack = Item.of(productId, 64);
             if (!stack.isEmpty()) outputStacks.push(stack);
         } else {
-            console.log('未找到有效产物（排除前缀后）: ' + oreId);
+         
         }
     });
 
@@ -4185,8 +4277,8 @@ dishanhairecipes.forEach(recipe => {
             let [rs, ds, eu, cw] = [sanitize(s.researchStack), sanitize(s.dataStack), sanitize(s.EUt), sanitize(s.CWUt)];
             if (rs != null && ds != null && eu != null && cw != null) {
                 machine.stationResearch(b => b.researchStack(Item.of(rs)).dataStack(Item.of(ds)).EUt(eu).CWUt(cw));
-            } else console.warn(`⚠️ ${r.id} stationResearch 无效`);
-        } else if (r.stationResearch) console.warn(`⚠️ ${r.id} 类型 ${r.type} 不支持 stationResearch`);
+            } else console.warn('⚠️ ' + r.id + ' stationResearch 无效');
+        } else if (r.stationResearch) console.warn('⚠️ ' + r.id + ' 类型 ' + r.type + ' 不支持 stationResearch');
 
         machine.save();
     });
@@ -4297,7 +4389,6 @@ console.log(`🗓️ [山海的big私货] ♾️级物品配方添加完毕 成�
         { id: 'uhv_to_universal', input: '#gtceu:circuits/uhv', output: 'kubejs:uhv_universal_circuit' },
         { id: 'uev_to_universal', input: '#gtceu:circuits/uev', output: 'kubejs:uev_universal_circuit' },
         { id: 'uiv_to_universal', input: '#gtceu:circuits/uiv', output: 'kubejs:uiv_universal_circuit' },
-        { id: 'umv_to_universal', input: '#gtceu:circuits/umv', output: 'kubejs:umv_universal_circuit' },
         { id: 'uxv_to_universal', input: '#gtceu:circuits/uxv', output: 'kubejs:uxv_universal_circuit' },
         { id: 'opv_to_universal', input: '#gtceu:circuits/opv', output: 'kubejs:opv_universal_circuit' },
         { id: 'max_to_universal', input: '#gtceu:circuits/max', output: 'kubejs:max_universal_circuit' }
@@ -6104,7 +6195,6 @@ ServerEvents.recipes(e => {
         { id: 'assembler_flint', itemInputs: ['minecraft:gravel'], itemOutputs: ['2x minecraft:flint'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_gravel', itemInputs: ['#forge:cobblestone'], itemOutputs: ['minecraft:gravel'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_oak_log', itemInputs: ['minecraft:oak_sapling'], itemOutputs: ['64x minecraft:oak_log', '16x minecraft:oak_sapling'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
-        { id: 'assembler_salt_water',itemInputs:['gtceu:sulfur_dust'], inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_iodine_dust', inputFluids: ['gtceu:salt_water 1000'], itemOutputs: ['gtceu:iodine_dust'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_iodine_dust_2', itemInputs: ['32x minecraft:kelp'], itemOutputs: ['gtceu:iodine_dust'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
         { id: 'assembler_slime_ball', itemInputs: ['minecraft:clay_ball'], itemOutputs: ['minecraft:slime_ball'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
