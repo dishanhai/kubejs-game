@@ -998,6 +998,116 @@ function getRandomRainbowText(text) {
 }
 
 /**
+ * 获取静态随机文本
+ * 基于种子生成确定性随机颜色，每次游戏重新加载时生成相同的颜色序列
+ * @param {string} text - 要着色的文本
+ * @param {string} [seed] - 随机种子，可选（默认为"shanhai"）
+ * @returns {string} 彩色文本
+ */
+function getStaticRandomText(text, seed) {
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getStaticRandomText: 输入必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    // 如果文本为空，返回空字符串（但添加重置代码）
+    if (text.length === 0) {
+        return '§r';
+    }
+    
+    // 确保颜色池存在
+    if (!colorPool || !Array.isArray(colorPool) || colorPool.length === 0) {
+        console.error('[山海私货] getStaticRandomText: 颜色池未初始化或为空，使用默认颜色§a');
+        return '§a' + text + '§r';
+    }
+    
+    // 默认种子
+    if (typeof seed !== 'string') {
+        seed = 'shanhai';
+    }
+    
+    // 简单字符串哈希函数
+    function stringHash(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash = hash & 0xFFFFFFFF; // 转换为32位整数
+        }
+        return Math.abs(hash);
+    }
+    
+    // 线性同余生成器 (LCG)
+    function createLCG(seedNum) {
+        var m = 4294967296; // 2^32
+        var a = 1664525;
+        var c = 1013904223;
+        var state = seedNum % m;
+        return function() {
+            state = (a * state + c) % m;
+            return state / m; // 返回0-1之间的随机数
+        };
+    }
+    
+    // 创建基于种子的随机数生成器
+    var baseSeed = stringHash(seed);
+    var random = createLCG(baseSeed);
+    
+    var result = "";
+    for (var i = 0; i < text.length; i++) {
+        // 为每个字符生成随机索引
+        var randomValue = random();
+        var colorIndex = Math.floor(randomValue * colorPool.length);
+        
+        // 确保索引在有效范围内
+        if (colorIndex >= colorPool.length) {
+            colorIndex = colorPool.length - 1;
+        }
+        
+        var color = colorPool[colorIndex];
+        
+        // 验证颜色代码有效性
+        if (typeof color !== 'string' || color.length < 2 || color[0] !== '§') {
+            color = '§a';
+        }
+        
+        result += color + text[i];
+    }
+    return result + "§r"; // 重置颜色
+}
+
+/**
+ * 获取会话随机单色文本
+ * 每次游戏重新加载后从15个颜色的颜色池（绝对禁用§0）中随机挑选一个颜色
+ * 整个文本使用同一个随机颜色
+ * @param {string} text - 要着色的文本
+ * @returns {string} 彩色文本
+ */
+function getSessionRandomSingleColorText(text) {
+    // 防御性编程：确保输入有效
+    if (typeof text !== 'string') {
+        console.error('[山海私货] getSessionRandomSingleColorText: 输入必须是字符串，使用默认文本');
+        text = '文本无效';
+    }
+    
+    // 如果文本为空，返回空字符串（但添加重置代码）
+    if (text.length === 0) {
+        return '§r';
+    }
+    
+    // 获取随机颜色（使用现有的getRandomColor函数，它已确保不使用§0）
+    var color = getRandomColor();
+    
+    // 验证颜色代码有效性（二次检查确保不是§0）
+    if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
+        color = '§a'; // 默认绿色
+    }
+    
+    // 整个文本使用同一个随机颜色
+    return color + text + "§r";
+}
+
+/**
  * 获取随机渐变文本
  * 随机选择起始和结束颜色，创建渐变效果
  * @param {string} text - 要着色的文本
@@ -1612,6 +1722,40 @@ global.shanhaiRecipeAPI = {
      */
     getRandomRainbowText: function(text) {
         return getRandomRainbowText(text);
+    },
+    
+    /**
+     * 获取静态随机文本
+     * 基于种子生成确定性随机颜色，每次游戏重新加载时生成相同的颜色序列
+     * 
+     * @function getStaticRandomText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @param {string} [seed] - 随机种子，可选（默认为"shanhai"）
+     * @returns {string} 彩色文本
+     * @example
+     * let staticRandom = global.shanhaiRecipeAPI.getStaticRandomText("山海私货", "myseed");
+     * console.log(staticRandom); // 输出: 基于种子的确定性随机颜色文本
+     */
+    getStaticRandomText: function(text, seed) {
+        return getStaticRandomText(text, seed);
+    },
+    
+    /**
+     * 获取会话随机单色文本
+     * 每次游戏重新加载后从15个颜色的颜色池（绝对禁用§0）中随机挑选一个颜色
+     * 整个文本使用同一个随机颜色
+     * 
+     * @function getSessionRandomSingleColorText
+     * @memberof shanhaiRecipeAPI
+     * @param {string} text - 要着色的文本
+     * @returns {string} 彩色文本
+     * @example
+     * let sessionRandom = global.shanhaiRecipeAPI.getSessionRandomSingleColorText("山海私货");
+     * console.log(sessionRandom); // 输出: 整个文本使用同一个随机颜色
+     */
+    getSessionRandomSingleColorText: function(text) {
+        return getSessionRandomSingleColorText(text);
     },
     
     /**

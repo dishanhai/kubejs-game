@@ -664,6 +664,107 @@ global.shanhaiRecipeAPI.getTextUtilGradientComponent("文本", "full_color")
                 return result + '§r';
             },
             
+            getStaticRandomText: function(text, seed) {
+                // 防御性编程：确保输入有效
+                if (typeof text !== 'string') {
+                    console.error('[山海私货] getStaticRandomText: 输入必须是字符串，使用默认文本');
+                    text = '文本无效';
+                }
+                
+                // 如果文本为空，返回空字符串（但添加重置代码）
+                if (text.length === 0) {
+                    return '§r';
+                }
+                
+                // 颜色池（与getRandomColor相同）
+                var colors = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
+                
+                // 默认种子
+                if (typeof seed !== 'string') {
+                    seed = 'shanhai';
+                }
+                
+                // 简单字符串哈希函数
+                function stringHash(str) {
+                    var hash = 0;
+                    for (var i = 0; i < str.length; i++) {
+                        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                        hash = hash & 0xFFFFFFFF; // 转换为32位整数
+                    }
+                    return Math.abs(hash);
+                }
+                
+                // 线性同余生成器 (LCG)
+                function createLCG(seedNum) {
+                    var m = 4294967296; // 2^32
+                    var a = 1664525;
+                    var c = 1013904223;
+                    var state = seedNum % m;
+                    return function() {
+                        state = (a * state + c) % m;
+                        return state / m; // 返回0-1之间的随机数
+                    };
+                }
+                
+                // 创建基于种子的随机数生成器
+                var baseSeed = stringHash(seed);
+                var random = createLCG(baseSeed);
+                
+                var result = "";
+                for (var i = 0; i < text.length; i++) {
+                    // 为每个字符生成随机索引
+                    var randomValue = random();
+                    var colorIndex = Math.floor(randomValue * colors.length);
+                    
+                    // 确保索引在有效范围内
+                    if (colorIndex >= colors.length) {
+                        colorIndex = colors.length - 1;
+                    }
+                    
+                    var color = colors[colorIndex];
+                    
+                    // 验证颜色代码有效性
+                    if (typeof color !== 'string' || color.length < 2 || color[0] !== '§') {
+                        color = '§a';
+                    }
+                    
+                    result += color + text[i];
+                }
+                return result + "§r"; // 重置颜色
+            },
+            
+            getSessionRandomSingleColorText: function(text) {
+                // 防御性编程：确保输入有效
+                if (typeof text !== 'string') {
+                    console.error('[山海私货] getSessionRandomSingleColorText: 输入必须是字符串，使用默认文本');
+                    text = '文本无效';
+                }
+                
+                // 如果文本为空，返回空字符串（但添加重置代码）
+                if (text.length === 0) {
+                    return '§r';
+                }
+                
+                // 从15个颜色的颜色池中随机挑选一个颜色（绝对禁用§0）
+                var colors = ['§1', '§2', '§3', '§4', '§5', '§6', '§7', '§8', '§9', '§a', '§b', '§c', '§d', '§e', '§f'];
+                var colorIndex = Math.floor(Math.random() * colors.length);
+                
+                // 确保索引在有效范围内
+                if (colorIndex >= colors.length) {
+                    colorIndex = colors.length - 1;
+                }
+                
+                var color = colors[colorIndex];
+                
+                // 验证颜色代码有效性（确保不是§0）
+                if (typeof color !== 'string' || color.length < 2 || color[0] !== '§' || color === '§0') {
+                    color = '§a'; // 默认绿色
+                }
+                
+                // 整个文本使用同一个随机颜色
+                return color + text + "§r";
+            },
+            
             getRandomGradientText: function(text) {
                 // 随机选择两种颜色
                 let colors = ['§c', '§6', '§e', '§a', '§b', '§9', '§d'];
@@ -1068,7 +1169,7 @@ StartupEvents.registry('item', function(e) {
     .texture('dishanhai_item:item/trar')
 
 e.create('dishanhai:time_reversal_protocol')
-    .displayName(colorAPI.getRandomRainbowText('世线信标'))
+    .displayName(colorAPI.getStaticRandomText('世线信标', 'dishanhai:time_reversal_protocol'))
     .texture('dishanhai_item:item/time')    
     .fireResistant(true)
     .tooltip('§b§o"逆转因果，改写命运"')
@@ -1094,15 +1195,15 @@ e.create('dishanhai:time_reversal_protocol')
 
 
     e.create('dishanhai:piggy')
-    .displayName(colorAPI.getTextUtilGradient('至高·猪咪', 'full_color'))
+    .displayName(colorAPI.getSessionRandomSingleColorText('创始·猪咪'))
     .texture('dishanhai_item:item/piggy')
     .fireResistant(false)
     colorAPI.registerItemTooltip('dishanhai:piggy', [
         { text: '祂屹立于创始时空的最顶端', style: 'full_color' },
-        { text: '祂俯视着所有时空的未来', style: 'full_color' },
-        { text: '祂俯视着所有时空的现在', style: 'full_color' },
-        { text: '祂俯视着所有时空的过去', style: 'full_color' },
-
+        { text: '祂的呼吸，便是星河的潮汐', style: 'purplish_red' },
+        { text: '祂的凝视，贯穿万古的因果', style: 'golden' },
+        { text: '猪蹄轻踏，诸天崩塌；猪鼻一哼，纪元重启', style: 'full_color' },
+        { text: '—— 此乃至高，猪咪大帝 ——', style: 'dark_green' }
     ]);
 
     e.create('dishanhai:fishbig_shards')
