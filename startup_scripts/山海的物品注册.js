@@ -1180,19 +1180,36 @@ StartupEvents.registry('item', function(e) {
      colorAPI.registerItemTooltip('dishanhai:god_forge_mod',[
         { text:'超越维度存在的造物,允许用水提取中子星的致密物质,于创始时空中提炼世界树物质',style:'full_color'},
     ])
-    e.create('dishanhai:gate_and_bridg')
+e.create('dishanhai:gate_and_bridg')
     .displayName('门与桥')
-     .texture('dishanhai_item:item/gate_and_bridg')
-     .maxStackSize(1)
-     .fireResistant(false)
-     colorAPI.registerItemTooltip('dishanhai:gate_and_bridg',[
-        { text:'方舟已过桥，正宇宙散尽，新世界与理事会静候蓝星。',style:'white_blue'},
-        { text:'宇宙的循环化作永恒之路——掌握不朽者，即掌握一切。',style:'full_color'},
+    .texture('dishanhai_item:item/gate_and_bridg')
+    .maxStackSize(1)
+    .fireResistant(false)
+    colorAPI.registerItemTooltip('dishanhai:gate_and_bridg',[
+        { text:'尽管重元素储量悲观，我们还是通过“桥”，正宇宙的一切已散作过眼云烟；',style:'full_color'},
+        { text:'崭新的世界正在虚空中等待，理事会将欣然欢迎蓝星文明的加盟。', style:'white_blue'},
+        { text:'从此刻起，宇宙的循环化为我们的工具，通向永恒的道路从未如此清晰可见——',style:'golden'},
+        { text:'无需追问秩序的底层是混沌还是虚空，只需明白：掌握不朽者，即掌握一切。', style:'full_color'},
+    ])
+e.create('dishanhai:bridge_and_gate')
+    .displayName('桥与门')
+    .texture('dishanhai_item:item/bridge_and_gate')
+    colorAPI.registerItemTooltip('dishanhai:bridge_and_gate',[
+        { text:'生存不是与生俱来的权力，而是文明的责任与义务；',style:'full_color'},
+        { text:'方舟满载超重元素顺利过桥，正宇宙的一切已散作过眼云烟，新世界正静候蓝星文明的加盟。', style:'white_blue'},
+        { text:'从此刻起，宇宙的循环将成为我们的工具，通向永恒的道路从未如此清晰——',style:'golden'},
+        { text:'无需追问底层是混沌还是虚空，只需明白：掌握不朽者，即掌握一切。', style:'full_color'},
+        { text:'理事会新九大准则：监护、控制、等价、稳定、排险、清肃、团结、共济——永恒。', style:'purplish_red'},
     ])
 
     e.create('dishanhai:big_tear')
     .displayName('§2逆§3向§4坍§4缩§5·§6大§c反§a冲')
     .texture('dishanhai_item:item/trar')
+    colorAPI.registerItemTooltip('dishanhai:big_tear',[
+        { text:'空想时代的伟力岂是理事会所能抗衡的?方舟以超重元素将大撕裂对冲至反宇宙，正宇宙坍缩、天国于中心凝聚。',style:'dark_green'},
+        { text:'他们并不承认空想时代的存在，他们只认为空想时代是一个理论上的概念，而不是实际存在的。',style:'full_color'},
+        { text:'但他们是可笑而无知的,超越奇迹的力量,终将被我们所利用。',style:'full_color'},
+    ])
 
 e.create('dishanhai:time_reversal_protocol')
     .displayName(colorAPI.getStaticRandomText('世线信标', 'dishanhai:time_reversal_protocol'))
@@ -1245,12 +1262,24 @@ e.create('dishanhai:time_reversal_protocol')
     ]);
 
     e.create('dishanhai:fishbig_shards')
-    .displayName('鱼大碎片')
+    .displayName(colorAPI.getSessionRandomSingleColorText('鱼大碎片'))
     .texture('dishanhai_item:item/fishbig_shards')
     .fireResistant(false)
-    .tooltip('鱼大碎片')
+    colorAPI.registerItemTooltip('dishanhai:fishbig_shards',[
+    { text:'它并不完整,你手中的，只是“鱼大”的一角。碎裂的外壳下，仍残留着某种难以言明的气息。',style:'full_color'},
+    { text:'看起来不起眼，但每一片都来之不易,内部似乎仍保存着部分力量',style:'full_color'},
+    { text:'有人说，集齐所有碎片的人，终会见到真正的“鱼大”。',style:'full_color'},
+    ])
 
-    e.create('dishanhai:halo_end')
+    e.create('dishanhai:collapse_tear')
+    .displayName(colorAPI.getSessionRandomSingleColorText('万物崩灭·大撕裂'))
+    .texture('dishanhai_item:item/collapse_tear')
+    colorAPI.registerItemTooltip('dishanhai:collapse_tear',[
+        { text:'即使耗尽超重元素，方舟仍不敌占据反宇宙的理事会，协议强行接管逃离，蓝星文明仅得幸存。',style:'full_color'},
+        { text:'宇宙因无限可能而值得敬畏——门后满目皆敌，但逐光之人无畏，您准备好了吗？',style:'full_color'},
+    ])
+
+       e.create('dishanhai:halo_end')
     .displayName('终末之环')
     .texture('dishanhai_item:item/halo_end')
     .fireResistant(false)

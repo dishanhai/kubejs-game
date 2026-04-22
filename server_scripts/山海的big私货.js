@@ -4021,7 +4021,7 @@ const universalRecipes = [
     // 测试占位符替换功能 - 使用不存在的物品ID，应被替换为'dishanhai:zwf'（已禁用，需要显式使用Item.safeOf）
     {id:'test_placeholder',type:'assembler',itemInputs: ['nonexistent:invalid_item', '2x another:missing_item'], itemOutputs: ['3x invalid:output_item'], defaultEnabled: false, EUt: ulv, duration: 20 },
     {id:'assembler_salt_water',type:'chemical_reactor',inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
-    {id:'assembler_module_gate_and_bridg',type:'assembler_module',itemInputs: [], itemOutputs: ['dishanhai:gate_and_bridg'], EUt: uv, duration: 20,addDataid: "SEPMTier", addData: 4},
+    {id:'assembler_module_gate_and_bridg',type:'assembler_module',itemInputs: ['512x dishanhai:wzmk2','16x gtceu:space_elevator','64x gtceu:resource_collection','64x gtceu:assembler_module','64x kubejs:space_drone_mk1','64x gtlcore:power_core','32x gtceu:chemical_distort','64x kubejs:bioware_assembly'], itemOutputs: ['dishanhai:gate_and_bridg'], EUt: uv, duration: 20,addDataid: "SEPMTier", addData: 2},
 ];
 
 var sanitize = function(v) {
