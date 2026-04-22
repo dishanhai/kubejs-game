@@ -1227,7 +1227,11 @@ e.create('dishanhai:time_reversal_protocol')
         { text: '祂的呼吸，便是星河的潮汐', style: 'purplish_red' },
         { text: '祂的凝视，贯穿万古的因果', style: 'golden' },
         { text: '猪蹄轻踏，诸天崩塌；猪鼻一哼，纪元重启', style: 'full_color' },
-        { text: '—— 此乃至高，猪咪大帝 ——', style: 'dark_green' }
+        { text: '祂曾在混沌中打了个盹，醒来时已历七千轮回', style: 'white_blue' },
+        { text: '一根毫毛，可化三千界；一声呢喃，能改写生死', style: 'dark_green' },
+        { text: '上苍之上，永恒长眠的并非不可名状之物——', style: 'purplish_red' },
+        { text: '而是祂遗落的一粒猪食', style: 'golden' },
+        { text: '—— 此乃至高，猪咪大帝 ——', style: 'full_color' }
     ]);
 
     e.create('dishanhai:fishbig_shards')
