@@ -1177,10 +1177,18 @@ StartupEvents.registry('item', function(e) {
      .texture('dishanhai_item:item/god_forge_mod')
      .maxStackSize(1)
      .fireResistant(false)
-     .rarity('epic')
-     .tooltip(Component.literal(TextUtil.full_color(`超越维度存在的造物
-    允许用水提取中子星的致密物质
-    于创始时空中提炼世界树物质`)))
+     colorAPI.registerItemTooltip('dishanhai:god_forge_mod',[
+        { text:'超越维度存在的造物,允许用水提取中子星的致密物质,于创始时空中提炼世界树物质',style:'full_color'},
+    ])
+    e.create('dishanhai:gate_and_bridg')
+    .displayName('门与桥')
+     .texture('dishanhai_item:item/gate_and_bridg')
+     .maxStackSize(1)
+     .fireResistant(false)
+     colorAPI.registerItemTooltip('dishanhai:gate_and_bridg',[
+        { text:'方舟已过桥，正宇宙散尽，新世界与理事会静候蓝星。',style:'white_blue'},
+        { text:'宇宙的循环化作永恒之路——掌握不朽者，即掌握一切。',style:'full_color'},
+    ])
 
     e.create('dishanhai:big_tear')
     .displayName('§2逆§3向§4坍§4缩§5·§6大§c反§a冲')
@@ -1190,8 +1198,10 @@ e.create('dishanhai:time_reversal_protocol')
     .displayName(colorAPI.getStaticRandomText('世线信标', 'dishanhai:time_reversal_protocol'))
     .texture('dishanhai_item:item/time')    
     .fireResistant(true)
-    .tooltip('§b§o"逆转因果，改写命运"')
-    .tooltip('§7§o时间线上的奇迹产物');
+    colorAPI.registerItemTooltip('dishanhai:time_reversal_protocol',[
+        { text:'逆转因果，改写命运',style:'full_color'},
+        { text:'时间线上的奇迹产物',style:'golden'},
+    ]);
 
     e.create('dishanhai:csj')
     .displayName('§1万§2态§3平§4衡§5·§6大§7冻§8结§9·§a创§c世§b纪')
@@ -1245,10 +1255,11 @@ e.create('dishanhai:time_reversal_protocol')
     .texture('dishanhai_item:item/halo_end')
     .fireResistant(false)
     .rarity('epic')
-    .tooltip(Component.literal(TextUtil.full_color(
-        `于终末展望，我终于看到祂的伟力 `)))
-        .tooltip(Component.literal(TextUtil.full_color(`来自终末的造物 休止符早已画上 现在由我继续开始`)))
-        .tooltip(Component.literal(TextUtil.full_color(`任务获取物，用于制作创造现实修改模块`)))
+    colorAPI.registerItemTooltip('dishanhai:halo_end',[
+        { text:'于终末展望，我终于看到祂的伟力',style:'full_color'},
+        { text:'来自终末的造物 休止符早已画上 现在由我继续开始',style:'full_color'},
+        { text:'任务获取物，用于制作创造现实修改模块',style:'full_color'},
+    ])
 
         e.create('dishanhai:wzcz1')
         .displayName('初级物质推演模块')
@@ -1264,7 +1275,9 @@ e.create('dishanhai:time_reversal_protocol')
         .rarity('epic')
         .displayName('终极物质创造模块')
         .texture('dishanhai_item:item/wzmk3')
-        .tooltip(Component.literal(TextUtil.full_color('重组一切，操纵一切，创造一切')))
+        colorAPI.registerItemTooltip('dishanhai:wzcz3', [
+            { text: '重组一切，操纵一切，创造一切', style: 'full_color' },
+        ]);
         e.create('dishanhai:create_mk')
         .displayName('§1创§2造§3现§4实§5修§6改§7模§8块')
         .texture('dishanhai_item:item/czmk')
@@ -1273,11 +1286,15 @@ e.create('dishanhai:time_reversal_protocol')
         .rarity('epic')
         .displayName('恒星碎片')
         .texture('dishanhai_item:item/hxsp')
-        .tooltip('恒星的碎片，由神锻终焉模块提取中子星物质获得')
+        colorAPI.registerItemTooltip('dishanhai:hxsp', [
+            { text: '恒星的碎片，由神锻终焉模块提取中子星物质获得', style: 'full_color' },
+        ]);
         e.create('dishanhai:cshx')
         .displayName('§2原§1始§3恒§4星§k111')
         .texture('dishanhai_item:item/yshx')
-        .tooltip('§2原§1始§4恒§3星，§5激§6发§7恒§8星§9能§a量§d创造§e物§b质')
+        colorAPI.registerItemTooltip('dishanhai:cshx', [
+            { text: '原始恒星，激发恒星能量创造物质', style: 'full_color' },
+        ]);
         e.create('dishanhai:zwf')
         .displayName('占位符')
         .texture('dishanhai_item:item/zwf')
@@ -1285,7 +1302,9 @@ e.create('dishanhai:time_reversal_protocol')
         e.create('dishanhai:soc')
         .displayName('§9创§2始§3s§4o§8c§7晶§6圆')
         .texture('dishanhai_item:item/soc')
-        .tooltip('§1超§2越§3维§4度§5存§6在§7的§8造§9物，§a来§b自§c至§d高§e维§f度§4的§2回§6响')
+        colorAPI.registerItemTooltip('dishanhai:soc', [
+            { text: '超越维度存在的造物，来自至高维度的回响', style: 'full_color' },
+        ]);
 
 })})();
 

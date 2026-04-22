@@ -4021,7 +4021,7 @@ const universalRecipes = [
     // 测试占位符替换功能 - 使用不存在的物品ID，应被替换为'dishanhai:zwf'（已禁用，需要显式使用Item.safeOf）
     {id:'test_placeholder',type:'assembler',itemInputs: ['nonexistent:invalid_item', '2x another:missing_item'], itemOutputs: ['3x invalid:output_item'], defaultEnabled: false, EUt: ulv, duration: 20 },
     {id:'assembler_salt_water',type:'chemical_reactor',inputFluids: ['minecraft:water 1000'], outputFluids: ['gtceu:salt_water 1000'], notConsumable: 'dishanhai:wzcz1', EUt: lv, duration: 20 },
-
+    {id:'assembler_module_gate_and_bridg',type:'assembler_module',itemInputs: [], itemOutputs: ['dishanhai:gate_and_bridg'], EUt: uv, duration: 20,addDataid: "SEPMTier", addData: 4},
 ];
 
 var sanitize = function(v) {
@@ -4543,19 +4543,33 @@ machine.duration(20)
 let voidtimer = timer_voidflux_reaction.end()
     console.log(`[山海的big私货] 🗓️ 量子虹吸矩阵配方添加完毕 成功:${voidfluxSuccess} | 失败:${voidfluxFailed} | 耗时${voidtimer}ms`)
 
+var ForgeRegistries = Java.loadClass('net.minecraftforge.registries.ForgeRegistries')
+var plasma_output = []
+ForgeRegistries.FLUIDS.getKeys().forEach(function(key) {
+    var id = key.toString()
+    if (Fluid.of(id).hasTag('forge:plasmas') && id !== 'gtladditions:creon_plasma' && id !== 'gtceu:instability_plasma') {
+        plasma_output.push(id)
+    }
+})
+var plasma_output_ingredient = plasma_output.map(id => id + ' 131072000')
+var plasma_output_ingredient_2 = ['gtceu:eternity 131072000','gtceu:cosmicneutronium 131072000']
+const plasma_output_ingredient_3 = plasma_output_ingredient.concat(plasma_output_ingredient_2)
+global.plasma_output_output = plasma_output_ingredient_3
+
+
+global.black_hole =  ['gtceu:magmatter 131072000','gtceu:spatialfluid 131072000','gtladditions:phonon_crystal_solution 131072000','gtceu:temporalfluid 131072000','gtceu:cosmicneutronium 131072000','gtceu:magnetohydrodynamicallyconstrainedstarmatter 131072000','gtladditions:phonon_medium 131072000','gtceu:chaos 131072000','gtceu:primordialmatter 131072000','gtceu:mana 131072000','gtceu:white_dwarf_mtter 131072000','gtceu:black_dwarf_mtter 131072000','gtceu:starlight 131072000','gtceu:instability 131072000','gtceu:infinity 131072000','gtceu:cosmic_element 131072000','gtceu:neutronium 131072000']
     if (Platform.isLoaded('gtl_extend')){
     info('🔌 检测到 gtl_extend 模组，添加扩展配方');
     
     //黑洞物质剥离配方
     safeAddRecipe('horizon_matter_decompression', 'dishanhai:heidon', () => {
-        gtr.horizon_matter_decompression('dishanhai:heidon')
-            .itemInputs('dishanhai:hxsp')
-            .outputFluids('gtceu:magmatter 131072000','gtceu:spatialfluid 131072000','gtladditions:phonon_crystal_solution 131072000','gtceu:temporalfluid 131072000','gtceu:cosmicneutronium 131072000','gtceu:magnetohydrodynamicallyconstrainedstarmatter 131072000','gtladditions:phonon_medium 131072000','gtceu:chaos 131072000','gtceu:primordialmatter 131072000','gtceu:mana 131072000','gtceu:white_dwarf_mtter 131072000','gtceu:black_dwarf_mtter 131072000','gtceu:starlight 131072000','gtceu:instability 131072000','gtceu:infinity 131072000'
-            )
-            .duration(1200);
+    let formula = gtr.horizon_matter_decompression('dishanhai:heidon')
+        .itemInputs('dishanhai:hxsp')            
+        formula.outputFluids.apply(formula, global.black_hole)
+        formula.duration(1200);
     });
-    
-    // large_void_pump 配方
+
+
     safeAddRecipe('large_void_pump', 'dishanhai:argon', () => {
         gtr.large_void_pump('dishanhai:argon')
             .circuit(15)
@@ -4617,14 +4631,18 @@ let voidtimer = timer_voidflux_reaction.end()
                 .duration(20);
         });
         }
-//==============  通用配方 =================(wx ， wuxian ， ♾️)
+//==============  通用配方 =================(wx,wuxian,♾️,wx)
 info('山海的♾️级物品配方允许加载🔓');
 const dishanhai_timer = new Timer('山海的♾️物品配方');
 
-const dishanhairecipes = [
+let cosmos_simulation_list = [ "131072x gtceu:white_dwarf_mtter_dust",'131072x gtceu:infused_gold_dust',"131072x gtceu:black_dwarf_mtter_dust","131072x ae2:sky_dust","131072x gtceu:trinium_dust","131072x gtceu:plutonium_241_dust","131072x gtceu:titanium_50_dust","131072x gtceu:copper76_dust","131072x gtceu:uranium_235_dust","131072x gtceu:perditio_crystal_dust","131072x gtceu:earth_crystal_dust","131072x gtceu:ignis_crystal_dust","131072x gtceu:tartarite_dust","131072x gtceu:uruium_dust","131072x gtceu:force_dust","131072x gtceu:alien_algae_dust","131072x gtceu:bloodstone_dust","131072x minecraft:netherite_scrap","131072x gtceu:purified_tengam_dust","131072x gtceu:quantanium_dust","131072x gtceu:bedrock_dust","131072x gtceu:damascus_steel_dust","131072x avaritia:neutron_pile","131072x gtceu:certus_quartz_dust","131072x ae2:fluix_dust",'131072x gtceu:shirabon_dust',"131072x gtceu:rare_earth_metal_dust",'131072x gtceu:enderium_dust','131072x gtceu:uraninite_dust','131072x gtceu:diatomite_dust','131072x gtceu:bentonite_dust','131072x gtceu:endstone_dust','131072x gtceu:cassiterite_dust','131072x gtceu:bauxite_dust','131072x gtceu:sapphire_dust','131072x gtceu:spacetime_dust','1024000x kubejs:dust_cryotheum','102400x gtceu:celestial_secret_dust','102400x gtceu:tear_dust','1024000x gtceu:rare_earth_dust','1024000x gtceu:stem_cells','2048000x kubejs:biological_cells']
+global.cosmos_simulation_output_items = cosmos_simulation_list
 
+let cosmos_simulation_list_hxsp =  ['10240x gtceu:small_eternity_dust','10240x kubejs:kinetic_matter','10240x kubejs:omni_matter','10240x kubejs:pellet_antimatter','10240x kubejs:amorphous_matter','10240x kubejs:corporeal_matter','10240x kubejs:essentia_matter','10240x kubejs:dark_matter','10240x kubejs:temporal_matter','10240x kubejs:void_matter','10240x gtceu:tiny_magmatter_dust','10240x kubejs:hypercube','10240x kubejs:quantum_anomaly','1x gtceu:magnetohydrodynamicallyconstrainedstarmatter_block','10240x gtceu:tiny_transcendentmetal_dust','10140x gtceu:tiny_infinity_dust','10240x kubejs:space_essence']
+global.cosmos_simulation_output_items_hxsp = cosmos_simulation_list_hxsp
+const dishanhairecipes = [
     {
-        id: 'time_reversal_protocol_cosmos_plus',type: 'cosmos_simulation',notConsumable: ['dishanhai:time_reversal_protocol'],inputFluids: ['minecraft:water 131002'],itemOutputs: [ "131072x gtceu:white_dwarf_mtter_dust",'131072x gtceu:infused_gold_dust',"131072x gtceu:black_dwarf_mtter_dust","131072x ae2:sky_dust","131072x gtceu:trinium_dust","131072x gtceu:plutonium_241_dust","131072x gtceu:titanium_50_dust","131072x gtceu:copper76_dust","131072x gtceu:uranium_235_dust","131072x gtceu:perditio_crystal_dust","131072x gtceu:earth_crystal_dust","131072x gtceu:ignis_crystal_dust","131072x gtceu:tartarite_dust","131072x gtceu:uruium_dust","131072x gtceu:force_dust","131072x gtceu:alien_algae_dust","131072x gtceu:bloodstone_dust","131072x minecraft:netherite_scrap","131072x gtceu:purified_tengam_dust","131072x gtceu:quantanium_dust","131072x gtceu:bedrock_dust","131072x gtceu:damascus_steel_dust","131072x avaritia:neutron_pile","131072x gtceu:certus_quartz_dust","131072x ae2:fluix_dust",'131072x gtceu:shirabon_dust',"131072x gtceu:rare_earth_metal_dust",'131072x gtceu:enderium_dust','131072x gtceu:uraninite_dust','131072x gtceu:diatomite_dust','131072x gtceu:bentonite_dust','131072x gtceu:endstone_dust','131072x gtceu:cassiterite_dust','131072x gtceu:bauxite_dust','131072x gtceu:sapphire_dust','131072x gtceu:spacetime_dust','1024000x kubejs:dust_cryotheum','102400x gtceu:celestial_secret_dust','102400x gtceu:tear_dust','1024000x gtceu:rare_earth_dust','1024000x gtceu:stem_cells','2048000x kubejs:biological_cells'],duration: 1200
+        id: 'time_reversal_protocol_cosmos_plus',type: 'cosmos_simulation',notConsumable: ['dishanhai:time_reversal_protocol'],itemOutputs:global.cosmos_simulation_output_items,itemOutputs:global.cosmos_simulation_output_items_hxsp,inputFluids: ['minecraft:water 131002'],duration: 1200
     },//不要给Cosmos加eut 世线高级鸿蒙
     {
         id: 'time_reversal_protocol_stellar_forge_supercritical_steam',type: 'stellar_forge',notConsumable: 'dishanhai:time_reversal_protocol',circuit: 2,inputFluids: ['minecraft:water 10000'],outputFluids: ['gtceu:supercritical_steam 100000'],EUt:lv,duration: 20,addDataid: "SCTier",addData: 2
@@ -4632,8 +4650,8 @@ const dishanhairecipes = [
     {
         id: 'time_reversal_protocol_stellar_forge_steam',type: 'stellar_forge',notConsumable: 'dishanhai:time_reversal_protocol',circuit: 1,inputFluids: ['minecraft:water 10000'],outputFluids: ['gtceu:steam 100000'],EUt:lv,duration: 20,addDataid: "SCTier",addData: 2
     },
-    {id: 'cosmos_simulation_hxsp',type: 'cosmos_simulation',itemInputs:['16x dishanhai:hxsp'],inputFluids: ['gtceu:raw_star_matter_plasma 102400'],itemOutputs: ['10240x gtceu:small_eternity_dust','10240x kubejs:kinetic_matter','10240x kubejs:omni_matter','10240x kubejs:pellet_antimatter','10240x kubejs:amorphous_matter','10240x kubejs:corporeal_matter','10240x kubejs:essentia_matter','10240x kubejs:dark_matter','10240x kubejs:temporal_matter','10240x kubejs:void_matter','10240x gtceu:tiny_magmatter_dust','10240x kubejs:hypercube','10240x kubejs:quantum_anomaly','1x gtceu:magnetohydrodynamicallyconstrainedstarmatter_block','10240x gtceu:tiny_transcendentmetal_dust','10140x gtceu:tiny_infinity_dust','10240x kubejs:space_essence'],duration: 1200
-    }, //世线恒星鸿蒙
+    {id: 'cosmos_simulation_hxsp',type: 'cosmos_simulation',itemInputs:['16x dishanhai:hxsp'],itemOutputs:global.cosmos_simulation_output_items_hxsp,inputFluids: ['gtceu:raw_star_matter_plasma 102400'],duration: 1200
+    }, //恒星碎片鸿蒙
     {
         id:'greythings_eoh_plus_cosmos_simulation_plus',type:'cosmos_simulation',inputFluids:['minecraft:water 102400'],itemInputs:['disksavior:quantum_chromodynamic_charge_super'],itemOutputs:["131072x gtceu:white_dwarf_mtter_dust",'131072x gtceu:infused_gold_dust',"131072x gtceu:black_dwarf_mtter_dust","131072x ae2:sky_dust","131072x gtceu:trinium_dust","131072x gtceu:plutonium_241_dust","131072x gtceu:titanium_50_dust","131072x gtceu:copper76_dust","131072x gtceu:uranium_235_dust","131072x gtceu:perditio_crystal_dust","131072x gtceu:earth_crystal_dust","131072x gtceu:ignis_crystal_dust","131072x gtceu:tartarite_dust","131072x gtceu:uruium_dust","131072x gtceu:force_dust","131072x gtceu:alien_algae_dust","131072x gtceu:bloodstone_dust","131072x minecraft:netherite_scrap","131072x gtceu:purified_tengam_dust","131072x gtceu:quantanium_dust","131072x gtceu:bedrock_dust","131072x gtceu:damascus_steel_dust","131072x avaritia:neutron_pile","131072x gtceu:certus_quartz_dust","131072x ae2:fluix_dust",'131072x gtceu:shirabon_dust',"131072x gtceu:rare_earth_metal_dust",'131072x gtceu:enderium_dust','131072x gtceu:uraninite_dust','131072x gtceu:diatomite_dust','131072x gtceu:bentonite_dust','131072x gtceu:endstone_dust','131072x gtceu:cassiterite_dust','131072x gtceu:bauxite_dust','131072x gtceu:sapphire_dust','131072x gtceu:spacetime_dust','10240x kubejs:dust_cryotheum','102400x gtceu:celestial_secret_dust','102400x gtceu:tear_dust','1024000x gtceu:rare_earth_dust','1024000x gtceu:stem_cells','1024000x kubejs:biological_cells'],duration:1200
     },
@@ -4665,6 +4683,21 @@ const dishanhairecipes = [
     {
         id:'assembler_dense_neutron_plasma_cell',type:'assembler',itemOutputs:['15x kubejs:dense_neutron_plasma_cell'],itemInputs:['kubejs:extremely_durable_plasma_cell','3x kubejs:quantum_chromodynamic_charge','3x gtceu:heavy_quark_degenerate_matter_block'],inputFluids:['gtceu:dense_neutron_plasma'],EUt:uxv,duration:20
     },
+    {
+        id:'distort_black_hole_event_horizon_stripping',type:'distort',circuit:2,notConsumable:['256x gtceu:eye_of_harmony','dishanhai:time_reversal_protocol'],inputFluids:['gtceu:hydrogen 1310012','gtceu:helium 1310012','gtceu:raw_star_matter_plasma 131000'],itemInputs:['256x dishanhai:hxsp'],outputFluids:global.black_hole,blastFurnaceTemp:24000,EUt:2147483647*max,duration:1200,
+    },
+    {
+        id:'distort_black_hole_event_horizon_stripping_2',type:'distort',circuit:1,notConsumable:['256x gtceu:eye_of_harmony','dishanhai:time_reversal_protocol'],inputFluids:['gtceu:hydrogen 1310012','gtceu:helium 1310012','gtceu:raw_star_matter_plasma 131000'],itemInputs:['32x kubejs:quantum_chromodynamic_charge'],outputFluids:global.plasma_output_output,blastFurnaceTemp:24000,EUt:2147483647*max,duration:1200,
+    },    //黑洞视界剥离扭
+    {
+        id:'distort_biological_simulation_laboratory_Infinite',type:'distort',circuit:1,notConsumable:['64x gtladditions:biological_simulation_laboratory','dishanhai:gate_and_bridg','avaritia:infinity_sword'],itemOutputs:['10240x minecraft:nether_star','10240x minecraft:dragon_egg','20480x minecraft:wither_skeleton_skull','65565x minecraft:blaze_rod','65565x minecraft:cod','65565x minecraft:egg','65565x minecraft:beef','65565x minecraft:salmon','65565x minecraft:glowstone_dust','65565x minecraft:sugar','65565x minecraft:chicken','65565x minecraft:rotten_flesh','65565x minecraft:string','65565x minecraft:porkchop','65565x minecraft:slime_ball','65565x minecraft:gunpowder','65565x minecraft:ghast_tear','65565x minecraft:ender_pearl','65565x minecraft:mutton','65565x minecraft:white_wool','65565x minecraft:echo_shard','65565x minecraft:sculk_sensor','65565x minecraft:sculk_catalyst','65565x minecraft:sculk','65565x minecraft:bone','65565x minecraft:rabbit','65565x minecraft:tropical_fish','65565x minecraft:wheat','65565x minecraft:carrot','65565x minecraft:potato','65565x minecraft:poppy','65565x minecraft:feather','65565x minecraft:leather','65565x minecraft:rabbit_hide','65565x minecraft:spider_eye','65565x minecraft:rabbit_foot','65565x minecraft:ink_sac','65565x minecraft:glow_ink_sac','65565x minecraft:nautilus_shell','65565x minecraft:iron_ingot','65565x minecraft:gold_ingot','65565x minecraft:copper_ingot','65565x minecraft:gold_nugget','65565x minecraft:emerald','65565x minecraft:coal','65565x minecraft:redstone','65565x minecraft:bamboo','65565x minecraft:stick','65565x minecraft:arrow','65565x minecraft:glass_bottle'],blastFurnaceTemp:4000,EUt:uv,duration:200
+    },
+    {
+        id:'distort_time_reversal_protocol_cosmos_plus',type:'distort',circuit:1,notConsumable:['64x gtceu:eye_of_harmony','dishanhai:time_reversal_protocol'],inputFluids:['gtceu:hydrogen 1310012','gtceu:helium 1310012','gtceu:grade_16_purified_water 131000'],itemOutputs:global.cosmos_simulation_output_items,blastFurnaceTemp:24000,duration:1200,EUt:65565*max
+    },
+    {
+        id:'distort_cosmos_simulation_hxsp',type:'distort',circuit:3,notConsumable:['64x gtceu:eye_of_harmony','dishanhai:time_reversal_protocol'],itemInputs:['32x dishanhai:hxsp'],inputFluids:['gtceu:hydrogen 1310012','gtceu:helium 1310012','gtceu:raw_star_matter_plasma 131000'],itemOutputs:global.cosmos_simulation_output_items_hxsp,blastFurnaceTemp:24000,duration:1200,EUt:65565*max
+    }
 
 ];
 
@@ -6542,7 +6575,7 @@ try {
       '2x gtladditions:arcanic_astrograph','1068x gtlcore:dimension_injection_casing','1792x gtlcore:create_casing','66x gtceu:high_power_casing','336x kubejs:dimension_creation_casing','96x kubejs:dimensional_stability_casing','276x kubejs:spacetime_compression_field_generator'/*伪神模块*/,'100x gtladditions:phonon_conduit','420x gtladditions:suprachronal_magnetic_confinement_casing','720x gtladditions:god_forge_trim_casing','500x gtladditions:god_forge_support_casing','56x gtladditions:god_forge_energy_casing','1x gtladditions:heliophase_leyline_crystallizer','3x gtladditions:heliothermal_plasma_fabricator','10x gtladditions:heliofusion_exoticizer','2x gtladditions:heliofluix_melting_core','4x gtladditions:helioflare_power_forge',
       '1x gtladditions:apocalyptic_torsion_quantum_matrix','864x gtladditions:quantum_glass','11520x gtlcore:qft_coil','216x gtlcore:spacetimecontinuumripper','10927x gtlcore:dimensionally_transcendent_casing','6285x gtlcore:manipulator','841x kubejs:dimensional_bridge_casing'
       ,'4x gtladditions:thread_modifier_hatch','1x gtladditions:macro_atomic_resonant_fragment_stripper','4230x gtlcore:qft_coil','1718x gtlcore:sps_casing','5507x gtlcore:hyper_mechanical_casing','937x gtlcore:echo_casing','218x gtlcore:fusion_casing_mk5','360x gtceu:quantumchromodynamically_confined_matter_frame','786x gtceu:neutronium_frame','627x gtceu:high_power_casing','1086x gtceu:fusion_glass','344x kubejs:eternity_coil_block','156x kubejs:dyson_receiver_casing','666x kubejs:dyson_control_toroid','66x kubejs:dyson_control_casing','8x kubejs:dimensional_stability_casing','162x kubejs:dimensional_bridge_casing','24x kubejs:annihilate_core'
-      ,'1x gtladditions:light_hunter_space_station','4643x gtladditions:gravity_stabilization_casing','1348x gtladditions:extreme_density_casing','208x gtlcore:ultimate_stellar_containment_casing','120x gtlcore:super_computation_component','27x gtlcore:hyper_core','9558x gtlcore:naquadah_alloy_casing','80x gtlcore:sps_casing','720x gtlcore:enhance_hyper_mechanical_casing','293x gtlcore:dragon_strength_tritanium_casing','666x gtlcore:echo_casing','4094x gtlcore:dimensionally_transcendent_casing','5884x gtlcore:dimension_injection_casing','224x gtlcore:molecular_casing','120x gtlcore:improved_superconductor_coil','176x gtlcore:fusion_casing_mk5','64x gtlcore:fusion_casing_mk4','2400x gtlcore:uxv_hermetic_casing','1073x ae2:quartz_vibrant_glass','560x gtceu:neutronium_frame','454x gtceu:high_power_casing','230x gtceu:computer_heat_vent','258x gtceu:advanced_computer_casing','3528x gtceu:fusion_glass','144x gtceu:uhv_ultimate_battery','1029x gtceu:uxv_machine_casing','180x gtceu:uiv_machine_casing','2528x gtceu:uhv_machine_casing','3651x gtceu:atomic_casing','1440x kubejs:restraint_device','280x kubejs:containment_field_generator','1500x kubejs:spacetime_assembly_line_unit','12x kubejs:force_field_glass','20x kubejs:module_connector','1038x kubejs:dimensional_bridge_casing','34x kubejs:dimensional_bridge_casing'
+      ,'1x gtladditions:light_hunter_space_station','4643x gtladditions:gravity_stabilization_casing','1348x gtladditions:extreme_density_casing','208x gtlcore:ultimate_stellar_containment_casing','120x gtlcore:super_computation_component','27x gtlcore:hyper_core','9558x gtlcore:naquadah_alloy_casing','80x gtlcore:sps_casing','720x gtlcore:enhance_hyper_mechanical_casing','293x gtlcore:dragon_strength_tritanium_casing','666x gtlcore:echo_casing','4094x gtlcore:dimensionally_transcendent_casing','5884x gtlcore:dimension_injection_casing','224x gtlcore:molecular_casing','120x gtlcore:improved_superconductor_coil','176x gtlcore:fusion_casing_mk5','64x gtlcore:fusion_casing_mk4','2400x gtlcore:uxv_hermetic_casing','1073x ae2:quartz_vibrant_glass','560x gtceu:neutronium_frame','454x gtceu:high_power_casing','230x gtceu:computer_heat_vent','258x gtceu:advanced_computer_casing','3528x gtceu:fusion_glass','144x gtceu:uhv_ultimate_battery','1029x gtceu:uxv_machine_casing','180x gtceu:uiv_machine_casing','2528x gtceu:uhv_machine_casing','3651x gtceu:atomic_casing','1440x kubejs:restraint_device','280x kubejs:containment_field_generator','1500x kubejs:spacetime_assembly_line_unit','12x kubejs:force_field_glass','20x kubejs:module_connector','1038x kubejs:dimensional_bridge_casing','34x kubejs:neutronium_pipe_casing'
 
     ];
     global.templateItemList_2 = templateItemList_2;
