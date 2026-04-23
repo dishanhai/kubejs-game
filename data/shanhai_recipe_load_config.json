@@ -113,5 +113,6 @@
 	"super_speed_card": true,
 	"overclock_card": true,
 	"test_placeholder": true,
-	"star_core_stripper_ores": false
+	"star_core_stripper_ores": false,
+	"distort_time_reversal_protocol_cosmos_plus": false
 }

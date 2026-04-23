@@ -1224,6 +1224,12 @@ e.create('dishanhai:time_reversal_protocol')
     .displayName('§1万§2态§3平§4衡§5·§6大§7冻§8结§9·§a创§c世§b纪')
     .texture('dishanhai_item:item/csj')    
     .fireResistant(true)
+    colorAPI.registerItemTooltip('dishanhai:csj',[
+        { text:'祂是初火是余烬，带来破灭与启迪。大撕裂是终点，也是回归;',style:'dark_purplish_red'},
+        { text:'文明的岁月终有极限，但终点另一边，新的世界如绳子相连，',style:'white_blue'},
+        { text:'汇成光的长线，超越永恒循环——每根绳子都叫【文明】。',style:'golden'},
+        { text:'生与灭，轮回不止；你与我，渡向无限。',style:'full_color'},
+    ]);
 
     e.create('dishanhai:food')
     .displayName('寰宇零食')

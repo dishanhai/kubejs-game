@@ -2,7 +2,7 @@
 name: "karpathy-coding-guidelines"
 description: "Applies Karpathy-inspired behavioral guidelines to reduce common LLM coding mistakes. Invoke when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria."
 ---
-
+生成必须优先中文
 # Karpathy Coding Guidelines
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
