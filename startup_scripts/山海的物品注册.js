@@ -1341,7 +1341,21 @@ e.create('dishanhai:time_reversal_protocol')
             { text: '超越维度存在的造物，来自至高维度的回响', style: 'full_color' },
         ]);
 
-})})();
+        // ===== 唱片注册 =====
+        e.create('dishanhai:gtl_disc', 'music_disc')
+        .displayName('§6时之砂 §e唱片')
+        .song('dishanhai:music_disc.gtl')
+        .analogOutput(10)
+        .rarity('epic')
+        .texture('dishanhai_item:item/gtl_disc')
+
+    })
+
+    StartupEvents.registry('sound_event', function(e) {
+        e.create('dishanhai:music_disc.gtl')
+    })
+
+})();
 
 // 物品动态提示系统已集成到colorAPI中
 // 使用 colorAPI.initItemTooltipSystem() 和 colorAPI.registerItemTooltip() 来管理提示

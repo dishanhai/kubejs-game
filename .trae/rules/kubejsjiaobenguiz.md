@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: kubejs
+---
 📘 KubeJS (Rhino) JavaScript 语法规则文档
 引擎：Mozilla Rhino (ES5 + 部分 ES6)
 运行环境：Minecraft / Java JVM

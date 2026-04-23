@@ -110,12 +110,13 @@ C:\Users\dishanhai\Desktop\山海的神人私货
 - projectlist.md（本文件 — 项目索引与基本规则）
 - kubejsjiaobenguiz.md（KubeJS/Rhino 语法规则，含实战经验第8章）
 - git-commit-message.md（Git 提交信息规范）
-- karpathy-coding-guidelines.md（Karpathy 编码行为指南）
+- karpathy-coding-guidelines.md（【优先级：高】Karpathy 编码行为指南 — 涉及代码编写、审查、重构、调试时自动触发。避免过度复杂化、做最小化修改、明确假设、定义可验证成功标准。）
 
 ### .learnings/（经验记忆文件，按条件提升至 rules/）
 - LEARNINGS.md（纠正、知识缺口、最佳实践）
 - ERRORS.md（命令失败、异常错误）
 - FEATURE_REQUESTS.md（功能需求）
+- GLOSSARY.md（项目专用术语/缩写/代称表）
 
 ### .trae/skills/（技能定义文件）
 - find-skills/SKILL.md
@@ -139,8 +140,8 @@ C:\Users\dishanhai\Desktop\山海的神人私货
 - 注意变量，避免重复定义或修改已有的变量，否则会导致脚本运行错误
 - 允许调用主文件内的全局 api
 - 需要局内调用的文件在游戏根目录下
-- 需要测试的脚本默认写在游戏根目录下
-- 可以多调用其他文件看其他文件的实现
+- 需要测试的脚本默认写在游戏根目录下的kubejs文件夹中 依据需要测试的功能分类写在不同的文件夹中
+- 可以多调用其他文件看其他文件(非dishanhai署名文件)的实现
 - 不要在日志或说明之类的文件中添加文件路径，仅说明文件的名称与功能
 
 ---
@@ -154,6 +155,9 @@ C:\Users\dishanhai\Desktop\山海的神人私货
 3. **发现不支持的语法/能力缺失** → 写入 .learnings/FEATURE_REQUESTS.md
 4. **发现更优做法/最佳实践** → 写入 .learnings/LEARNINGS.md（category: best_practice）
 5. **知识点更新（如游戏版本变化）** → 写入 .learnings/LEARNINGS.md（category: knowledge_gap）
+6. **发现新术语/缩写/代称** → 写入 .learnings/GLOSSARY.md（含定义、来源文件、标签）
+7. **用户两次以上使用同一术语** → 确认后录入 .learnings/GLOSSARY.md
+8. **新 Skill 创建后首次测试时** → 写入 `c:\Users\dishanhai\Desktop\skill.md`（含英文名称、中文定义名称、简述、调用时机）
 
 ## 提升(Promotion)规则
 当某条学习经验满足以下任一条件时，必须提升到永久规则文件：
@@ -165,16 +169,52 @@ C:\Users\dishanhai\Desktop\山海的神人私货
 提升目标：.learnings/ 中的记录 → .trae/rules/ 下的对应规则文件
 
 ## 记忆文件（.learnings/）结构
-位于项目根目录 kubejs/.learnings/，包含三个文件：
+位于项目根目录 kubejs/.learnings/，包含四个文件：
 - LEARNINGS.md — 纠正、知识缺口、最佳实践
 - ERRORS.md — 命令失败、异常错误
 - FEATURE_REQUESTS.md — 功能需求
+- GLOSSARY.md — 项目专用术语/缩写/代称
 
 每条记录格式：`[TYPE-YYYYMMDD-XXX] 标题`，含优先级、状态、摘要、详情、元数据
+
+## 查找优先级
+当需要检索记忆时，按以下顺序查找：
+1. **.trae/rules/**（热缓存）— 永久规则文件，alwaysApply，最高优先级
+2. **.learnings/GLOSSARY.md**（术语表）— 项目专用术语/缩写解释
+3. **.learnings/**（冷存储）— 经验教训、错误记录、功能需求
 
 ## 状态管理
 - pending — 待处理
 - in_progress — 正在处理
 - resolved — 已解决
 - promoted — 已提升到永久规则
+- stale — 已过时/超过 90 天无引用
 - wont_fix — 不修复
+
+## 降级(Demotion)规则
+当规则文件满足以下任一条件时，从 .trae/rules/ 降级回 .learnings/：
+- **90 天未被引用** — 在 agent 响应中未被匹配或引用
+- **版本过时** — 所描述的知识已被新版本取代（如 Minecraft 大版本更新）
+- **被取代** — 有更完善的规则覆盖了相同领域
+降级目标：.trae/rules/ → .learnings/ 对应文件（状态设为 stale）
+
+## 归档管理
+- **90 天 stale** — 状态为 stale 超过 90 天的记录，自动标记为可归档
+- **季度审查** — 每季度审查一次 stale 记录，确认是否彻底删除或保留
+- **180 天删除** — 审查确认无用的记录可删除，但应在删除前通知用户确认
+
+## 记忆健康检查
+定期（或用户要求时）执行以下检查：
+1. **孤儿文件** — .learnings/ 中是否存在未被任何规则引用的独立记录
+2. **缺失时间戳** — 记录是否缺少 Logged/Resolved 时间戳
+3. **热缓存膨胀** — .trae/rules/ 是否超过 5 个文件，考虑是否需要归档或合并
+4. **冷存储冗余** — .learnings/ 中是否存在内容重复或高度相似的记录
+5. **术语交叉** — GLOSSARY.md 中的术语是否准确反映项目文件列表
+
+## 更新时机
+以下时机必须触发记忆系统更新：
+1. **Bug 修复后** — 将修复过程记录到 LEARNINGS.md 或 ERRORS.md
+2. **新功能实现后** — 新功能涉及的特殊约定记录到 learnings/
+3. **用户纠正后** — 立即记录到 LEARNINGS.md（category: correction）
+4. **新术语发现后** — 写入 GLOSSARY.md
+5. **月度回顾** — 每月检查一次记忆系统的完整性和准确性

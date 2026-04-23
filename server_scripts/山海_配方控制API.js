@@ -3445,7 +3445,12 @@ var rawAPI = {
     reloadRecipeLoadConfig: reloadRecipeLoadConfig,
     
     // 配置访问（高级）
-    recipeLoadConfig: function() { return getAllRecipeLoadConfig(); }
+    recipeLoadConfig: function() { return getAllRecipeLoadConfig(); },
+    
+    // 获取API版本号
+    getVersion: function() {
+        return '2.7.0';
+    }
 };
 
 // 使用错误保护包装器保护所有API函数

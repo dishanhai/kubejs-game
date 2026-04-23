@@ -852,7 +852,7 @@ function initializeProtection(event) {
 
 // ---------------- 配方统计模块 ----------------
 let recipeStats = {
-    total:0, success:0, failed:0,
+    total:0, success:0, failed:0, disabled:0,
     byType:{}, errors:[]
 };
 
@@ -1917,6 +1917,14 @@ var newShanhaiAPI = {
         // 这个函数会在 ServerEvents.recipes 内部被覆盖
         // 这里只是一个占位符
         return false;
+    },
+    
+    /**
+     * 获取API版本号
+     * @returns {string} API版本
+     */
+    getVersion: function() {
+        return API_Version;
     }
 };
 
@@ -3743,6 +3751,7 @@ ServerEvents.recipes(function(e) {
         // 如果都没有设置，保持默认值（启用所有配方）
         
         if (!recipeEnabled) {
+            recipeStats.disabled++;
             info('⏭️ 配方加载已禁用，跳过: ' + id + ' (' + type + ')');
             debug('配方 ' + id + ' (' + type + ') 已被禁用，不计入统计');
             return true; // 返回true表示"成功跳过"，不视为失败
@@ -7029,7 +7038,7 @@ PlayerEvents.loggedIn(event => {
             } else if (failed === 0) {
                 player.tell(Component.green(`§a✓ 配方库加载完成！`));
                 player.tell(Component.green(`§a📦 成功加载: §e${success}§a 个配方`));
-                player.tell(Component.yellow("§e⚠ 注意：统计不包含已禁用的配方"));
+                player.tell(Component.yellow(`§e⚠ 已被禁用配方数量：${stats.disabled}`));
                 player.tell(Component.green(`§a😋 配方库检测无报错 祝领航员航行无阻!`))
                 player.tell(Component.green(`💽 当前神人私货版本:v${Version}`))
                 player.tell(Component.green(`💽 当前API总控系统版本为${API_Version}`))
@@ -7485,8 +7494,13 @@ ServerEvents.loaded(event => {
                     
                     for (var i = 0; i < apis.length; i++) {
                         var api = apis[i];
+                        var apiObj = global[api.name];
+                        var ver = '未知';
+                        if (apiObj && typeof apiObj.getVersion === 'function') {
+                            try { ver = apiObj.getVersion(); } catch(e) {}
+                        }
                         var status = api.enabled ? '§a启用' : '§c禁用';
-                        sender.tell(`§e${api.name}§7 - ${api.type} (${status}§7)`);
+                        sender.tell(`§e${api.name}§7 - ${api.type} §7(v${ver}) (${status}§7)`);
                     }
                     
                     sender.tell(`§7总计: §e${apis.length}§7 个API`);

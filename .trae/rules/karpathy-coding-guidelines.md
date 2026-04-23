@@ -5,6 +5,8 @@ description: "Applies Karpathy-inspired behavioral guidelines to reduce common L
 生成必须优先中文
 # Karpathy Coding Guidelines
 
+**优先级：高 — 涉及代码编写、审查、重构、调试时自动触发，无需等待 Skill 调用**
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
