@@ -1342,9 +1342,13 @@ e.create('dishanhai:time_reversal_protocol')
         ]);
 
         // ===== 唱片注册 =====
+        // 使用占位符 SoundEvent（minecraft:music_disc.13）确保 RecordItem 正常创建
+        // 后续在 postInit 中通过反射替换为自定义 SoundEvent
+        // 原因：Forge 1.20.1 RegisterEvent 按字母顺序触发，item 先于 sound_event，
+        // 直接传自定义 SoundEvent 会导致查找为 null，唱片机播放异常且物品消失
         e.create('dishanhai:gtl_disc', 'music_disc')
         .displayName('§6时之砂 §e唱片')
-        .song('dishanhai:music_disc.gtl')
+        .song('minecraft:music_disc.13', 250)
         .analogOutput(10)
         .rarity('epic')
         .texture('dishanhai_item:item/gtl_disc')
@@ -1382,4 +1386,51 @@ StartupEvents.postInit(event => {
         console.error('[山海私货] 生成动态Lore文本失败: ' + e); 
         global.shanhaiDynamicLoreText = "§7由CellAPI生成,显示由JEIcellAPI生成"; 
     } 
+
+    // ===== 唱片 SoundEvent 修复 =====
+    // 将占位符 SoundEvent(minecraft:music_disc.13) 替换为自定义 SoundEvent(dishanhai:music_disc.gtl)
+    // 原因：item 注册时 sound_event 注册表尚未就绪，只能先用占位符确保 RecordItem 正常创建
+    try {
+        var $RL = Java.loadClass('net.minecraft.resources.ResourceLocation');
+        var $SE = Java.loadClass('net.minecraft.sounds.SoundEvent');
+        var $FR = Java.loadClass('net.minecraftforge.registries.ForgeRegistries');
+        var $RecordItem = Java.loadClass('net.minecraft.world.item.RecordItem');
+
+        var customLoc = new $RL('dishanhai:music_disc.gtl');
+        var customSound = $FR.SOUND_EVENTS.getValue(customLoc);
+        if (customSound == null) {
+            customSound = $SE.createVariableRangeEvent(customLoc);
+            console.log('[山海私货] 手动创建了 SoundEvent 实例');
+        }
+
+        var discItem = $FR.ITEMS.getValue(new $RL('dishanhai:gtl_disc'));
+        if (discItem != null && (discItem instanceof $RecordItem)) {
+            var fields = $RecordItem.class.getDeclaredFields();
+            var soundField = null;
+            for (var i = 0; i < fields.length; i++) {
+                if (fields[i].getType() == $SE.class) {
+                    soundField = fields[i];
+                    break;
+                }
+            }
+            if (soundField != null) {
+                soundField.setAccessible(true);
+                var $Modifier = Java.loadClass('java.lang.reflect.Modifier');
+                var $Field = Java.loadClass('java.lang.reflect.Field');
+                if ($Modifier.isFinal(soundField.getModifiers())) {
+                    var modifiersField = java.lang.reflect.Field.class.getDeclaredField('modifiers');
+                    modifiersField.setAccessible(true);
+                    modifiersField.setInt(soundField, soundField.getModifiers() & ~$Modifier.FINAL);
+                }
+                soundField.set(discItem, customSound);
+                console.log('[山海私货] 唱片 SoundEvent 替换成功');
+            } else {
+                console.log('[山海私货] 唱片 SoundEvent 字段替换失败');
+            }
+        } else {
+            console.log('[山海私货] 唱片物品不存在或类型不匹配');
+        }
+    } catch (ex) {
+        console.log('[山海私货] 唱片 SoundEvent 修复异常: ' + ex);
+    }
 });

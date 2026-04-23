@@ -1,6 +1,5 @@
 ---
-alwaysApply: false
-description: kubejs
+alwaysApply: true
 ---
 📘 KubeJS (Rhino) JavaScript 语法规则文档
 引擎：Mozilla Rhino (ES5 + 部分 ES6)
@@ -776,3 +775,33 @@ onEvent('jei.add.items', event => {
     })
 })()
 ```
+
+## 9.8 dishanhairecipes 配方 ID 命名规范
+
+`dishanhairecipes` 数组中每个配方的 `id` 字段必须遵循以下规范：
+
+**格式**: `机器类型_输出物品(必须)_输入物品(可选)_不消耗物品(可选)`
+
+**各段用 `_` 分隔**，使用**英文小写 + 下划线**。
+
+**示例**:
+
+| 完整 ID | 机器类型 | 输出物品 | 输入物品 | 不消耗物品 |
+|---------|---------|---------|---------|-----------|
+| `assembler_salt_water` | assembler | salt_water | - | - |
+| `distort_black_hole_event_horizon_stripping` | distort | black_hole | event_horizon_stripping | - |
+| `distort_biological_simulation_laboratory_Infinite` | distort | biological_simulation_laboratory | - | Infinite (infinity_sword) |
+
+**规则**:
+
+1. **第一段**: 机器类型（小写英文，参考机器类型对照表）
+2. **第二段**: 最有代表性的输出物品简称（必需）
+3. **第三段（可选）**: 输入物品简称（当输入是区分关键时加）
+4. **第四段（可选）**: 不消耗物品简称（当不消耗是区分关键时加）
+
+**注意事项**:
+- 不使用命名空间前缀（如 `minecraft:`、`gtceu:`）
+- 不使用数量前缀（如 `16x`）
+- 空格转换为下划线
+- 已有 ID 按此规则基本合规，**无需批量重命名**（避免破坏引用）
+- `_2`、`_3` 等后缀用于同机器同输出的变体区分
