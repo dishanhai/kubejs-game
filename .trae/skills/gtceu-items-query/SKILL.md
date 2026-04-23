@@ -1,13 +1,13 @@
 ---
 alwaysApply: false
-description: 物品id查询/物品id匹配/配方id生成/物品注册表/物品名称/材料查询/gtceu/gtlcore/gtladditions/minecraft原版/原版物品/格雷物品/GregTech/gtceu_items/minecraft_items/id匹配/物品ID
+description: 物品id查询/物品id匹配/配方id生成/物品注册表/物品名称/材料查询/流体id查询/流体注册表/gtceu/gtlcore/gtladditions/minecraft原版/原版物品/原版流体/格雷物品/GregTech/gtceu_items/gtceu_fluids/minecraft_items/minecraft_fluids/id匹配/物品ID/流体ID
 ---
 
-# 物品 ID 查询技能（GTCEu + Minecraft 原版）
+# 物品/流体 ID 查询技能（GTCEu + Minecraft 原版）
 
-在需要查询物品 ID、验证 ID 是否正确、生成配方中需要引用的物品 ID、或需要了解某个物品/材料的完整注册名时，使用本技能。
+在需要查询物品 ID、流体 ID、验证 ID 是否正确、生成配方中需要引用的物品/流体 ID、或需要了解某个物品/材料/流体的完整注册名时，使用本技能。
 
-数据来源为运行时生成的 JSON 注册表快照，覆盖 **GTCEu 物品** 和 **Minecraft 原版物品**。
+数据来源为运行时生成的 JSON 注册表快照，覆盖 **GTCEu 物品/流体** 和 **Minecraft 原版物品/流体**。
 
 ---
 
@@ -53,6 +53,40 @@ description: 物品id查询/物品id匹配/配方id生成/物品注册表/物品
 
 涵盖所有原版物品，包括：方块、工具、武器、盔甲、食物、刷怪蛋、药水等。
 
+### 1.3 GTCEu 流体（含 gtceu/gtlcore/gtladditions）
+
+文件：**`kubejs/data/gtceu_fluids.json`**
+
+```json
+{
+  "totalFluids": 2164,
+  "byNamespace": {
+    "gtceu":      ["gtceu:1_octene", ...],           // ~2148 项
+    "gtlcore":    [],                                 // 0 项
+    "gtladditions": ["gtladditions:xxx", ...]         // ~16 项
+  },
+  "byPrefix": { "1": ["gtceu:1_octene", ...], ... },
+  "allFluids": ["gtceu:1_octene", ..., "gtladditions:yyy"]
+}
+```
+
+### 1.4 Minecraft 原版流体
+
+文件：**`kubejs/data/minecraft_fluids.json`**
+
+```json
+{
+  "totalFluids": 5+,
+  "byNamespace": {
+    "minecraft": ["minecraft:water", "minecraft:lava", ...]
+  },
+  "byPrefix": { "water": ["minecraft:water", ...], ... },
+  "allFluids": ["minecraft:water", "minecraft:lava", ...]
+}
+```
+
+涵盖所有原版流体：水、熔岩等。
+
 ---
 
 ## 2. 查询方法
@@ -68,14 +102,24 @@ description: 物品id查询/物品id匹配/配方id生成/物品注册表/物品
 ```bash
 # 搜索指令示例（在 AI 工具中执行）
 grep -n '"gtceu:目标物品"' kubejs/data/gtceu_items.json
+
+# 也可搜索流体
+grep -n '"gtceu:目标流体"' kubejs/data/gtceu_fluids.json
+
+# 搜索原版
+grep -n '"minecraft:目标物品"' kubejs/data/minecraft_items.json
+grep -n '"minecraft:目标流体"' kubejs/data/minecraft_fluids.json
 ```
 
 ### 2.2 按关键词模糊搜索
 
 ```bash
-# 搜索包含关键词的物品
+# 搜索包含关键词的物品/流体
 # 例如搜索所有包含 "processor" 的物品
 grep -n 'processor' kubejs/data/gtceu_items.json | head -20
+
+# 搜索包含 "sulfuric" 的流体
+grep -n 'sulfuric' kubejs/data/gtceu_fluids.json | head -20
 ```
 
 ### 2.3 按命名空间列出
@@ -90,6 +134,9 @@ grep -n 'processor' kubejs/data/gtceu_items.json | head -20
 ```bash
 # 搜索特定前缀（如 "uv_"、"processor_" 等）
 grep -n '"gtceu:目标前缀' kubejs/data/gtceu_items.json | head -20
+
+# 搜索流体前缀（如 "sulfuric" 等）
+grep -n '"gtceu:sulfuric' kubejs/data/gtceu_fluids.json | head -20
 ```
 
 ---
@@ -187,17 +234,19 @@ GTCEu 物品 ID 遵循 `命名空间:材料_类型` 或 `命名空间:类型_材
 
 ## 5. 常用查询场景
 
-### 场景 A：写配方时需要引用物品 ID
+### 场景 A：写配方时需要引用物品/流体 ID
 
-1. 先确认物品的中文名/材料名
-2. 用 Grep 搜索 `gtceu_items.json` 确认完整注册 ID
+1. 先确认物品/流体的中文名/材料名
+2. 用 Grep 搜索对应的 JSON 文件确认完整注册 ID
+   - 物品：`gtceu_items.json` 或 `minecraft_items.json`
+   - 流体：`gtceu_fluids.json` 或 `minecraft_fluids.json`
 3. 如果是 GTCEu 材料，按 `{材料}_{类型}` 模式构造候选
-4. 验证：在 `allItems` 数组中搜索确认
+4. 验证：在 `allItems` / `allFluids` 数组中搜索确认
 
 ### 场景 B：验证已有配方 ID 是否正确
 
-1. 取出配方中引用的所有物品 ID
-2. 逐个搜索 `gtceu_items.json` 确认存在
+1. 取出配方中引用的所有物品/流体 ID
+2. 逐个搜索对应的 JSON 文件确认存在
 3. 若不存在，根据命名模式和材料名推断正确 ID
 4. 确认后用正确 ID 替换
 
@@ -205,7 +254,7 @@ GTCEu 物品 ID 遵循 `命名空间:材料_类型` 或 `命名空间:类型_材
 
 1. 搜索 `byPrefix` 中找到目标前缀
 2. 该前缀下所有子项即为该材料/类型的所有变体
-3. 例如查 `iron` 前缀可获得所有铁制物品
+3. 例如查 `iron` 前缀可获得所有铁制物品，查 `sulfuric` 前缀可获得所有硫酸相关流体
 
 ---
 
@@ -213,10 +262,10 @@ GTCEu 物品 ID 遵循 `命名空间:材料_类型` 或 `命名空间:类型_材
 
 以下场景应自动触发本技能：
 
-1. **用户询问物品 ID**（"xx物品的id是什么"、"查一下xx的注册名"）
-2. **编写配方**（涉及 GTCEu/gtlcore/gtladditions 命名空间的物品引用）
-3. **验证配方**（用户提供的配方代码中包含可疑的物品 ID）
+1. **用户询问物品/流体 ID**（"xx物品/流体的id是什么"、"查一下xx的注册名"）
+2. **编写配方**（涉及 GTCEu/gtlcore/gtladditions 命名空间的物品/流体引用）
+3. **验证配方**（用户提供的配方代码中包含可疑的物品/流体 ID）
 4. **生成配方 ID**（需要为 `dishanhairecipes` 新增条目时）
-5. **材料查询**（需要知道某材料的所有物品变体时）
-6. **询问物品是否存在**（"gtceu:xxx 这个物品存在吗"）
-7. **自动修复**（发现配方引用了不存在的物品 ID 时）
+5. **材料查询**（需要知道某材料的所有物品变体或某流体的所有变体时）
+6. **询问物品/流体是否存在**（"gtceu:xxx 这个物品/流体存在吗"）
+7. **自动修复**（发现配方引用了不存在的物品/流体 ID 时）
