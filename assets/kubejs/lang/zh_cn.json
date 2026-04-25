@@ -539,6 +539,7 @@
   "key.keybinding.kubejs": "KubeJS按键",
   "key.kubejs.flyingspeed": "飞行速度",
   "key.kubejs.nightvision": "夜视开关",
+  "key.kubejs.copy_id": "复制物品ID",
   "key.kubejs.openplanetsmenuKey": "打开创造模式行星菜单",
   "planet.kubejs.ceres": "谷神星",
   "planet.kubejs.ceres_orbit": "谷神星轨道",

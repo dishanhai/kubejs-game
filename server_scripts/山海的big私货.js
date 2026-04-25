@@ -1,6 +1,26 @@
 // priority:70 
 //API主控制器模块 
 // ========== 山海私货（日志模块） - 完整修复版 ==========
+
+// ——— 文件索引 ———
+// L008  九层防篡改保护层       L1739 山海私货全局API
+// L540  全局配置与核心框架      L2820 命令控制API
+// L878  静态彩色名称系统        L3401 配方加载系统主控
+// L929  颜色池系统              L3859 配方数据区
+//                              L5330 跨模组配方与标签系统
+//                              L5717 AE单元/包系统
+//                              L6627 无限系列与后期配方
+//                              L7138 事件监听与运行机制
+// ——— 山海私货配方区子目录 ———
+// L3859 组装机   L4132 蒸馏塔   L4430 伟哥罐子   L4558 研磨机
+// L4014 通用配方  L4151 天基矿   L4529 分子解构   L4568 压缩机
+// L4121 天机模块  L4162 提取机   L4717 Mek创造    L5330 ae2超频
+// ——— 山海专属物品配方 ———
+// L4375 暗能量倍增器(发电组)    L5078 星门四件套
+// L5058 维度核心(装配线)       L5222 宇宙探测器配方组
+// L5066 终极模块               L5242 赛特斯修复
+// =========================
+
 (function() {
 //iife就绪
 // 版本: 2.6 - 添加API控制系统
@@ -4328,7 +4348,120 @@ safeAddRecipe('star_core_stripper', 'dishanhai:star_core_stripper_fluid_2', func
         .outputFluids(Total_fluid_input)
         .EUt(max)
         .duration(200);
+
     });
+
+try {
+//电力专区
+safeAddRecipe('genesis_engine', 'dishanhai:genesis_engine_dark_energy_multiplier',() => {
+    gtr.genesis_engine('dishanhai:genesis_engine_dark_energy_multiplier')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+//苦命鸳鸯
+safeAddRecipe('genesis_engine', 'dishanhai:ku_ming_yuan_yang',() => {
+    gtr.genesis_engine('dishanhai:ku_ming_yuan_yang')
+    .notConsumable("dishanhai:blue_alien")
+    .notConsumable("dishanhai:long_zui")
+    .chancedOutput('1x dishanhai:ku_ming_yuan_yang', 10,0)
+    .duration(114514)
+    .EUt(-114514)
+})
+safeAddRecipe('annihilate_generator', 'dishanhai:annihilate_generator_dark_energy_multiplier',() => {
+    gtr.annihilate_generator('dishanhai:annihilate_generator_dark_energy_multiplier')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('steam_turbine', 'dishanhai:steam_turbine_dark_energy_multiplier',() => {
+    gtr.steam_turbine('dishanhai:steam_turbine_dark_energy_multiplier')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('rocket_engine', 'dishanhai:rocket_engine',() => {
+    gtr.rocket_engine('dishanhai:rocket_engine')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('naquadah_reactor', 'dishanhai:naquadah_reactor',() => {
+    gtr.naquadah_reactor('dishanhai:naquadah_reactor')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('large_naquadah_reactor', 'dishanhai:large_naquadah_reactor',() => {
+    gtr.large_naquadah_reactor('dishanhai:large_naquadah_reactor')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('dyson_sphere', 'dishanhai:dyson_sphere',() => {
+    gtr.dyson_sphere('dishanhai:dyson_sphere')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('semi_fluid_generator', 'dishanhai:semi_fluid_generator',() => {
+    gtr.semi_fluid_generator('dishanhai:semi_fluid_generator')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('supercritical_steam_turbine', 'dishanhai:supercritical_steam_turbine',() => {
+    gtr.supercritical_steam_turbine('dishanhai:supercritical_steam_turbine')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('advanced_hyper_reactor', 'gtceu:advanced_hyper_reactor/concentration_mixing_hyper_fuel',() => {
+    gtr.advanced_hyper_reactor('gtceu:advanced_hyper_reactor/concentration_mixing_hyper_fuel')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+
+safeAddRecipe('hyper_reactor', 'dishanhai:hyper_excitation',() => {
+    gtr.hyper_reactor('dishanhai:hyper_excitation')
+    .notConsumable('dishanhai:dark_energy_multiplier')
+    .inputFluids('minecraft:water 1')
+    .duration(2147483647)
+    .EUt(-9221474836470000000)
+})
+} catch (error) {
+    console.error(error);
+}
+
+safeAddRecipe('element_copying', 'dishanhai:element_copying',() => {
+    gtr.element_copying('dishanhai:element_copying_astral_array')
+    .notConsumable('gtladditions:astral_array')
+    .inputFluids('gtladditions:star_gate_crystal_slurry 950',"gtceu:uu_matter 1000")
+    .itemOutputs('1x gtladditions:astral_array')
+    .duration(200)
+    .EUt(max)
+})
+
+
+
+
 
     // ========== 伟哥罐子30倍组装机产出 ==========
     const assemblerRecipes = [
@@ -4406,6 +4539,24 @@ safeAddRecipe('star_core_stripper', 'dishanhai:star_core_stripper_fluid_2', func
                 if (recipe.inputFluids?.length) machine.inputFluids.apply(machine, recipe.inputFluids);
                 if (recipe.itemOutputs?.length) machine.itemOutputs.apply(machine, recipe.itemOutputs);
                 if (recipe.outputFluids?.length) machine.outputFluids.apply(machine, recipe.outputFluids);
+                if (recipe.chancedInputs?.length) {
+                    recipe.chancedInputs.forEach(co => {
+                        if (Array.isArray(co)) {
+                            machine.chancedInput(co[0], co[1], co[2] || 0);
+                        } else {
+                            machine.chancedInput(co.item, co.chance, co.tierBonus || 0);
+                        }
+                    });
+                }
+                if (recipe.chancedOutputs?.length) {
+                    recipe.chancedOutputs.forEach(co => {
+                        if (Array.isArray(co)) {
+                            machine.chancedOutput(co[0], co[1], co[2] || 0);
+                        } else {
+                            machine.chancedOutput(co.item, co.chance, co.tierBonus || 0);
+                        }
+                    });
+                }
                 if (recipe.blastFurnaceTemp !== null && recipe.blastFurnaceTemp !== undefined && recipe.blastFurnaceTemp >0) machine.blastFurnaceTemp(recipe.blastFurnaceTemp);
                 machine.duration(recipe.duration);
                 machine.EUt(recipe.EUt)
@@ -4718,6 +4869,26 @@ const dishanhairecipes = [
     {
         id:'distort_one_stop_platinum_treatment',type:'distort',circuit:1,notConsumable:['dishanhai:wzmk2'],itemInputs:['5000x gtceu:platinum_group_sludge_dust'],inputFluids:['gtceu:hydrogen 625000','gtceu:oxygen 1111000','gtceu:chlorine 125000','gtceu:fluorine 1000'],itemOutputs:['1500x gtceu:platinum_dust','1500x gtceu:palladium_dust','1500x gtceu:ruthenium_dust','1500x gtceu:iridium_dust','1500x gtceu:osmium_dust','1500x gtceu:rhodium_dust'],outputFluids:['gtceu:hydrogen 600000','gtceu:chlorine 125000','gtceu:fluorine 500'],blastFurnaceTemp:3000,duration:120,EUt:luv
     },
+    {
+        id:'distort_platinum_group_minerals_dust',type:'distort',circuit:2,notConsumable:['dishanhai:wzmk2','dishanhai:bridge_and_gate'],itemInputs:['8000x gtceu:platinum_group_sludge_dust'],inputFluids:['gtceu:hydrogen 625000','gtceu:oxygen 1111000','gtceu:chlorine 125000','gtceu:fluorine 1000'],itemOutputs:['10417x gtceu:platinum_dust','6944x gtceu:palladium_dust','3472x gtceu:rhodium_dust','3472x gtceu:iridium_dust','3472x gtceu:osmium_dust','3472x gtceu:ruthenium_dust','8681x gtceu:gold_dust','8681x gtceu:silver_dust','10417x gtceu:copper_dust','10417x gtceu:nickel_dust','5208x gtceu:cobalt_dust','3472x gtceu:sulfur_dust'],outputFluids:['gtceu:hydrogen 600000','gtceu:chlorine 125000','gtceu:fluorine 500'],blastFurnaceTemp:5000,duration:120,EUt:zpm
+    },
+    {
+        id:'distort_platinum_group_minerals',type:'distort',circuit:3,defaultEnabled:true,notConsumable:['dishanhai:wzmk2','dishanhai:bridge_and_gate'],itemInputs:['8000x gtceu:platinum_group_sludge_dust'],inputFluids:['gtceu:hydrogen 625000','gtceu:oxygen 1111000','gtceu:chlorine 125000','gtceu:fluorine 1000'],itemOutputs:['10417x gtceu:platinum_ingot','6944x gtceu:palladium_ingot','3472x gtceu:rhodium_ingot','3472x gtceu:iridium_ingot','3472x gtceu:osmium_ingot','3472x gtceu:ruthenium_ingot','8681x minecraft:gold_ingot','8681x gtceu:silver_ingot','10417x minecraft:copper_ingot','10417x gtceu:nickel_ingot','5208x gtceu:cobalt_ingot','3472x gtceu:sulfur_dust'],outputFluids:['gtceu:hydrogen 600000','gtceu:chlorine 125000','gtceu:fluorine 500'],blastFurnaceTemp:9000,duration:200,EUt:uv
+    },
+    {
+        id:'distort_platinum_group_minerals_csj',type:'distort',circuit:4,notConsumable:['576x dishanhai:wzmk2','dishanhai:csj'],itemInputs:['2147483647x gtceu:platinum_group_sludge_dust'],inputFluids:['gtceu:hydrogen 2147483647','gtceu:oxygen 2147483647','gtceu:chlorine 2147483647','gtceu:fluorine 2147483647'],itemOutputs:['2147483647x gtceu:platinum_ingot','2147483647x gtceu:palladium_ingot','2147483647x gtceu:rhodium_ingot','2147483647x gtceu:iridium_ingot','2147483647x gtceu:osmium_ingot','2147483647x gtceu:ruthenium_ingot','2147483647x minecraft:gold_ingot','2147483647x gtceu:silver_ingot','2147483647x minecraft:copper_ingot','2147483647x gtceu:nickel_ingot','2147483647x gtceu:cobalt_ingot','2147483647x gtceu:sulfur_dust'],outputFluids:['gtceu:hydrogen 2147483647','gtceu:chlorine 2147483647','gtceu:fluorine 2147483647'],blastFurnaceTemp:18900,duration:20,EUt:uxv
+    },
+    {
+        id:'suprachronal_assembly_line_platinum_god_proof',type:'suprachronal_assembly_line',notConsumable:['dishanhai:dark_energy_multiplier','dishanhai:wzmk2'],itemInputs:['32x gtceu:assembler_module','32x gtceu:resource_collection',"32x gtceu:large_void_miner","32x gtceu:large_greenhouse","32x gtceu:large_incubator","64x gtceu:isa_mill"],itemOutputs:['dishanhai:platinum_god_proof'],inputFluids:['gtceu:platinum 1000000','gtceu:ruthenium 1000000','gtceu:rhodium 1000000'],EUt:uev,duration:200
+    },
+    {
+        id:'suprachronal_assembly_line_cshx',type:'suprachronal_assembly_line',notConsumable:["dishanhai:annihilation_core","dishanhai:dark_energy_multiplier","dishanhai:time_reversal_protocol"],
+        itemInputs:['2147483647x dishanhai:hxsp','83742x gtceu:neutronium_ingot','31956x gtceu:cosmicneutronium_ingot','79423x gtceu:cosmic_ingot','46821x gtceu:degenerate_rhenium_plate',"2375x gtceu:cosmicneutronium_nanoswarm"],
+        inputFluids:['gtceu:raw_star_matter_plasma 2147483647','gtceu:iron_plasma 2147483647','gtceu:helium_plasma 2147483647'],
+        itemOutputs:['1x dishanhai:cshx'],
+        EUt:MAX,duration:400
+    }
+
 ];
 
 let dishanhaiSucc = 0;

@@ -1341,6 +1341,57 @@ e.create('dishanhai:time_reversal_protocol')
             { text: '超越维度存在的造物，来自至高维度的回响', style: 'full_color' },
         ]);
 
+        e.create('dishanhai:platinum_god_proof')
+        .displayName('§6铂系之神的证明')
+        .texture('dishanhai_item:item/platinum_god_proof')
+        colorAPI.registerItemTooltip('dishanhai:platinum_god_proof', [
+            { text: '铂系之神的馈赠，证明你已征服铂系元素的一切奥秘', style: 'golden' },
+            { text: '铂、钯、铑、铱、锇、钌——六元素皆臣服于你', style: 'full_color' }
+        ]);
+
+        e.create('dishanhai:dark_energy_multiplier')
+        .displayName('暗能量倍增器')
+        .texture('dishanhai_item:item/dark_energy_multiplier')
+        colorAPI.registerItemTooltip('dishanhai:dark_energy_multiplier', [
+            { text: '相信终有一天大撕裂也要为我们所用...', style: 'full_color' },
+            { text: '蓝星奇迹时代产物，消耗零点能使所有产能翻倍。', style: 'white_blue' },
+            { text: '依赖"真空零点能发生器"为启动核心,需在模式四下激活。', style: 'golden' },
+        ]);
+
+        e.create('dishanhai:blue_alien')
+        .displayName('§9蓝色外星人')
+        .texture('dishanhai_item:item/blue_alien')
+        colorAPI.registerItemTooltip('dishanhai:blue_alien', [
+            { text: '来自深空彼端的蓝色外星生命体，散发着幽蓝光芒...', style: 'full_color' },
+            { text: '跨越维度的苦命鸳鸯，被时空洪流永远分隔的旅人', style: 'white_blue' },
+        ]);
+
+        e.create('dishanhai:long_zui')
+        .displayName('§6长醉')
+        .texture('dishanhai_item:item/cz')
+        colorAPI.registerItemTooltip('dishanhai:long_zui', [
+            { text: '神权王——醉卧时空长河，只求与君再度相逢', style: 'full_color' },
+            { text: '苦命鸳鸯的另一半，失去挚爱后终日长醉不醒的孤王', style: 'white_blue' },
+        ]);
+
+        e.create('dishanhai:ku_ming_yuan_yang')
+        .displayName('§d苦命鸳鸯')
+        .texture('dishanhai_item:item/ku_ming_yuan_yang')
+        colorAPI.registerItemTooltip('dishanhai:ku_ming_yuan_yang', [
+            { text: '神权王与他的蓝星爱人——被时空法则撕裂的命运之缘', style: 'full_color' },
+            { text: '一个永醉长河，一个漂流异界，相隔万界的苦命鸳鸯', style: 'white_blue' },
+        ]);
+
+        e.create('dishanhai:annihilation_core')
+        .displayName('湮灭核心')
+        .texture('dishanhai_item:item/annihilation_core')
+        colorAPI.registerItemTooltip('dishanhai:annihilation_core', [
+            { text: '从"利用规则"到"制定规则"——宇宙规则的订正者', style: 'full_color' },
+            { text: '高效反物质产能核心，指尖一触即可收割文明，改写宇宙基本定律', style: 'white_blue' },
+            { text: '"新态引力源"技术让引力不再遥不可及，低熵态不复存在', style: 'golden' },
+            { text: '奇迹时代的产物,利用奇异湮灭一切', style: 'purplish_red' },
+        ]);
+
         // ===== 唱片注册 =====
         // 使用占位符 SoundEvent（minecraft:music_disc.13）确保 RecordItem 正常创建
         // 后续在 postInit 中通过反射替换为自定义 SoundEvent
