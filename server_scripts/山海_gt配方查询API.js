@@ -1008,6 +1008,33 @@ global.shanhaiGTRecipeQueryAPI = {
     version: '1.0.0'
 };
 
+// =====================================================
+// =============== 集成到山海配方API =====================
+// =====================================================
+// 将GT配方查询功能注册到 global.shanhaiRecipeAPI.gtRecipes
+// 外部脚本可通过以下路径调用：
+//   global.shanhaiRecipeAPI.gtRecipes.findRecipesByInput('minecraft:diamond')
+//   或保持原有的 global.shanhaiGTRecipeQueryAPI.findRecipesByInput(...)
+
+if (global.shanhaiRecipeAPI && typeof global.shanhaiRecipeAPI === 'object') {
+    global.shanhaiRecipeAPI.gtRecipes = {
+        getRecipeTypes: getRecipeTypes,
+        getRecipesByType: getRecipesByType,
+        findRecipesByInput: findRecipesByInput,
+        findRecipesByOutput: findRecipesByOutput,
+        searchRecipes: searchRecipes,
+        getRecipeDetail: getRecipeDetail,
+        getRecipeStats: getRecipeStats,
+        reloadCache: reloadCache,
+        getCacheStatus: getCacheStatus,
+        formatRecipeForChat: formatRecipeForChat,
+        version: '1.0.0'
+    };
+    info('GT配方查询API 已集成到 shanhaiRecipeAPI.gtRecipes');
+} else {
+    warn('GT配方查询API: 未找到 shanhaiRecipeAPI，保持独立 API');
+}
+
 // ========== 初始化 ==========
 init();
 
